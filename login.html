@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entrar | Flowpost Studio</title>
+    <meta name="description" content="Crea una cuenta o entra a Flowpost Studio con Google, Facebook o email." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-copy">
+        <a class="marketing-brand" href="landing.html" aria-label="Flowpost Studio">
+          <span class="brand-mark">F</span>
+          <span><strong>Flowpost</strong> Studio</span>
+        </a>
+        <h1>Tu cuenta para manejar marcas, contenido y publicaciones en un solo lugar.</h1>
+        <p>
+          El acceso social queda preparado para OAuth real. Mientras configuramos credenciales, puedes entrar al MVP y probar el producto completo.
+        </p>
+        <div class="login-plan-badge" id="loginPlanBadge">Plan Starter seleccionado</div>
+        <div class="login-preview">
+          <span>Hoy</span>
+          <strong>5 publicaciones listas</strong>
+          <small>Instagram, Facebook y TikTok preparados para conectar.</small>
+        </div>
+      </section>
+
+      <section class="login-card" aria-label="Crear cuenta">
+        <h2>Crear cuenta</h2>
+        <p>Empieza gratis y activa integraciones cuando el backend este listo.</p>
+        <div class="social-login-stack">
+          <button class="social-login-button" type="button" data-social-login="google">
+            <span class="provider-mark google">G</span>
+            Continuar con Google
+          </button>
+          <button class="social-login-button" type="button" data-social-login="facebook">
+            <span class="provider-mark facebook">f</span>
+            Continuar con Facebook
+          </button>
+        </div>
+        <div class="login-divider"><span>o entra con email</span></div>
+        <form class="email-login" id="emailLoginForm">
+          <label>
+            Nombre
+            <input id="loginName" type="text" name="name" placeholder="Tu nombre" autocomplete="name" />
+          </label>
+          <label>
+            Email
+            <input id="loginEmail" type="email" name="email" placeholder="tu@email.com" autocomplete="email" />
+          </label>
+          <button class="marketing-button dark" type="submit">Entrar al MVP</button>
+        </form>
+        <p class="login-status" id="loginStatus" aria-live="polite"></p>
+        <footer>
+          <a href="index.html">Abrir dashboard</a>
+          <a href="landing.html#planes">Ver planes</a>
+        </footer>
+      </section>
+    </main>
+    <script src="login.js"></script>
+  </body>
+</html>

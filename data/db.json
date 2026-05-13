@@ -1,0 +1,3024 @@
+{
+  "activeCompanyId": "casa-norte",
+  "companies": [
+    {
+      "id": "casa-norte",
+      "name": "Casa Norte Cafe",
+      "handle": "@casanortecafe",
+      "description": "Cafe de especialidad con contenido de menu, comunidad y experiencias.",
+      "voice": "Cercano, calido y premium",
+      "primaryColor": "#0095f6",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok"
+      ],
+      "mediaSource": {
+        "provider": "iCloud",
+        "folder": "/Casa Norte Cafe/Reels abril",
+        "connected": true
+      },
+      "videos": [
+        {
+          "id": "casa-latte",
+          "title": "Latte especial",
+          "duration": "00:18",
+          "size": "42 MB",
+          "source": "https://drive.google.com/file/d/casa-latte-demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        },
+        {
+          "id": "casa-brunch",
+          "title": "Brunch vertical",
+          "duration": "00:27",
+          "size": "66 MB",
+          "source": "https://drive.google.com/file/d/casa-brunch-demo",
+          "provider": "Google Drive",
+          "tone": "sunset"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@casanortecafe",
+          "status": "Conectada",
+          "note": "Business account via Meta OAuth."
+        },
+        {
+          "platform": "Facebook",
+          "key": "facebook",
+          "handle": "Casa Norte Cafe",
+          "status": "Conectada",
+          "note": "Pagina administrada por el usuario."
+        },
+        {
+          "platform": "TikTok",
+          "key": "tiktok",
+          "handle": "@casanortecafe",
+          "status": "Pendiente",
+          "note": "Requiere revision para publicar publico."
+        }
+      ]
+    },
+    {
+      "id": "verde-lima",
+      "name": "Verde Lima Studio",
+      "handle": "@verdelimastudio",
+      "description": "Estudio creativo para lanzamientos visuales y marcas lifestyle.",
+      "voice": "Editorial, simple y aspiracional",
+      "primaryColor": "#6c5ce7",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok"
+      ],
+      "mediaSource": {
+        "provider": "Google Drive",
+        "folder": "/Verde Lima/Contenido aprobado",
+        "connected": true
+      },
+      "videos": [
+        {
+          "id": "verde-pack",
+          "title": "Unboxing cliente",
+          "duration": "00:22",
+          "size": "58 MB",
+          "source": "https://www.icloud.com/iclouddrive/demo-verde-pack",
+          "provider": "iCloud",
+          "tone": "orchid"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@verdelimastudio",
+          "status": "Conectada",
+          "note": "Creator account via Meta OAuth."
+        },
+        {
+          "platform": "Facebook",
+          "key": "facebook",
+          "handle": "Verde Lima Studio",
+          "status": "Pendiente",
+          "note": "Falta seleccionar pagina."
+        }
+      ]
+    },
+    {
+      "id": "agroalimentos-1777421031890",
+      "name": "Agroalimentos",
+      "handle": "@ agroalimentospereira",
+      "description": "Tienda",
+      "voice": "",
+      "primaryColor": "#96d35f",
+      "socialNetworks": [],
+      "mediaSource": {
+        "provider": "iCloud",
+        "folder": "/Agroalimentos/Videos aprobados",
+        "connected": true
+      },
+      "videos": [
+        {
+          "id": "agroalimentos-drive-reel-1777489895919",
+          "title": "Reel producto destacado",
+          "duration": "00:24",
+          "size": "68 MB",
+          "source": "https://drive.google.com/file/d/agroalimentos-reel-demo",
+          "provider": "Google Drive",
+          "tone": "sunset"
+        },
+        {
+          "id": "agroalimentos-drive-story-1777489895920",
+          "title": "Historia detras de camaras",
+          "duration": "00:18",
+          "size": "41 MB",
+          "source": "https://drive.google.com/file/d/agroalimentos-story-demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        },
+        {
+          "id": "agroalimentos-1777421031890-demo",
+          "title": "Video inicial",
+          "duration": "00:20",
+          "size": "Pendiente",
+          "source": "https://drive.google.com/file/d/demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@ agroalimentospereira",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        }
+      ]
+    },
+    {
+      "id": "trejos-1777440586355",
+      "name": "Trejos",
+      "handle": "@trejos",
+      "description": "",
+      "voice": "",
+      "primaryColor": "#0c3e5f",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok"
+      ],
+      "mediaSource": {
+        "provider": "Google Drive",
+        "folder": "/Trejos/Videos aprobados",
+        "connected": true
+      },
+      "videos": [
+        {
+          "id": "trejos-1777440586355-demo",
+          "title": "Video inicial",
+          "duration": "00:20",
+          "size": "Pendiente",
+          "source": "https://drive.google.com/file/d/demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@trejos",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        }
+      ]
+    },
+    {
+      "id": "touch-1777563844102",
+      "name": "touch",
+      "handle": "@touchstudio",
+      "description": "Marca personal",
+      "voice": "tecnologia y marketing",
+      "primaryColor": "#41f500",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok",
+        "YouTube"
+      ],
+      "ownerProfileId": "user-1777563793174",
+      "mediaSource": {
+        "provider": "Google Drive",
+        "folder": "/t/Videos aprobados",
+        "connected": false
+      },
+      "videos": [
+        {
+          "id": "touch-1777563844102-video-inicial",
+          "title": "Video inicial",
+          "duration": "00:20",
+          "size": "Pendiente",
+          "source": "https://drive.google.com/file/d/demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@touchstudio",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "Facebook",
+          "key": "facebook",
+          "handle": "@touchstudio",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "TikTok",
+          "key": "tiktok",
+          "handle": "@touchstudio",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        },
+        {
+          "platform": "YouTube",
+          "key": "youtube",
+          "handle": "@touchstudio",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        }
+      ]
+    },
+    {
+      "id": "food-1778028766712",
+      "name": "food",
+      "handle": "@f",
+      "description": "Pyme",
+      "voice": "Claro, cercano y comercial",
+      "primaryColor": "#0095f6",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok",
+        "YouTube"
+      ],
+      "ownerProfileId": "user-1778028751331",
+      "mediaSource": {
+        "provider": "Google Drive",
+        "folder": "/food/Videos aprobados",
+        "connected": false
+      },
+      "videos": [
+        {
+          "id": "food-drive-reel",
+          "title": "Reel producto destacado",
+          "duration": "00:24",
+          "size": "68 MB",
+          "source": "https://drive.google.com/file/d/food-reel-demo",
+          "provider": "Google Drive",
+          "tone": "sunset",
+          "status": "mock"
+        },
+        {
+          "id": "food-drive-story",
+          "title": "Historia detras de camaras",
+          "duration": "00:18",
+          "size": "41 MB",
+          "source": "https://drive.google.com/file/d/food-story-demo",
+          "provider": "Google Drive",
+          "tone": "mint",
+          "status": "mock"
+        },
+        {
+          "id": "food-1778028766712-video-inicial",
+          "title": "Video inicial",
+          "duration": "00:20",
+          "size": "Pendiente",
+          "source": "https://drive.google.com/file/d/demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@f",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "Facebook",
+          "key": "facebook",
+          "handle": "@f",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "TikTok",
+          "key": "tiktok",
+          "handle": "@f",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        },
+        {
+          "platform": "YouTube",
+          "key": "youtube",
+          "handle": "@f",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        }
+      ]
+    },
+    {
+      "id": "hola-1778048046568",
+      "name": "hola",
+      "handle": "@h",
+      "description": "Pyme",
+      "voice": "Claro, cercano y comercial",
+      "primaryColor": "#b51a00",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok"
+      ],
+      "ownerProfileId": "user-1778048022925",
+      "mediaSource": {
+        "provider": "Google Drive",
+        "folder": "/h/Videos aprobados",
+        "connected": false
+      },
+      "videos": [
+        {
+          "id": "hola-1778048046568-video-inicial",
+          "title": "Video inicial",
+          "duration": "00:20",
+          "size": "Pendiente",
+          "source": "https://drive.google.com/file/d/demo",
+          "provider": "Google Drive",
+          "tone": "mint"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@h",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "Facebook",
+          "key": "facebook",
+          "handle": "@h",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "TikTok",
+          "key": "tiktok",
+          "handle": "@h",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        }
+      ]
+    },
+    {
+      "id": "oso-1778048260122",
+      "name": "oso",
+      "handle": "@oso",
+      "description": "Pyme",
+      "voice": "Claro, cercano y comercial",
+      "primaryColor": "#0095f6",
+      "socialNetworks": [
+        "Instagram",
+        "Facebook",
+        "TikTok",
+        "LinkedIn",
+        "YouTube"
+      ],
+      "ownerProfileId": "user-1778048241094",
+      "mediaSource": {
+        "provider": "iCloud",
+        "folder": "/c/Videos aprobados",
+        "connected": false
+      },
+      "videos": [
+        {
+          "id": "oso-1778048260122-video-inicial",
+          "title": "Video inicial",
+          "duration": "00:20",
+          "size": "Pendiente",
+          "source": "https://www.icloud.com/iclouddrive/demo",
+          "provider": "iCloud",
+          "tone": "mint"
+        }
+      ],
+      "accounts": [
+        {
+          "platform": "Instagram",
+          "key": "instagram",
+          "handle": "@oso",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "Facebook",
+          "key": "facebook",
+          "handle": "@oso",
+          "status": "Pendiente",
+          "note": "Lista para conectar con Meta OAuth."
+        },
+        {
+          "platform": "TikTok",
+          "key": "tiktok",
+          "handle": "@oso",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        },
+        {
+          "platform": "LinkedIn",
+          "key": "linkedin",
+          "handle": "@oso",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        },
+        {
+          "platform": "YouTube",
+          "key": "youtube",
+          "handle": "@oso",
+          "status": "Pendiente",
+          "note": "Pendiente de credenciales API."
+        }
+      ]
+    }
+  ],
+  "publications": [
+    {
+      "id": "pub-1778041833480",
+      "companyId": "casa-norte",
+      "platforms": [
+        "instagram"
+      ],
+      "type": "Video / Reel",
+      "title": "Publicacion sin titulo",
+      "copy": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "notes": "Guion guardado desde calendario.",
+      "date": "2026-05-06",
+      "time": "09:00",
+      "status": "Error",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/casa-latte-demo",
+      "script": "Hook: Esto es lo nuevo de Casa Norte Cafe.\nEscena 1: muestra el resultado final en los primeros 2 segundos.\nEscena 2: presenta el proceso o beneficio principal con una toma cercana.\nEscena 3: agrega prueba social, detalle del producto o antes/despues.\nCierre: Escríbenos para recibir más información.",
+      "hook": "Esto es lo nuevo de Casa Norte Cafe",
+      "cta": "Escríbenos para recibir más información."
+    },
+    {
+      "id": "pub-1777492260546",
+      "companyId": "agroalimentos-1777421031890",
+      "platforms": [
+        "instagram"
+      ],
+      "type": "Video / Reel",
+      "title": "Reel producto destacado",
+      "copy": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "notes": "",
+      "date": "2026-04-29",
+      "time": "09:00",
+      "status": "Idea",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/agroalimentos-story-demo"
+    },
+    {
+      "id": "pub-1777489811923",
+      "companyId": "agroalimentos-1777421031890",
+      "platforms": [
+        "instagram"
+      ],
+      "type": "Video / Reel",
+      "title": "Publicacion sin titulo",
+      "copy": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "notes": "",
+      "date": "2026-04-29",
+      "time": "09:00",
+      "status": "Idea",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/demo"
+    },
+    {
+      "id": "pub-1777489809875",
+      "companyId": "agroalimentos-1777421031890",
+      "platforms": [
+        "instagram"
+      ],
+      "type": "Video / Reel",
+      "title": "Publicacion sin titulo",
+      "copy": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "notes": "",
+      "date": "2026-04-29",
+      "time": "09:00",
+      "status": "Idea",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/demo"
+    },
+    {
+      "id": "pub-casa-latte",
+      "companyId": "casa-norte",
+      "platforms": [
+        "instagram"
+      ],
+      "type": "Video / Reel",
+      "title": "Latte especial",
+      "copy": "Behind the scenes del nuevo menu.",
+      "notes": "Usar portada vertical y CTA a reservas.",
+      "date": "2026-04-28",
+      "time": "18:30",
+      "status": "Idea",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/casa-latte-demo",
+      "hook": "crea un guión de 5 colores increíbles para vivir feliz muy largo y viral",
+      "cta": "Escríbenos para recibir más información.",
+      "script": "Hook: crea un guión de 5 colores increíbles para vivir feliz muy largo y viral.\nEscena 1: muestra el resultado final en los primeros 2 segundos.\nEscena 2: presenta el proceso o beneficio principal con una toma cercana.\nEscena 3: agrega prueba social, detalle del producto o antes/despues.\nCierre: Escríbenos para recibir más información."
+    }
+  ],
+  "jobs": [
+    {
+      "publicationId": "pub-casa-latte",
+      "companyId": "casa-norte",
+      "platform": "Instagram",
+      "type": "Video / Reel",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/casa-latte-demo",
+      "caption": "Behind the scenes del nuevo menu.",
+      "status": "Idea",
+      "time": "2026-04-28 18:30"
+    },
+    {
+      "publicationId": "pub-1778041833480",
+      "companyId": "casa-norte",
+      "platform": "Instagram",
+      "type": "Video / Reel",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/casa-latte-demo",
+      "caption": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "status": "Error",
+      "time": "2026-05-06 09:00",
+      "errorMessage": "Faltan credenciales backend: META_APP_ID, META_APP_SECRET.",
+      "preflight": {
+        "ready": false,
+        "platform": "Instagram",
+        "blockers": [
+          "Faltan credenciales backend: META_APP_ID, META_APP_SECRET."
+        ],
+        "warnings": [
+          "Supabase aun no esta configurado para guardar tokens y auditoria real."
+        ],
+        "checkedAt": "2026-05-06T04:30:47.137Z",
+        "next": "Resolver bloqueos antes de publicar automaticamente."
+      }
+    },
+    {
+      "publicationId": "pub-1777492260546",
+      "companyId": "agroalimentos-1777421031890",
+      "platform": "Instagram",
+      "type": "Video / Reel",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/agroalimentos-story-demo",
+      "caption": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "status": "Idea",
+      "time": "2026-04-29 09:00"
+    },
+    {
+      "publicationId": "pub-1777489811923",
+      "companyId": "agroalimentos-1777421031890",
+      "platform": "Instagram",
+      "type": "Video / Reel",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/demo",
+      "caption": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "status": "Idea",
+      "time": "2026-04-29 09:00"
+    },
+    {
+      "publicationId": "pub-1777489809875",
+      "companyId": "agroalimentos-1777421031890",
+      "platform": "Instagram",
+      "type": "Video / Reel",
+      "mediaProvider": "Google Drive",
+      "mediaSource": "https://drive.google.com/file/d/demo",
+      "caption": "Nuevo menu de temporada. Reservas abiertas para esta semana.",
+      "status": "Idea",
+      "time": "2026-04-29 09:00"
+    }
+  ],
+  "session": {
+    "id": "user-1778048659008",
+    "name": "Usuario Google",
+    "email": "",
+    "provider": "google",
+    "plan": "starter",
+    "planLabel": "Starter",
+    "status": "trial",
+    "createdAt": "2026-05-06T06:24:19.008Z",
+    "updatedAt": "2026-05-13T22:06:56.316Z"
+  },
+  "clients": [
+    {
+      "agencyId": "agency-touch",
+      "contact": "Administracion",
+      "email": "admin@casanortecafe.com",
+      "plan": "Pro",
+      "billingCycle": "Mensual",
+      "amount": 149,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "pro",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Crea contenido claro, cercano y comercial para una pyme que necesita vender sin sonar agresiva.",
+      "id": "client-casa-norte",
+      "companyId": "casa-norte",
+      "name": "Casa Norte Cafe",
+      "nextInvoiceDate": "2026-05-18"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Crea contenido claro, cercano y comercial para una pyme que necesita vender sin sonar agresiva.",
+      "id": "client-verde-lima",
+      "companyId": "verde-lima",
+      "name": "Verde Lima Studio",
+      "nextInvoiceDate": "2026-05-21"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Crea contenido claro, cercano y comercial para una pyme que necesita vender sin sonar agresiva.",
+      "id": "client-agroalimentos-1777421031890",
+      "companyId": "agroalimentos-1777421031890",
+      "name": "Agroalimentos",
+      "nextInvoiceDate": "2026-05-21"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Actua como estratega senior de marketing para Trejos. Tono: claro, cercano y comercial. Objetivo: generar contenido para Instagram, Facebook, TikTok que eduque, genere confianza y convierta. Propón guiones, copies, hooks, llamadas a la accion y variantes para anuncios.",
+      "id": "client-trejos-1777440586355",
+      "companyId": "trejos-1777440586355",
+      "name": "Trejos",
+      "nextInvoiceDate": "2026-05-21"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Crea contenido claro, cercano y comercial para una pyme que necesita vender sin sonar agresiva.",
+      "id": "client-touch-1777563844102",
+      "companyId": "touch-1777563844102",
+      "name": "touch",
+      "nextInvoiceDate": "2026-05-21"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Actua como estratega senior de marketing para food. Tono: Claro, cercano y comercial. Objetivo: generar contenido para Instagram, Facebook, TikTok, YouTube que eduque, genere confianza y convierta. Propón guiones, copies, hooks, llamadas a la accion y variantes para anuncios.",
+      "id": "client-food-1778028766712",
+      "companyId": "food-1778028766712",
+      "name": "food",
+      "nextInvoiceDate": "2026-05-21"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Crea contenido para hola con tono Claro, cercano y comercial.",
+      "id": "client-hola-1778048046568",
+      "companyId": "hola-1778048046568",
+      "name": "hola",
+      "nextInvoiceDate": "2026-05-21"
+    },
+    {
+      "agencyId": "agency-touch",
+      "contact": "Responsable de marca",
+      "email": "",
+      "plan": "Starter",
+      "billingCycle": "Mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Activo",
+      "serviceId": "starter",
+      "objectives": "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
+      "notes": "Pendiente completar briefing, tono de marca y ofertas principales.",
+      "aiPrompt": "Crea contenido para oso con tono Claro, cercano y comercial.",
+      "id": "client-oso-1778048260122",
+      "companyId": "oso-1778048260122",
+      "name": "oso",
+      "nextInvoiceDate": "2026-05-21"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "invoice-order-client-casa-norte-domain-1778049215123",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "domain",
+          "quantity": 1,
+          "price": 85000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-domain-1778049215123"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-chatbot-1778049214156",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "chatbot",
+          "quantity": 1,
+          "price": 450000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-chatbot-1778049214156"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-website-1778049212439",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Pagina web landing",
+      "amount": 1200000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "website",
+          "quantity": 1,
+          "price": 1200000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-website-1778049212439"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-hosting-1778049210905",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "hosting",
+          "quantity": 1,
+          "price": 180000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-hosting-1778049210905"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-starter-1778049203374",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Plan Starter social",
+      "amount": 79000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "starter",
+          "quantity": 1,
+          "price": 79000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-starter-1778049203374"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-domain-1778048494567-1778048661564",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "domain",
+          "quantity": 1,
+          "price": 85000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-domain-1778048494567-1778048661564"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-hosting-1778048496466-1778048661564",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "hosting",
+          "quantity": 1,
+          "price": 180000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-hosting-1778048496466-1778048661564"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-ads-1778048502816-1778048661564",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Campanas Meta Ads",
+      "amount": 420000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "ads",
+          "quantity": 1,
+          "price": 420000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-ads-1778048502816-1778048661564"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-website-1778048463468",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Pagina web landing",
+      "amount": 1200000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "website",
+          "quantity": 1,
+          "price": 1200000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-website-1778048463468"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-chatbot-1778048462184",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "chatbot",
+          "quantity": 1,
+          "price": 450000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-chatbot-1778048462184"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-ai-content-1778048460184",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Guiones e IA creativa",
+      "amount": 250000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "ai-content",
+          "quantity": 1,
+          "price": 250000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-ai-content-1778048460184"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-ads-1778048452418",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Campanas Meta Ads",
+      "amount": 420000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "ads",
+          "quantity": 1,
+          "price": 420000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-ads-1778048452418"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-reels-1778048450301",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Paquete de reels",
+      "amount": 280000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "reels",
+          "quantity": 1,
+          "price": 280000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-reels-1778048450301"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-agency-1778048446817",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Plan Agencia",
+      "amount": 700000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "agency",
+          "quantity": 1,
+          "price": 700000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-agency-1778048446817"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-starter-1778048445017",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Plan Starter social",
+      "amount": 79000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "starter",
+          "quantity": 1,
+          "price": 79000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-starter-1778048445017"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-domain-1778048311018",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "domain",
+          "quantity": 1,
+          "price": 85000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-domain-1778048311018"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-starter-1778048291035",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "trejos-1777440586355",
+      "documentType": "Cuenta de cobro",
+      "concept": "Plan Starter social",
+      "amount": 79000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "starter",
+          "quantity": 1,
+          "price": 79000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-starter-1778048291035"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-website-1778048014015-1778048029526",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Pagina web landing",
+      "amount": 1200000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "website",
+          "quantity": 1,
+          "price": 1200000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-website-1778048014015-1778048029526"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-hosting-1778047845769-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "hosting",
+          "quantity": 1,
+          "price": 180000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-hosting-1778047845769-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-hosting-1778047846869-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "hosting",
+          "quantity": 1,
+          "price": 180000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-hosting-1778047846869-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-domain-1778047847620-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "domain",
+          "quantity": 1,
+          "price": 85000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-domain-1778047847620-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-chatbot-1778047851668-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "chatbot",
+          "quantity": 1,
+          "price": 450000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-chatbot-1778047851668-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-chatbot-1778047852819-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "chatbot",
+          "quantity": 1,
+          "price": 450000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-chatbot-1778047852819-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-reels-1778047853752-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Paquete de reels",
+      "amount": 280000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "reels",
+          "quantity": 1,
+          "price": 280000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-reels-1778047853752-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-chatbot-1778047855152-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "chatbot",
+          "quantity": 1,
+          "price": 450000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-chatbot-1778047855152-1778047988433"
+    },
+    {
+      "id": "invoice-order-client-casa-norte-landing-ads-1778047940550-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "casa-norte",
+      "documentType": "Cuenta de cobro",
+      "concept": "Campanas Meta Ads",
+      "amount": 420000,
+      "currency": "COP",
+      "status": "Pendiente",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-11",
+      "lines": [
+        {
+          "serviceId": "ads",
+          "quantity": 1,
+          "price": 420000
+        }
+      ],
+      "serviceOrderId": "order-client-casa-norte-landing-ads-1778047940550-1778047988433"
+    },
+    {
+      "id": "invoice-client-casa-norte-1778047437959",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "concept": "Plan Pro social mensual",
+      "amount": 149,
+      "currency": "USD",
+      "status": "Pendiente",
+      "dueDate": "2026-05-18"
+    },
+    {
+      "id": "invoice-client-trejos-1777440586355-1778046901555",
+      "agencyId": "agency-touch",
+      "clientId": "client-trejos-1777440586355",
+      "companyId": "trejos-1777440586355",
+      "concept": "Plan Starter social mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Pendiente",
+      "dueDate": "2026-05-21"
+    },
+    {
+      "id": "invoice-client-agroalimentos-1777421031890-1778046871620",
+      "agencyId": "agency-touch",
+      "clientId": "client-agroalimentos-1777421031890",
+      "companyId": "agroalimentos-1777421031890",
+      "concept": "Plan Starter social mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Pendiente",
+      "dueDate": "2026-05-21"
+    },
+    {
+      "id": "invoice-client-verde-lima-1778045811309",
+      "clientId": "client-verde-lima",
+      "companyId": "verde-lima",
+      "concept": "Plan Starter mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Pendiente",
+      "dueDate": "2026-05-21"
+    },
+    {
+      "id": "invoice-client-casa-norte-1778045207776",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "issuerCompanyId": "agroalimentos-1777421031890",
+      "documentType": "Cuenta de cobro",
+      "concept": "Servicios de marketing digital",
+      "amount": 609000,
+      "currency": "COP",
+      "status": "Pagada",
+      "issueDate": "2026-05-06",
+      "dueDate": "2026-05-10",
+      "observations": "Servicios prestados segun plan seleccionado. Gracias por confiar en nuestro equipo.",
+      "signatureName": "",
+      "lines": [
+        {
+          "serviceId": "pro",
+          "quantity": 1,
+          "price": 350000
+        },
+        {
+          "serviceId": "hosting",
+          "quantity": 1,
+          "price": 180000
+        },
+        {
+          "serviceId": "starter",
+          "quantity": 1,
+          "price": 79000
+        }
+      ],
+      "paidAt": "2026-05-06T05:54:29.404Z"
+    },
+    {
+      "id": "invoice-client-touch-1777563844102-1778044815648",
+      "clientId": "client-touch-1777563844102",
+      "companyId": "touch-1777563844102",
+      "concept": "Plan Starter mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Pagada",
+      "dueDate": "2026-05-21",
+      "paidAt": "2026-05-06T05:22:05.292Z"
+    },
+    {
+      "id": "invoice-client-casa-norte-1778044471863",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "concept": "Plan Pro mensual",
+      "amount": 149,
+      "currency": "USD",
+      "status": "Pagada",
+      "dueDate": "2026-05-18",
+      "paidAt": "2026-05-06T05:22:01.727Z"
+    },
+    {
+      "id": "invoice-client-agroalimentos-1777421031890-1778044459711",
+      "clientId": "client-agroalimentos-1777421031890",
+      "companyId": "agroalimentos-1777421031890",
+      "concept": "Plan Starter mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Pagada",
+      "dueDate": "2026-05-21",
+      "paidAt": "2026-05-06T05:22:02.577Z"
+    },
+    {
+      "id": "invoice-client-verde-lima-1778044455310",
+      "clientId": "client-verde-lima",
+      "companyId": "verde-lima",
+      "concept": "Plan Starter mensual",
+      "amount": 79,
+      "currency": "USD",
+      "status": "Pagada",
+      "dueDate": "2026-05-21",
+      "paidAt": "2026-05-06T05:22:00.529Z"
+    },
+    {
+      "id": "invoice-casa-norte",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "concept": "Plan Pro mensual",
+      "amount": 149,
+      "currency": "USD",
+      "status": "Pagada",
+      "dueDate": "2026-05-18",
+      "paidAt": "2026-05-06T05:14:28.209Z"
+    }
+  ],
+  "billingDraft": {
+    "documentType": "Factura",
+    "issuerCompanyId": "trejos-1777440586355",
+    "clientId": "client-casa-norte",
+    "description": "Dominio anual",
+    "issueDate": "2026-05-06",
+    "dueDate": "2026-05-11",
+    "observations": "Servicios prestados segun plan seleccionado. Gracias por confiar en nuestro equipo.",
+    "signatureName": "",
+    "lines": [
+      {
+        "serviceId": "domain",
+        "quantity": 1,
+        "price": 85000
+      }
+    ]
+  },
+  "agencyServices": [
+    {
+      "id": "starter",
+      "name": "Plan Starter social",
+      "price": 79000,
+      "group": "Contenido"
+    },
+    {
+      "id": "pro",
+      "name": "Plan Pro social",
+      "price": 350000,
+      "group": "Contenido"
+    },
+    {
+      "id": "agency",
+      "name": "Plan Agencia",
+      "price": 700000,
+      "group": "Contenido"
+    },
+    {
+      "id": "reels",
+      "name": "Paquete de reels",
+      "price": 280000,
+      "group": "Produccion"
+    },
+    {
+      "id": "ads",
+      "name": "Campanas Meta Ads",
+      "price": 420000,
+      "group": "Publicidad"
+    },
+    {
+      "id": "hosting",
+      "name": "Hosting administrado",
+      "price": 180000,
+      "group": "Web"
+    },
+    {
+      "id": "domain",
+      "name": "Dominio anual",
+      "price": 85000,
+      "group": "Web"
+    },
+    {
+      "id": "website",
+      "name": "Pagina web landing",
+      "price": 1200000,
+      "group": "Web"
+    },
+    {
+      "id": "chatbot",
+      "name": "Chatbot y soporte",
+      "price": 450000,
+      "group": "Automatizacion"
+    },
+    {
+      "id": "ai-content",
+      "name": "Guiones e IA creativa",
+      "price": 250000,
+      "group": "IA"
+    }
+  ],
+  "activeAgencyId": "agency-touch",
+  "agencies": [
+    {
+      "id": "agency-touch",
+      "name": "Touch Agencia",
+      "ownerUserId": "demo-profile",
+      "billingEmail": "admin@touch.com.co"
+    }
+  ],
+  "serviceOrders": [
+    {
+      "id": "order-client-casa-norte-domain-1778049215123",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "domain",
+      "serviceName": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "provisioning": {
+        "domain": "",
+        "contactEmail": "admin@casanortecafe.com",
+        "hostingPlan": "",
+        "status": "Conector pendiente",
+        "lastResult": {
+          "ready": false,
+          "automated": true,
+          "serviceId": "domain",
+          "domain": "",
+          "actions": [
+            {
+              "ready": false,
+              "provider": "eNom",
+              "missingFields": [
+                "domain"
+              ],
+              "message": "Falta un dominio válido para comprar en eNom."
+            }
+          ]
+        },
+        "updatedAt": "2026-05-06T06:33:35.172Z"
+      },
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:33:35.123Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para dominio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:35.123Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Verificar dominio",
+            "detail": "Validar disponibilidad y datos del titular.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Compra eNom",
+            "detail": "Ejecutar compra cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "DNS inicial",
+            "detail": "Configurar registros base para web, correo o hosting.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Renovacion",
+            "detail": "Guardar fecha de vencimiento y recordatorio anual.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:33:35.123Z",
+      "updatedAt": "2026-05-06T06:33:35.172Z"
+    },
+    {
+      "id": "order-client-casa-norte-chatbot-1778049214156",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "chatbot",
+      "serviceName": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Completado",
+      "provisioning": {
+        "domain": "",
+        "contactEmail": "admin@casanortecafe.com",
+        "hostingPlan": "",
+        "status": "No requerido"
+      },
+      "automation": {
+        "status": "Completada",
+        "startedAt": "2026-05-06T06:33:34.156Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para chatbot.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:34.157Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Base de preguntas",
+            "detail": "Recolectar preguntas frecuentes, tono y productos.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:47.872Z"
+          },
+          {
+            "id": "step-3",
+            "title": "Flujo conversacional",
+            "detail": "Crear bienvenida, rutas y captura de leads.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:48.523Z"
+          },
+          {
+            "id": "step-4",
+            "title": "Instalacion",
+            "detail": "Preparar widget/canal cuando el conector esté activo.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:49.156Z"
+          },
+          {
+            "id": "step-5",
+            "title": "Pruebas",
+            "detail": "Validar respuestas, leads y handoff a soporte.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:42.724Z"
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:33:34.156Z",
+      "updatedAt": "2026-05-06T06:33:55.639Z"
+    },
+    {
+      "id": "order-client-casa-norte-website-1778049212439",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "website",
+      "serviceName": "Pagina web landing",
+      "amount": 1200000,
+      "currency": "COP",
+      "status": "Completado",
+      "provisioning": {
+        "domain": "",
+        "contactEmail": "admin@casanortecafe.com",
+        "hostingPlan": "",
+        "status": "Conector pendiente",
+        "lastResult": {
+          "ready": false,
+          "automated": true,
+          "serviceId": "website",
+          "domain": "",
+          "actions": [
+            {
+              "ready": false,
+              "provider": "cPanel/WHM",
+              "missingFields": [
+                "domain"
+              ],
+              "message": "Falta dominio para crear la cuenta de hosting."
+            }
+          ]
+        },
+        "updatedAt": "2026-05-06T06:34:13.897Z"
+      },
+      "automation": {
+        "status": "Completada",
+        "startedAt": "2026-05-06T06:33:32.440Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para iniciar el sitio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:32.440Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief web",
+            "detail": "Recolectar logo, textos, secciones, dominio y referencias.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:58.140Z"
+          },
+          {
+            "id": "step-3",
+            "title": "Estructura IA",
+            "detail": "Crear mapa de página, copy base y propuesta visual.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:58.772Z"
+          },
+          {
+            "id": "step-4",
+            "title": "Produccion web",
+            "detail": "Diseñar y montar la landing en el entorno preparado.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:59.673Z"
+          },
+          {
+            "id": "step-5",
+            "title": "Publicacion",
+            "detail": "Conectar dominio, revisar responsive y entregar enlace.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:34:00.390Z"
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:33:32.439Z",
+      "updatedAt": "2026-05-06T06:34:14.672Z"
+    },
+    {
+      "id": "order-client-casa-norte-hosting-1778049210905",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "hosting",
+      "serviceName": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "provisioning": {
+        "domain": "",
+        "contactEmail": "admin@casanortecafe.com",
+        "hostingPlan": "",
+        "status": "Conector pendiente",
+        "lastResult": {
+          "ready": false,
+          "automated": true,
+          "serviceId": "hosting",
+          "domain": "",
+          "actions": [
+            {
+              "ready": false,
+              "provider": "cPanel/WHM",
+              "missingFields": [
+                "domain"
+              ],
+              "message": "Falta dominio para crear la cuenta de hosting."
+            }
+          ]
+        },
+        "updatedAt": "2026-05-06T06:33:30.958Z"
+      },
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:33:30.905Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para el hosting.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:30.905Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Validar dominio",
+            "detail": "Confirmar dominio principal y necesidades de correo/DNS.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Crear hosting",
+            "detail": "Preparar cuenta cPanel cuando la API esté conectada.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configurar DNS",
+            "detail": "Apuntar registros y verificar propagación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Entregar accesos",
+            "detail": "Enviar resumen seguro y fecha de renovación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:33:30.905Z",
+      "updatedAt": "2026-05-06T06:33:30.958Z"
+    },
+    {
+      "id": "order-client-casa-norte-starter-1778049203374",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "starter",
+      "serviceName": "Plan Starter social",
+      "amount": 79000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "provisioning": {
+        "domain": "",
+        "contactEmail": "admin@casanortecafe.com",
+        "hostingPlan": "",
+        "status": "No requerido"
+      },
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:33:23.374Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada y vinculada al cliente.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:33:23.374Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief del cliente",
+            "detail": "Solicitar objetivo, referencias, fechas y aprobador.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Produccion",
+            "detail": "Ejecutar el servicio con recursos internos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Entrega",
+            "detail": "Enviar avance al cliente y cerrar pendientes.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:33:23.374Z"
+    },
+    {
+      "id": "order-client-casa-norte-landing-domain-1778048494567-1778048661564",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "domain",
+      "serviceName": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Completado",
+      "source": "landing",
+      "automation": {
+        "status": "Completada",
+        "startedAt": "2026-05-06T06:24:21.564Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para dominio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:24:21.564Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Verificar dominio",
+            "detail": "Validar disponibilidad y datos del titular.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:34:22.407Z"
+          },
+          {
+            "id": "step-3",
+            "title": "Compra eNom",
+            "detail": "Ejecutar compra cuando el conector esté activo.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:34:23.022Z"
+          },
+          {
+            "id": "step-4",
+            "title": "DNS inicial",
+            "detail": "Configurar registros base para web, correo o hosting.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:34:23.822Z"
+          },
+          {
+            "id": "step-5",
+            "title": "Renovacion",
+            "detail": "Guardar fecha de vencimiento y recordatorio anual.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:34:24.439Z"
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:21:34.567Z",
+      "updatedAt": "2026-05-06T06:34:24.439Z"
+    },
+    {
+      "id": "order-client-casa-norte-landing-hosting-1778048496466-1778048661564",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "hosting",
+      "serviceName": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:24:21.564Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para el hosting.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:24:21.564Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Validar dominio",
+            "detail": "Confirmar dominio principal y necesidades de correo/DNS.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Crear hosting",
+            "detail": "Preparar cuenta cPanel cuando la API esté conectada.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configurar DNS",
+            "detail": "Apuntar registros y verificar propagación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Entregar accesos",
+            "detail": "Enviar resumen seguro y fecha de renovación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:21:36.466Z"
+    },
+    {
+      "id": "order-client-casa-norte-landing-ads-1778048502816-1778048661564",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "ads",
+      "serviceName": "Campanas Meta Ads",
+      "amount": 420000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:24:21.564Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para campaña.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:24:21.564Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief de campaña",
+            "detail": "Objetivo, audiencia, oferta, presupuesto y fechas.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Creativos",
+            "detail": "Preparar copies, piezas y variaciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configuracion Meta",
+            "detail": "Crear campaña cuando Meta Ads esté conectado.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Reporte",
+            "detail": "Registrar resultados y próximas optimizaciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      },
+      "createdAt": "2026-05-06T06:21:42.816Z"
+    },
+    {
+      "id": "order-client-casa-norte-website-1778048463468",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "website",
+      "serviceName": "Pagina web landing",
+      "amount": 1200000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:21:03.468Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para iniciar el sitio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief web",
+            "detail": "Recolectar logo, textos, secciones, dominio y referencias.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Estructura IA",
+            "detail": "Crear mapa de página, copy base y propuesta visual.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Produccion web",
+            "detail": "Diseñar y montar la landing en el entorno preparado.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Publicacion",
+            "detail": "Conectar dominio, revisar responsive y entregar enlace.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-chatbot-1778048462184",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "chatbot",
+      "serviceName": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:21:02.184Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para chatbot.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Base de preguntas",
+            "detail": "Recolectar preguntas frecuentes, tono y productos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Flujo conversacional",
+            "detail": "Crear bienvenida, rutas y captura de leads.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Instalacion",
+            "detail": "Preparar widget/canal cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Pruebas",
+            "detail": "Validar respuestas, leads y handoff a soporte.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-ai-content-1778048460184",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "ai-content",
+      "serviceName": "Guiones e IA creativa",
+      "amount": 250000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:21:00.184Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para IA creativa.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Perfil del cliente",
+            "detail": "Definir tono, oferta, audiencia y objeciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Prompts base",
+            "detail": "Crear prompts para guiones, copies e imágenes.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Calendario IA",
+            "detail": "Proponer ideas y piezas para la empresa.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Aprobacion",
+            "detail": "Enviar selección editable al cliente.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-ads-1778048452418",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "ads",
+      "serviceName": "Campanas Meta Ads",
+      "amount": 420000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:20:52.418Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para campaña.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief de campaña",
+            "detail": "Objetivo, audiencia, oferta, presupuesto y fechas.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Creativos",
+            "detail": "Preparar copies, piezas y variaciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configuracion Meta",
+            "detail": "Crear campaña cuando Meta Ads esté conectado.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Reporte",
+            "detail": "Registrar resultados y próximas optimizaciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-reels-1778048450301",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "reels",
+      "serviceName": "Paquete de reels",
+      "amount": 280000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:20:50.301Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para reels.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Guiones",
+            "detail": "Generar hooks, escenas, CTA y notas de producción.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Recursos",
+            "detail": "Seleccionar videos desde biblioteca o Drive.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Edicion",
+            "detail": "Preparar corte, subtítulos y portada.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Calendario",
+            "detail": "Programar piezas y crear trabajos por red.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-agency-1778048446817",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "agency",
+      "serviceName": "Plan Agencia",
+      "amount": 700000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:20:46.817Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada y vinculada al cliente.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief del cliente",
+            "detail": "Solicitar objetivo, referencias, fechas y aprobador.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Produccion",
+            "detail": "Ejecutar el servicio con recursos internos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Entrega",
+            "detail": "Enviar avance al cliente y cerrar pendientes.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-starter-1778048445017",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "starter",
+      "serviceName": "Plan Starter social",
+      "amount": 79000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:20:45.017Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada y vinculada al cliente.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief del cliente",
+            "detail": "Solicitar objetivo, referencias, fechas y aprobador.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Produccion",
+            "detail": "Ejecutar el servicio con recursos internos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Entrega",
+            "detail": "Enviar avance al cliente y cerrar pendientes.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-domain-1778048311018",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "domain",
+      "serviceName": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Completado",
+      "createdAt": "2026-05-06T06:18:31.018Z",
+      "updatedAt": "2026-05-06T06:19:20.184Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para dominio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Verificar dominio",
+            "detail": "Validar disponibilidad y datos del titular.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Compra eNom",
+            "detail": "Ejecutar compra cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "DNS inicial",
+            "detail": "Configurar registros base para web, correo o hosting.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Renovacion",
+            "detail": "Guardar fecha de vencimiento y recordatorio anual.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-starter-1778048291035",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "starter",
+      "serviceName": "Plan Starter social",
+      "amount": 79000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "createdAt": "2026-05-06T06:18:11.035Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada y vinculada al cliente.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief del cliente",
+            "detail": "Solicitar objetivo, referencias, fechas y aprobador.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Produccion",
+            "detail": "Ejecutar el servicio con recursos internos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Entrega",
+            "detail": "Enviar avance al cliente y cerrar pendientes.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-website-1778048014015-1778048029526",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "website",
+      "serviceName": "Pagina web landing",
+      "amount": 1200000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:13:34.016Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para iniciar el sitio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief web",
+            "detail": "Recolectar logo, textos, secciones, dominio y referencias.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Estructura IA",
+            "detail": "Crear mapa de página, copy base y propuesta visual.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Produccion web",
+            "detail": "Diseñar y montar la landing en el entorno preparado.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Publicacion",
+            "detail": "Conectar dominio, revisar responsive y entregar enlace.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-hosting-1778047845769-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "hosting",
+      "serviceName": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:45.769Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para el hosting.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Validar dominio",
+            "detail": "Confirmar dominio principal y necesidades de correo/DNS.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Crear hosting",
+            "detail": "Preparar cuenta cPanel cuando la API esté conectada.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configurar DNS",
+            "detail": "Apuntar registros y verificar propagación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Entregar accesos",
+            "detail": "Enviar resumen seguro y fecha de renovación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-hosting-1778047846869-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "hosting",
+      "serviceName": "Hosting administrado",
+      "amount": 180000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:46.869Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para el hosting.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Validar dominio",
+            "detail": "Confirmar dominio principal y necesidades de correo/DNS.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Crear hosting",
+            "detail": "Preparar cuenta cPanel cuando la API esté conectada.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configurar DNS",
+            "detail": "Apuntar registros y verificar propagación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Entregar accesos",
+            "detail": "Enviar resumen seguro y fecha de renovación.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-domain-1778047847620-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "domain",
+      "serviceName": "Dominio anual",
+      "amount": 85000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:47.620Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para dominio.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Verificar dominio",
+            "detail": "Validar disponibilidad y datos del titular.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Compra eNom",
+            "detail": "Ejecutar compra cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "DNS inicial",
+            "detail": "Configurar registros base para web, correo o hosting.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Renovacion",
+            "detail": "Guardar fecha de vencimiento y recordatorio anual.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-chatbot-1778047851668-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "chatbot",
+      "serviceName": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:51.668Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para chatbot.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Base de preguntas",
+            "detail": "Recolectar preguntas frecuentes, tono y productos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Flujo conversacional",
+            "detail": "Crear bienvenida, rutas y captura de leads.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Instalacion",
+            "detail": "Preparar widget/canal cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Pruebas",
+            "detail": "Validar respuestas, leads y handoff a soporte.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-chatbot-1778047852819-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "chatbot",
+      "serviceName": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:52.819Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para chatbot.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Base de preguntas",
+            "detail": "Recolectar preguntas frecuentes, tono y productos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Flujo conversacional",
+            "detail": "Crear bienvenida, rutas y captura de leads.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Instalacion",
+            "detail": "Preparar widget/canal cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Pruebas",
+            "detail": "Validar respuestas, leads y handoff a soporte.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-reels-1778047853752-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "reels",
+      "serviceName": "Paquete de reels",
+      "amount": 280000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:53.752Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para reels.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Guiones",
+            "detail": "Generar hooks, escenas, CTA y notas de producción.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Recursos",
+            "detail": "Seleccionar videos desde biblioteca o Drive.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Edicion",
+            "detail": "Preparar corte, subtítulos y portada.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Calendario",
+            "detail": "Programar piezas y crear trabajos por red.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-chatbot-1778047855152-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "chatbot",
+      "serviceName": "Chatbot y soporte",
+      "amount": 450000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:10:55.152Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para chatbot.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Base de preguntas",
+            "detail": "Recolectar preguntas frecuentes, tono y productos.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Flujo conversacional",
+            "detail": "Crear bienvenida, rutas y captura de leads.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Instalacion",
+            "detail": "Preparar widget/canal cuando el conector esté activo.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Pruebas",
+            "detail": "Validar respuestas, leads y handoff a soporte.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "order-client-casa-norte-landing-ads-1778047940550-1778047988433",
+      "agencyId": "agency-touch",
+      "clientId": "client-casa-norte",
+      "companyId": "casa-norte",
+      "serviceId": "ads",
+      "serviceName": "Campanas Meta Ads",
+      "amount": 420000,
+      "currency": "COP",
+      "status": "Solicitado",
+      "source": "landing",
+      "createdAt": "2026-05-06T06:12:20.550Z",
+      "automation": {
+        "status": "Activa",
+        "startedAt": "2026-05-06T06:26:59.846Z",
+        "steps": [
+          {
+            "id": "step-1",
+            "title": "Cobro creado",
+            "detail": "Cuenta de cobro generada para campaña.",
+            "status": "Completado",
+            "completedAt": "2026-05-06T06:26:59.846Z"
+          },
+          {
+            "id": "step-2",
+            "title": "Brief de campaña",
+            "detail": "Objetivo, audiencia, oferta, presupuesto y fechas.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-3",
+            "title": "Creativos",
+            "detail": "Preparar copies, piezas y variaciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-4",
+            "title": "Configuracion Meta",
+            "detail": "Crear campaña cuando Meta Ads esté conectado.",
+            "status": "Pendiente",
+            "completedAt": ""
+          },
+          {
+            "id": "step-5",
+            "title": "Reporte",
+            "detail": "Registrar resultados y próximas optimizaciones.",
+            "status": "Pendiente",
+            "completedAt": ""
+          }
+        ]
+      }
+    }
+  ]
+}

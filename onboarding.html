@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configurar empresa | Flowpost Studio</title>
+    <meta name="description" content="Configura tu primera empresa, redes y carpeta de contenido en Flowpost Studio." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="onboarding-page">
+    <main class="onboarding-shell">
+      <section class="onboarding-intro">
+        <a class="marketing-brand" href="landing.html" aria-label="Flowpost Studio">
+          <span class="brand-mark">F</span>
+          <span><strong>Flowpost</strong> Studio</span>
+        </a>
+        <h1>Configura tu primer espacio de trabajo.</h1>
+        <p>
+          Crea la empresa, elige redes y deja lista la carpeta donde viviran los videos aprobados. Despues podras sumar mas empresas segun tu plan.
+        </p>
+        <ol class="onboarding-steps" aria-label="Pasos de configuracion">
+          <li><span>1</span>Empresa</li>
+          <li><span>2</span>Redes</li>
+          <li><span>3</span>Biblioteca</li>
+        </ol>
+      </section>
+
+      <form class="onboarding-card" id="onboardingForm">
+        <div class="section-heading">
+          <h2>Primera empresa</h2>
+          <p>Esta informacion alimenta calendario, biblioteca, cuentas y tono de IA.</p>
+        </div>
+
+        <div class="onboarding-grid">
+          <label class="field">
+            <span>Nombre de la empresa</span>
+            <input id="onboardingCompanyName" type="text" placeholder="Verde Lima Studio" required />
+          </label>
+
+          <label class="field">
+            <span>Usuario principal</span>
+            <input id="onboardingHandle" type="text" placeholder="@verdelimastudio" />
+          </label>
+
+          <label class="field">
+            <span>Tipo de negocio</span>
+            <select id="onboardingBusinessType">
+              <option value="Pyme">Pyme</option>
+              <option value="Marca personal">Marca personal</option>
+              <option value="Agencia">Agencia</option>
+              <option value="Ecommerce">Ecommerce</option>
+              <option value="Restaurante">Restaurante</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Color principal</span>
+            <input id="onboardingColor" type="color" value="#0095f6" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Tono de voz</span>
+          <textarea id="onboardingVoice" rows="3" placeholder="Cercano, claro, comercial y con energia."></textarea>
+        </label>
+
+        <section class="onboarding-network-box" aria-label="Redes iniciales">
+          <strong>Redes que vas a gestionar</strong>
+          <div class="onboarding-networks">
+            <label><input type="checkbox" name="network" value="Instagram" checked /> Instagram</label>
+            <label><input type="checkbox" name="network" value="Facebook" checked /> Facebook</label>
+            <label><input type="checkbox" name="network" value="TikTok" checked /> TikTok</label>
+            <label><input type="checkbox" name="network" value="LinkedIn" /> LinkedIn</label>
+            <label><input type="checkbox" name="network" value="YouTube" /> YouTube</label>
+          </div>
+        </section>
+
+        <div class="onboarding-grid">
+          <label class="field">
+            <span>Proveedor de biblioteca</span>
+            <select id="onboardingProvider">
+              <option value="Google Drive">Google Drive</option>
+              <option value="iCloud">iCloud</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Carpeta de contenido aprobado</span>
+            <input id="onboardingFolder" type="text" placeholder="/Mi empresa/Videos aprobados" />
+          </label>
+        </div>
+
+        <p class="onboarding-status" id="onboardingStatus" aria-live="polite"></p>
+
+        <footer class="onboarding-actions">
+          <a class="secondary-button" href="index.html">Saltar por ahora</a>
+          <button class="primary-button" type="submit">Crear espacio de trabajo</button>
+        </footer>
+      </form>
+    </main>
+    <script src="onboarding.js"></script>
+  </body>
+</html>

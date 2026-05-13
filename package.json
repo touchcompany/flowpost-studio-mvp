@@ -1,0 +1,19 @@
+{
+  "name": "flowpost-studio-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "start:prod": "node server.js",
+    "build": "node scripts/build.js",
+    "check": "node --check app.js && node --check login.js && node --check onboarding.js && node --check server.js && node --check lib/data-store.js && node --check lib/local-store.js && node --check lib/supabase-store.js && node --check lib/oauth-utils.js",
+    "smoke": "node scripts/smoke.js",
+    "production:check": "node scripts/check-production.js",
+    "live:check": "node scripts/check-live.js",
+    "supabase:migrate": "node scripts/migrate-supabase.js",
+    "deploy:package": "node scripts/package-deploy.js"
+  },
+  "description": "MVP de publicacion social con empresas, biblioteca de videos y backend JSON local."
+}

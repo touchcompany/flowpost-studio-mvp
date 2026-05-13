@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowpost Studio</title>
+    <meta
+      name="description"
+      content="MVP simple para publicar y programar contenido en Instagram, Facebook y TikTok."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell" id="appShell">
+      <aside class="sidebar" aria-label="Navegacion principal">
+        <div class="sidebar-head">
+          <a class="brand" href="#compose" aria-label="Flowpost Studio">
+            <span class="brand-mark">F</span>
+            <span>
+              <strong>Flowpost</strong>
+              <small>Studio</small>
+            </span>
+          </a>
+          <button class="panel-toggle" id="sidebarToggle" type="button" aria-label="Minimizar menu">
+            <i data-lucide="panel-left-close"></i>
+          </button>
+        </div>
+
+        <nav class="nav-list">
+          <a class="nav-item active" href="#dashboard" data-view-link="dashboard">
+            <span class="nav-icon"><i data-lucide="home"></i></span>
+            Inicio
+          </a>
+          <a class="nav-item" href="#compose" data-view-link="compose">
+            <span class="nav-icon"><i data-lucide="plus-square"></i></span>
+            Crear
+          </a>
+          <a class="nav-item" href="#companies" data-view-link="companies">
+            <span class="nav-icon"><i data-lucide="building-2"></i></span>
+            Empresas
+          </a>
+          <a class="nav-item" href="#library" data-view-link="library">
+            <span class="nav-icon"><i data-lucide="clapperboard"></i></span>
+            Biblioteca
+          </a>
+          <a class="nav-item" href="#calendar" data-view-link="calendar">
+            <span class="nav-icon"><i data-lucide="calendar-days"></i></span>
+            Calendario
+          </a>
+          <a class="nav-item" href="#clients" data-view-link="clients">
+            <span class="nav-icon"><i data-lucide="users"></i></span>
+            Clientes
+          </a>
+          <a class="nav-item" href="#store" data-view-link="store">
+            <span class="nav-icon"><i data-lucide="shopping-bag"></i></span>
+            Tienda
+          </a>
+          <a class="nav-item" href="#accounts" data-view-link="accounts">
+            <span class="nav-icon"><i data-lucide="badge-check"></i></span>
+            Cuentas
+          </a>
+        </nav>
+
+        <section class="sync-card" aria-label="Estado de integraciones">
+          <span class="status-dot" id="connectionDot"></span>
+          <div>
+            <strong id="connectionMode">Modo MVP</strong>
+            <p id="connectionDetail">Publicacion simulada, lista para conectar APIs.</p>
+            <div class="backup-actions">
+              <button type="button" id="exportBackupButton">
+                <i data-lucide="download"></i>
+                Exportar
+              </button>
+              <button type="button" id="importBackupButton">
+                <i data-lucide="upload"></i>
+                Importar
+              </button>
+              <input id="importBackupInput" type="file" accept="application/json" hidden />
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="main-panel">
+        <header class="topbar">
+          <div>
+            <p class="workspace-label">Marca activa</p>
+            <h1 id="activeCompanyName">Casa Norte Cafe</h1>
+          </div>
+          <label class="company-switcher">
+            <span>Empresa</span>
+            <select id="activeCompanySelect"></select>
+          </label>
+          <button class="icon-button" id="newPostButton" type="button" aria-label="Crear publicacion">
+            <i data-lucide="plus"></i>
+          </button>
+          <section class="account-chip" id="accountChip" aria-label="Cuenta activa">
+            <span class="account-avatar" id="accountAvatar">M</span>
+            <div>
+              <strong id="accountName">Invitado MVP</strong>
+              <p id="accountPlan">Plan local</p>
+            </div>
+            <button type="button" id="logoutButton">Salir</button>
+          </section>
+        </header>
+
+        <section class="mobile-sync-card" aria-label="Estado y respaldo local">
+          <span class="status-dot" id="mobileConnectionDot"></span>
+          <div>
+            <strong id="mobileConnectionMode">Modo MVP</strong>
+            <p id="mobileConnectionDetail">Publicacion simulada, lista para conectar APIs.</p>
+          </div>
+          <div class="backup-actions compact">
+            <button type="button" id="mobileExportBackupButton" aria-label="Exportar respaldo">
+              <i data-lucide="download"></i>
+            </button>
+            <button type="button" id="mobileImportBackupButton" aria-label="Importar respaldo">
+              <i data-lucide="upload"></i>
+            </button>
+          </div>
+        </section>
+
+        <section class="view active" id="dashboard" data-view="dashboard" aria-label="Dashboard">
+          <div class="section-heading">
+            <h2>Inicio</h2>
+            <p>Vista general de la empresa activa, contenido, cobros y conexiones.</p>
+          </div>
+          <div id="dashboardPanel"></div>
+        </section>
+
+        <section class="view" id="compose" data-view="compose" aria-label="Crear publicacion">
+          <div class="composer-layout">
+            <form class="composer" id="composerForm">
+              <div class="section-heading">
+                <h2>Crear publicacion</h2>
+                <p>Una pieza, versiones adaptadas por plataforma.</p>
+              </div>
+
+              <label class="field">
+                <span>Formato</span>
+                <select id="contentType">
+                  <option value="video">Video / Reel</option>
+                  <option value="carousel">Carrusel</option>
+                  <option value="post">Post</option>
+                  <option value="story">Historia</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Titulo</span>
+                <input id="postTitle" type="text" placeholder="Lanzamiento menu de temporada" />
+              </label>
+
+              <label class="field">
+                <span>Copy</span>
+                <textarea
+                  id="caption"
+                  rows="5"
+                  placeholder="Nuevo menu de temporada. Reservas abiertas para esta semana."
+                ></textarea>
+              </label>
+
+              <div class="ai-row">
+                <button class="secondary-button icon-text-button" id="generateCopyButton" type="button">
+                  <i data-lucide="sparkles"></i>
+                  Generar copy con IA
+                </button>
+                <span id="aiStatus">Modo mock si no hay API key.</span>
+              </div>
+
+              <label class="field">
+                <span>Notas internas</span>
+                <textarea id="postNotes" rows="3" placeholder="Pendiente revisar portada y CTA."></textarea>
+              </label>
+
+              <section class="media-source" aria-label="Video de la publicacion">
+                <div class="section-heading small">
+                  <h2>Video</h2>
+                  <p>Selecciona desde la carpeta conectada de esta empresa.</p>
+                </div>
+
+                <div class="media-location" id="mediaLocation"></div>
+                <div class="video-library" id="composerVideoLibrary"></div>
+
+                <details class="manual-link">
+                  <summary>Pegar enlace manual</summary>
+                  <label class="field compact">
+                    <span>Ruta o enlace del video</span>
+                    <input
+                      id="videoSource"
+                      type="url"
+                      placeholder="https://drive.google.com/... o https://www.icloud.com/iclouddrive/..."
+                    />
+                  </label>
+                </details>
+
+                <div class="media-status" id="mediaStatus">
+                  <span class="media-provider">Sin video</span>
+                  <strong>Agrega el enlace antes de publicar video, reel o historia.</strong>
+                </div>
+              </section>
+
+              <section class="cover-editor" aria-label="Portada 1350 por 1080">
+                <div class="section-heading small">
+                  <h2>Portada</h2>
+                  <p>Define como se ve en vertical, feed y recorte cuadrado.</p>
+                </div>
+
+                <div class="cover-tools">
+                  <label class="field compact">
+                    <span>Estilo</span>
+                    <select id="coverStyle">
+                      <option value="season">Temporada</option>
+                      <option value="launch">Lanzamiento</option>
+                      <option value="behind">Detras de camaras</option>
+                    </select>
+                  </label>
+
+                  <label class="field compact">
+                    <span>Titulo portada</span>
+                    <input id="coverTitle" type="text" value="Nuevo menu" />
+                  </label>
+
+                  <label class="field compact">
+                    <span>Vista principal</span>
+                    <select id="coverFormat">
+                      <option value="story">Vertical 1080 x 1920</option>
+                      <option value="feed">Feed vertical 1080 x 1350</option>
+                      <option value="landscape">Horizontal 1920 x 1080</option>
+                      <option value="square">Cuadrado 1080 x 1080</option>
+                    </select>
+                  </label>
+
+                  <label class="field compact">
+                    <span>Imagen</span>
+                    <input id="coverUpload" type="file" accept="image/*" />
+                  </label>
+
+                  <label class="field compact">
+                    <span>Ajuste</span>
+                    <select id="coverFit">
+                      <option value="cover">Rellenar</option>
+                      <option value="contain">Encajar</option>
+                    </select>
+                  </label>
+
+                  <label class="field compact">
+                    <span>Zoom</span>
+                    <input id="coverZoom" type="range" min="100" max="160" value="100" />
+                  </label>
+
+                  <label class="field compact">
+                    <span>Posicion</span>
+                    <input id="coverPosition" type="range" min="0" max="100" value="50" />
+                  </label>
+                </div>
+
+                <div class="cover-workbench">
+                  <div class="cover-stage cover-stage-main is-story" id="coverStage">
+                    <img id="coverImage" alt="" hidden />
+                    <div class="cover-art" id="coverArt">
+                      <span class="cover-orb large"></span>
+                      <span class="cover-orb small"></span>
+                    </div>
+                    <div class="format-guide" aria-hidden="true"></div>
+                    <div class="cover-copy">
+                      <span id="coverCompany">@casanortecafe</span>
+                      <strong id="coverTitlePreview">Nuevo menu</strong>
+                    </div>
+                    <span class="cover-size" id="coverSizeLabel">1080 x 1920</span>
+                  </div>
+
+                  <div class="cover-formats" aria-label="Vistas de portada">
+                    <article class="format-card active" data-cover-format-button="story">
+                      <div class="mini-cover mini-story"></div>
+                      <strong>Reel/Story</strong>
+                      <span>1080 x 1920</span>
+                    </article>
+                    <article class="format-card" data-cover-format-button="feed">
+                      <div class="mini-cover mini-feed"></div>
+                      <strong>Feed vertical</strong>
+                      <span>1080 x 1350</span>
+                    </article>
+                    <article class="format-card" data-cover-format-button="landscape">
+                      <div class="mini-cover mini-landscape"></div>
+                      <strong>Horizontal</strong>
+                      <span>1920 x 1080</span>
+                    </article>
+                    <article class="format-card" data-cover-format-button="square">
+                      <div class="mini-cover mini-square"></div>
+                      <strong>Cuadrado</strong>
+                      <span>1080 x 1080</span>
+                    </article>
+                  </div>
+                </div>
+              </section>
+
+              <div class="platform-picker" aria-label="Plataformas">
+                <label class="platform selected instagram">
+                  <input type="checkbox" name="platform" value="instagram" checked />
+                  <span class="platform-mark social-icon instagram"></span>
+                  <strong>Instagram</strong>
+                </label>
+                <label class="platform selected facebook">
+                  <input type="checkbox" name="platform" value="facebook" checked />
+                  <span class="platform-mark social-icon facebook"></span>
+                  <strong>Facebook</strong>
+                </label>
+                <label class="platform selected tiktok">
+                  <input type="checkbox" name="platform" value="tiktok" checked />
+                  <span class="platform-mark social-icon tiktok"></span>
+                  <strong>TikTok</strong>
+                </label>
+              </div>
+
+              <div class="schedule-row">
+                <label class="switch">
+                  <input type="checkbox" id="scheduleToggle" />
+                  <span></span>
+                  Programar
+                </label>
+
+                <label class="field compact">
+                  <span>Fecha</span>
+                  <input type="date" id="postDate" />
+                </label>
+
+                <label class="field compact">
+                  <span>Hora</span>
+                  <input type="time" id="postTime" />
+                </label>
+
+                <label class="field compact">
+                  <span>Estado</span>
+                  <select id="postStatus">
+                    <option value="Idea">Idea</option>
+                    <option value="En diseño">En diseño</option>
+                    <option value="En revisión">En revisión</option>
+                    <option value="Aprobado">Aprobado</option>
+                    <option value="Programado">Programado</option>
+                    <option value="Publicado">Publicado</option>
+                  </select>
+                </label>
+
+                <label class="field compact legacy-schedule">
+                  <span>Fecha y hora anterior</span>
+                  <input type="datetime-local" id="scheduledAt" />
+                </label>
+              </div>
+
+              <div class="action-row">
+                <button class="primary-button icon-text-button" id="publishButton" type="submit">
+                  <i data-lucide="save"></i>
+                  Guardar publicacion
+                </button>
+                <button class="secondary-button icon-text-button" id="draftButton" type="button">
+                  <i data-lucide="file-clock"></i>
+                  Guardar borrador
+                </button>
+              </div>
+            </form>
+
+            <aside class="preview-panel" aria-label="Vista previa">
+              <div class="phone-preview">
+                <div class="phone-status"></div>
+                <div class="media-frame">
+                  <div class="media-layer one"></div>
+                  <div class="media-layer two"></div>
+                  <span id="previewFormat">Video / Reel</span>
+                </div>
+                <div class="preview-copy">
+                  <strong>@casanortecafe</strong>
+                  <p id="previewCaption">Nuevo menu de temporada. Reservas abiertas para esta semana.</p>
+                </div>
+                <div class="preview-actions">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+
+              <div class="compatibility">
+                <h3>Chequeo automatico</h3>
+                <ul id="checkList"></ul>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="library" data-view="library" aria-label="Biblioteca de videos">
+          <div class="library-layout">
+            <section class="library-source-panel">
+              <div class="section-heading">
+                <h2>Biblioteca</h2>
+                <p>Una carpeta conectada por empresa para elegir videos sin subirlos uno por uno.</p>
+              </div>
+
+              <div class="source-actions">
+                <button class="secondary-button" type="button" data-connect-source="Google Drive">
+                  <i data-lucide="hard-drive"></i>
+                  Conectar Drive
+                </button>
+                <button class="secondary-button" type="button" id="googlePickerButton">
+                  <i data-lucide="folder-open"></i>
+                  Seleccionar desde Drive
+                </button>
+                <button class="secondary-button" type="button" data-connect-source="iCloud">
+                  <i data-lucide="cloud"></i>
+                  Conectar iCloud
+                </button>
+              </div>
+              <div class="media-location large" id="libraryLocation"></div>
+
+              <form class="source-form" id="mediaSourceForm">
+                <label class="field compact">
+                  <span>Proveedor</span>
+                  <select id="mediaProviderSelect">
+                    <option value="Google Drive">Google Drive</option>
+                    <option value="iCloud">iCloud</option>
+                  </select>
+                </label>
+
+                <label class="field compact">
+                  <span>Carpeta de la empresa</span>
+                  <input id="mediaFolderInput" type="text" placeholder="/Marca/Videos aprobados" />
+                </label>
+
+                <button class="primary-button" type="submit">Guardar ubicacion</button>
+              </form>
+            </section>
+
+            <section class="library-browser">
+              <div class="section-heading small">
+                <h2>Videos disponibles</h2>
+                <p id="libraryCompanyLabel">Casa Norte Cafe</p>
+              </div>
+
+              <div class="library-toolbar" aria-label="Filtros de biblioteca">
+                <label class="field compact">
+                  <span>Buscar</span>
+                  <input id="librarySearchInput" type="text" placeholder="Nombre del video" />
+                </label>
+                <label class="field compact">
+                  <span>Origen</span>
+                  <select id="libraryProviderFilter">
+                    <option value="all">Todos</option>
+                    <option value="Google Drive">Google Drive</option>
+                    <option value="iCloud">iCloud</option>
+                    <option value="URL directa">URL directa</option>
+                  </select>
+                </label>
+                <label class="field compact">
+                  <span>Estado</span>
+                  <select id="libraryStatusFilter">
+                    <option value="all">Todos</option>
+                    <option value="ready">Listos</option>
+                    <option value="selected">Seleccionado</option>
+                    <option value="used">Usados</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="video-library large" id="libraryVideoGrid"></div>
+              <section class="video-studio" id="videoStudioPanel" aria-label="Editor rapido de video"></section>
+
+              <form class="video-form" id="videoForm">
+                <div class="section-heading small">
+                  <h2>Agregar video</h2>
+                  <p>Simula el resultado de escoger un archivo desde la API conectada.</p>
+                </div>
+
+                <div class="video-form-grid">
+                  <label class="field compact">
+                    <span>Nombre</span>
+                    <input id="videoTitleInput" type="text" placeholder="Reel lanzamiento" />
+                  </label>
+
+                  <label class="field compact">
+                    <span>Enlace Drive/iCloud</span>
+                    <input id="videoUrlInput" type="url" placeholder="https://drive.google.com/file/d/..." />
+                  </label>
+
+                  <label class="field compact">
+                    <span>Duracion</span>
+                    <input id="videoDurationInput" type="text" placeholder="00:24" />
+                  </label>
+
+                  <label class="field compact">
+                    <span>Tamano</span>
+                    <input id="videoSizeInput" type="text" placeholder="64 MB" />
+                  </label>
+                </div>
+
+                <button class="primary-button" type="submit">Agregar a biblioteca</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="companies" data-view="companies" aria-label="Empresas">
+          <div class="companies-layout">
+            <form class="company-form" id="companyForm">
+              <div class="section-heading">
+                <h2>Empresas</h2>
+                <p>Cada empresa tiene sus propias redes, calendario y cola.</p>
+              </div>
+
+              <label class="field">
+                <span>Nombre empresa</span>
+                <input id="companyNameInput" type="text" placeholder="Nombre de la marca" />
+              </label>
+
+              <label class="field">
+                <span>Usuario base</span>
+                <input id="companyHandleInput" type="text" placeholder="@marca" />
+              </label>
+
+              <label class="field">
+                <span>Descripcion</span>
+                <textarea id="companyDescriptionInput" rows="3" placeholder="Marca de cafe, lifestyle, eventos..."></textarea>
+              </label>
+
+              <label class="field">
+                <span>Tono de voz</span>
+                <input id="companyVoiceInput" type="text" placeholder="Cercano, premium, divertido" />
+              </label>
+
+              <label class="field">
+                <span>Redes sociales</span>
+                <input id="companyNetworksInput" type="text" placeholder="Instagram, Facebook, TikTok" />
+              </label>
+
+              <label class="field color-field">
+                <span>Color principal</span>
+                <input id="companyColorInput" type="color" value="#0095f6" />
+              </label>
+
+              <button class="primary-button" id="companySubmitButton" type="submit">Crear empresa</button>
+              <button class="secondary-button" id="companyCancelButton" type="button" hidden>Cancelar edicion</button>
+            </form>
+
+            <div class="companies-grid" id="companiesGrid"></div>
+          </div>
+        </section>
+
+        <section class="view" id="calendar" data-view="calendar" aria-label="Calendario editorial">
+          <div class="section-heading">
+            <h2>Calendario</h2>
+            <p>Planeacion editorial, guiones, estados y publicaciones por empresa.</p>
+          </div>
+          <div class="summary-strip" id="summaryStrip"></div>
+          <div class="calendar-view-tabs" aria-label="Visualizacion del calendario">
+            <button class="active" type="button" data-calendar-view="week">
+              <i data-lucide="calendar-days"></i>
+              Semana
+            </button>
+            <button type="button" data-calendar-view="day">
+              <i data-lucide="calendar"></i>
+              Dia
+            </button>
+            <button type="button" data-calendar-view="list">
+              <i data-lucide="list"></i>
+              Lista
+            </button>
+            <button type="button" data-calendar-view="kanban">
+              <i data-lucide="columns-3"></i>
+              Kanban
+            </button>
+          </div>
+          <div class="filter-bar" aria-label="Filtros de calendario">
+            <label>
+              <span>Estado</span>
+              <select id="statusFilter">
+                <option value="all">Todos</option>
+                <option value="Idea">Idea</option>
+                <option value="En diseño">En diseño</option>
+                <option value="En revisión">En revisión</option>
+                <option value="Aprobado">Aprobado</option>
+                <option value="Programado">Programado</option>
+                <option value="Publicado">Publicado</option>
+              </select>
+            </label>
+            <label>
+              <span>Plataforma</span>
+              <select id="platformFilter">
+                <option value="all">Todas</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="tiktok">TikTok</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="youtube">YouTube</option>
+              </select>
+            </label>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <div class="calendar-planner-panel" id="calendarPlannerPanel"></div>
+        </section>
+
+        <section class="view" id="clients" data-view="clients" aria-label="Clientes">
+          <div class="section-heading">
+            <h2>Clientes</h2>
+            <p>Control de cuentas, cobros, recursos, notas y automatizaciones de agencia.</p>
+          </div>
+          <div id="clientWorkspacePanel"></div>
+        </section>
+
+        <section class="view" id="store" data-view="store" aria-label="Tienda de servicios">
+          <div class="section-heading">
+            <h2>Tienda</h2>
+            <p>Compra servicios para cada cliente y conviértelos en órdenes, cobros y tareas administrables.</p>
+          </div>
+          <div id="storePanel"></div>
+        </section>
+
+        <section class="view" id="accounts" data-view="accounts" aria-label="Cuentas conectadas">
+          <div class="section-heading">
+            <h2>Cuentas</h2>
+            <p>Conexiones OAuth que despues se enlazan con Meta y TikTok.</p>
+          </div>
+          <section class="plan-panel" id="planPanel" aria-label="Cuenta y plan"></section>
+          <section class="billing-panel" id="billingPanel" aria-label="Pagos y suscripcion"></section>
+          <section class="agency-panel" aria-label="Ecosistema de agencia">
+            <div class="section-heading small">
+              <h2>Agencia OS</h2>
+              <p>Modulos que iremos activando por fases para operar clientes, cobros, sitios y soporte.</p>
+            </div>
+            <div class="agency-grid">
+              <article>
+                <i data-lucide="users"></i>
+                <strong>Clientes</strong>
+                <span>CRM, marcas, responsables y aprobaciones.</span>
+              </article>
+              <article>
+                <i data-lucide="receipt"></i>
+                <strong>Facturacion</strong>
+                <span>Cobros mensuales/anuales y cuentas por plan.</span>
+              </article>
+              <article>
+                <i data-lucide="server-cog"></i>
+                <strong>Hosting</strong>
+                <span>Planes de servidor, cPanel y dominios eNom.</span>
+              </article>
+              <article>
+                <i data-lucide="monitor-smartphone"></i>
+                <strong>Sitios web</strong>
+                <span>Crear, publicar y conectar landing pages.</span>
+              </article>
+              <article>
+                <i data-lucide="bot"></i>
+                <strong>Chatbot</strong>
+                <span>Soporte y respuestas conectables a canales.</span>
+              </article>
+              <article>
+                <i data-lucide="wand-sparkles"></i>
+                <strong>IA creativa</strong>
+                <span>Guiones, copies, imagenes y perfiles de cliente.</span>
+              </article>
+            </div>
+          </section>
+          <section class="client-billing-panel" id="clientBillingPanel" aria-label="Clientes y cobros"></section>
+          <section class="readiness-panel" aria-label="Preparacion para produccion">
+            <div class="section-heading small">
+              <h2>Preparacion para app.touch.com.co</h2>
+              <p>Checklist real para saber que falta antes de vender y conectar APIs.</p>
+            </div>
+            <div class="readiness-summary" id="readinessSummary"></div>
+            <div class="readiness-grid" id="readinessGrid"></div>
+          </section>
+          <section class="diagnostics-panel" aria-label="Estado real del sistema">
+            <div class="section-heading small">
+              <h2>Estado real del sistema</h2>
+              <p>Que funciona ahora, que esta en mock y que falta configurar.</p>
+            </div>
+            <button class="secondary-button icon-text-button" id="refreshDiagnosticsButton" type="button">
+              <i data-lucide="refresh-cw"></i>
+              Probar estado
+            </button>
+            <div class="diagnostics-grid" id="diagnosticsGrid"></div>
+          </section>
+          <section class="technical-panel" aria-label="Configuracion tecnica">
+            <div class="section-heading small">
+              <h2>Configuracion tecnica</h2>
+              <p>Redirect URIs, variables y pasos para conectar APIs reales.</p>
+            </div>
+            <div class="technical-grid" id="technicalGrid"></div>
+          </section>
+          <div class="accounts-grid" id="accountsGrid"></div>
+        </section>
+      </main>
+
+      <aside class="queue-panel" aria-label="Cola de publicacion">
+        <div class="queue-head">
+          <div class="section-heading small">
+            <h2>Cola</h2>
+            <p>Trabajos generados por plataforma.</p>
+          </div>
+          <button class="panel-toggle" id="queueToggle" type="button" aria-label="Minimizar cola">
+            <i data-lucide="panel-right-close"></i>
+          </button>
+        </div>
+        <div class="queue-mini" aria-hidden="true">
+          <i data-lucide="list-checks"></i>
+          <span>Cola</span>
+        </div>
+        <div class="queue-summary" id="queueSummary"></div>
+        <div class="queue-filters" aria-label="Filtros de cola">
+          <label>
+            <span>Estado</span>
+            <select id="queueStatusFilter">
+              <option value="all">Todos</option>
+              <option value="Programado">Programado</option>
+              <option value="Publicado">Publicado</option>
+              <option value="Error">Error</option>
+              <option value="En revisión">En revisión</option>
+            </select>
+          </label>
+          <label>
+            <span>Red</span>
+            <select id="queuePlatformFilter">
+              <option value="all">Todas</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Facebook">Facebook</option>
+              <option value="TikTok">TikTok</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="YouTube">YouTube</option>
+            </select>
+          </label>
+        </div>
+        <div class="queue-list" id="queueList"></div>
+      </aside>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="review-modal" id="reviewModal" hidden>
+      <div class="review-backdrop" data-close-review></div>
+      <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+        <header>
+          <div>
+            <p class="workspace-label">Revision final</p>
+            <h2 id="reviewTitle">Antes de guardar</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeReviewButton" aria-label="Cerrar revision">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+
+        <div class="review-content">
+          <section class="review-preview">
+            <span id="reviewType">Video / Reel</span>
+            <strong id="reviewTitleText">Publicacion</strong>
+            <p id="reviewCopyText"></p>
+          </section>
+
+          <section class="review-details">
+            <div id="reviewPlatforms"></div>
+            <ul id="reviewChecklist"></ul>
+          </section>
+        </div>
+
+        <footer>
+          <button class="secondary-button" type="button" id="cancelReviewButton">Volver a editar</button>
+          <button class="primary-button icon-text-button" type="button" id="confirmReviewButton">
+            <i data-lucide="check-circle-2"></i>
+            Confirmar y guardar
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
