@@ -19,3 +19,6 @@ data/*.tmp
 # OS/editor
 .vscode/
 .idea/
+
+# External/tutorial repos accidentally created inside this folder
+desktop-tutorial/
