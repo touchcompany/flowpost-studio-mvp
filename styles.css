@@ -5687,6 +5687,69 @@ input[type="file"] {
   color: var(--muted);
 }
 
+.deployment-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.deployment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.deployment-grid article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.deployment-grid article button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.deployment-grid strong,
+.deployment-grid p {
+  display: block;
+  margin: 0;
+}
+
+.deployment-grid p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.deployment-commands {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.deployment-commands code {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow-x: auto;
+}
+
 @media (max-width: 880px) {
   .cover-workbench,
   .video-studio-grid,
@@ -5696,6 +5759,8 @@ input[type="file"] {
   .store-layout,
   .store-hero,
   .store-provision-box,
+  .deployment-grid,
+  .deployment-commands,
   .dashboard-metrics,
   .dashboard-grid {
     grid-template-columns: 1fr;

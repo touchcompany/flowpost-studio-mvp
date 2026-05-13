@@ -79,6 +79,7 @@ const calendarPlannerPanel = document.querySelector("#calendarPlannerPanel");
 const accountsGrid = document.querySelector("#accountsGrid");
 const planPanel = document.querySelector("#planPanel");
 const billingPanel = document.querySelector("#billingPanel");
+const deploymentPanel = document.querySelector("#deploymentPanel");
 const clientBillingPanel = document.querySelector("#clientBillingPanel");
 const clientWorkspacePanel = document.querySelector("#clientWorkspacePanel");
 const storePanel = document.querySelector("#storePanel");
@@ -3648,6 +3649,88 @@ async function renderDiagnostics() {
   renderIcons();
 }
 
+function renderDeploymentPanel(status = null) {
+  if (!deploymentPanel) return;
+  const isReady = Boolean(status?.ok);
+  const publicUrl = status?.currentPublicUrl || "https://app.touch.com.co";
+  const pendingGroups = status?.groups
+    ? Object.entries(status.groups)
+        .filter(([, group]) => !group.ready)
+        .map(([name]) => name)
+    : ["supabase", "billing", "cpanel", "enom"];
+  deploymentPanel.innerHTML = `
+    <div class="section-heading small">
+      <h2>GitHub y servidor</h2>
+      <p>Sincroniza cambios y revisa la app en cPanel mientras seguimos desarrollando.</p>
+    </div>
+    <div class="deployment-grid">
+      <article>
+        <span class="status-icon"><i data-lucide="github"></i></span>
+        <div>
+          <strong>Repositorio</strong>
+          <p>github.com/touchcompany/flowpost-studio-mvp</p>
+        </div>
+        <button class="secondary-button icon-text-button" type="button" data-copy-command="git">
+          <i data-lucide="copy"></i>
+          Copiar Git
+        </button>
+      </article>
+      <article>
+        <span class="status-icon"><i data-lucide="server-cog"></i></span>
+        <div>
+          <strong>Servidor</strong>
+          <p>${escapeHtml(publicUrl)}</p>
+        </div>
+        <button class="secondary-button icon-text-button" type="button" data-copy-command="deploy">
+          <i data-lucide="copy"></i>
+          Copiar deploy
+        </button>
+      </article>
+      <article>
+        <span class="status-icon"><i data-lucide="${isReady ? "check-circle-2" : "circle-alert"}"></i></span>
+        <div>
+          <strong>${isReady ? "Produccion lista" : "Pendientes"}</strong>
+          <p>${isReady ? "La configuracion principal esta completa." : pendingGroups.join(", ")}</p>
+        </div>
+        <button class="primary-button icon-text-button" type="button" data-refresh-deployment>
+          <i data-lucide="refresh-cw"></i>
+          Revisar
+        </button>
+      </article>
+    </div>
+    <div class="deployment-commands">
+      <code>npm run check && npm run build && npm run deploy:package</code>
+      <code>npm run live:check</code>
+    </div>
+  `;
+  renderIcons();
+}
+
+async function refreshDeploymentStatus() {
+  try {
+    const response = await fetch("/api/production-readiness", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("readiness unavailable");
+    renderDeploymentPanel(await response.json());
+    showToast("Estado de despliegue actualizado.");
+  } catch {
+    renderDeploymentPanel();
+    showToast("No se pudo consultar el estado de despliegue.");
+  }
+}
+
+async function copyDeploymentCommand(type) {
+  const command =
+    type === "git"
+      ? `git add .\ngit commit -m "Update Flowpost Studio"\ngit push origin main`
+      : `npm run check\nnpm run build\nnpm run deploy:package\nnpm run live:check`;
+  try {
+    await navigator.clipboard.writeText(command);
+    showToast("Comandos copiados.");
+  } catch {
+    showToast(command);
+  }
+}
+
 function renderCompanies() {
   activeCompanyName.textContent = activeCompany().name;
   activeCompanySelect.innerHTML = companies
@@ -4086,6 +4169,19 @@ accountsGrid.addEventListener("click", async (event) => {
 
 refreshDiagnosticsButton.addEventListener("click", renderDiagnostics);
 refreshDiagnosticsButton.addEventListener("click", renderProductionReadinessFromServer);
+
+deploymentPanel.addEventListener("click", (event) => {
+  const refreshButton = event.target.closest("[data-refresh-deployment]");
+  if (refreshButton) {
+    refreshDeploymentStatus();
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-copy-command]");
+  if (copyButton) {
+    copyDeploymentCommand(copyButton.dataset.copyCommand);
+  }
+});
 
 planPanel.addEventListener("click", (event) => {
   const button = event.target.closest("[data-plan-change]");
@@ -4727,6 +4823,7 @@ async function init() {
   renderAccounts();
   renderStorePanel();
   renderDiagnostics();
+  refreshDeploymentStatus();
   renderProductionReadinessFromServer();
   renderCompanies();
   renderMediaLocation();
