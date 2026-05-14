@@ -212,6 +212,14 @@ function cpanelSetup() {
   return providerSetup("cPanel/WHM", ["CPANEL_WHM_HOST", "CPANEL_WHM_USERNAME", "CPANEL_WHM_TOKEN"]);
 }
 
+function cpanelPlanConfig() {
+  return {
+    defaultPlan: process.env.CPANEL_DEFAULT_PLAN || "",
+    hostingPlan: process.env.CPANEL_PLAN_HOSTING || process.env.CPANEL_DEFAULT_PLAN || "",
+    websitePlan: process.env.CPANEL_PLAN_WEBSITE || process.env.CPANEL_DEFAULT_PLAN || "",
+  };
+}
+
 function enomSetup() {
   return providerSetup("eNom", ["ENOM_UID", "ENOM_TOKEN"]);
 }
@@ -843,7 +851,7 @@ function diagnostics(req) {
       auth: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"],
       billing: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"],
       supabase: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_STORAGE_BUCKET"],
-      cpanel: ["CPANEL_WHM_HOST", "CPANEL_WHM_USERNAME", "CPANEL_WHM_TOKEN", "CPANEL_DEFAULT_PLAN"],
+      cpanel: ["CPANEL_WHM_HOST", "CPANEL_WHM_USERNAME", "CPANEL_WHM_TOKEN", "CPANEL_DEFAULT_PLAN", "CPANEL_PLAN_HOSTING", "CPANEL_PLAN_WEBSITE"],
       enom: ["ENOM_UID", "ENOM_TOKEN", "ENOM_ENV"],
     },
     auth: {
@@ -853,7 +861,7 @@ function diagnostics(req) {
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
     provisioning: {
-      cpanel: cpanelSetup(),
+      cpanel: { ...cpanelSetup(), plans: cpanelPlanConfig() },
       enom: enomSetup(),
     },
     features: {
@@ -887,7 +895,7 @@ function productionReadiness(req) {
     meta: [["META_APP_ID"], ["META_APP_SECRET"], ["META_REDIRECT_URI", `${expectedUrl}/api/oauth/meta/callback`]],
     tiktok: [["TIKTOK_CLIENT_KEY"], ["TIKTOK_CLIENT_SECRET"], ["TIKTOK_REDIRECT_URI", `${expectedUrl}/api/oauth/tiktok/callback`]],
     billing: [["STRIPE_SECRET_KEY"], ["STRIPE_WEBHOOK_SECRET"], ["STRIPE_PRICE_PRO"], ["STRIPE_PRICE_AGENCY"]],
-    cpanel: [["CPANEL_WHM_HOST"], ["CPANEL_WHM_USERNAME"], ["CPANEL_WHM_TOKEN"], ["CPANEL_DEFAULT_PLAN"]],
+    cpanel: [["CPANEL_WHM_HOST"], ["CPANEL_WHM_USERNAME"], ["CPANEL_WHM_TOKEN"], ["CPANEL_DEFAULT_PLAN"], ["CPANEL_PLAN_HOSTING"], ["CPANEL_PLAN_WEBSITE"]],
     enom: [["ENOM_UID"], ["ENOM_TOKEN"], ["ENOM_ENV"]],
   };
   const groups = Object.fromEntries(
@@ -972,7 +980,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/services/provisioning/status") {
     sendJson(res, 200, {
-      cpanel: cpanelSetup(),
+      cpanel: { ...cpanelSetup(), plans: cpanelPlanConfig() },
       enom: enomSetup(),
       requiredFields: {
         hosting: ["domain", "contactEmail"],

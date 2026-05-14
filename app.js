@@ -1894,6 +1894,12 @@ function providerMissingText(setup) {
 
 function connectorCard(key, setup, description) {
   const ready = Boolean(setup?.ready);
+  const plans = setup?.plans
+    ? Object.entries(setup.plans)
+        .filter(([, value]) => Boolean(value))
+        .map(([name, value]) => `${name}: ${value}`)
+        .join(" · ")
+    : "";
   return `
     <article class="automation-connector ${ready ? "is-ready" : ""}">
       <span class="status-icon"><i data-lucide="${key === "cpanel" ? "server-cog" : "globe-2"}"></i></span>
@@ -1901,6 +1907,7 @@ function connectorCard(key, setup, description) {
         <strong>${escapeHtml(setup?.provider || (key === "cpanel" ? "cPanel/WHM" : "eNom"))}</strong>
         <p>${escapeHtml(description)}</p>
         <small>${escapeHtml(providerMissingText(setup))}</small>
+        ${plans ? `<small>${escapeHtml(plans)}</small>` : ""}
       </div>
       <span class="pill ${ready ? "done" : "muted"}">${ready ? "OK" : "Falta"}</span>
     </article>
@@ -2043,6 +2050,8 @@ function renderStorePanel() {
   const selectedOrders = selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const revenue = activeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
   const groups = [...new Set(activeAgencyServices().map((service) => service.group || "Servicio"))];
+  const cpanelPlans = provisioningStatus?.cpanel?.plans || {};
+  const planOptions = [...new Set([cpanelPlans.defaultPlan, cpanelPlans.hostingPlan, cpanelPlans.websitePlan, serviceProvisionDraft.hostingPlan].filter(Boolean))];
 
   storePanel.innerHTML = `
     <section class="store-hero">
@@ -2079,7 +2088,14 @@ function renderStorePanel() {
       </label>
       <label class="field compact">
         <span>Plan cPanel</span>
-        <input data-provision-field="hostingPlan" type="text" placeholder="default" value="${escapeHtml(serviceProvisionDraft.hostingPlan)}" />
+        ${
+          planOptions.length
+            ? `<select data-provision-field="hostingPlan">
+                <option value="">Automático</option>
+                ${planOptions.map((plan) => `<option value="${escapeHtml(plan)}" ${serviceProvisionDraft.hostingPlan === plan ? "selected" : ""}>${escapeHtml(plan)}</option>`).join("")}
+              </select>`
+            : `<input data-provision-field="hostingPlan" type="text" placeholder="default" value="${escapeHtml(serviceProvisionDraft.hostingPlan)}" />`
+        }
       </label>
     </section>
 
@@ -4224,6 +4240,8 @@ function renderTechnicalConfig(result) {
     technicalCard("Login social", { ready: result.auth.google.ready && result.auth.facebook.ready, missing: [...result.auth.google.missing, ...result.auth.facebook.missing] }, `${result.redirects.authGoogle} / ${result.redirects.authFacebook}`, result.env.auth),
     technicalCard("Stripe", result.billing, `${result.appUrl}/api/billing/webhook`, result.env.billing),
     technicalCard("Supabase", { ready: result.storage.configured, missing: result.storage.configured ? [] : ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] }, "No aplica", result.env.supabase),
+    technicalCard("cPanel / WHM", result.provisioning.cpanel, "WHM API createacct", result.env.cpanel),
+    technicalCard("eNom", result.provisioning.enom, "eNom interface Purchase", result.env.enom),
   ].join("");
 }
 
