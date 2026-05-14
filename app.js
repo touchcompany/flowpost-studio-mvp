@@ -4433,6 +4433,79 @@ function testStatusCard(label, status, detail, icon) {
   `;
 }
 
+function realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights, providerOrders, companyPosts }) {
+  const oauthReady = oauthStatus ? Object.values(oauthStatus).filter((setup) => setup.ready).length : 0;
+  const providerReady = provisioningStatus ? [provisioningStatus.cpanel, provisioningStatus.enom].filter((setup) => setup?.ready).length : 0;
+  const steps = [
+    {
+      title: "Dominio y backend",
+      detail: backendEnabled ? `API activa con ${backendProvider}.` : "Servidor local activo; falta validar app.touch.com.co online.",
+      status: backendEnabled ? "ok" : "mock",
+      icon: "server",
+    },
+    {
+      title: "Cuentas OAuth",
+      detail: `${oauthReady}/5 proveedores con credenciales. ${connectedAccounts} cuentas conectadas a la empresa.`,
+      status: connectedAccounts ? "ok" : oauthReady ? "mock" : "pending",
+      icon: "plug-zap",
+    },
+    {
+      title: "Biblioteca y Drive",
+      detail: `${activeCompany().videos?.length || 0} recursos disponibles. ${activeCompany().mediaSource?.provider || "Sin proveedor"} configurado.`,
+      status: activeCompany().videos?.length ? "ok" : "pending",
+      icon: "layers",
+    },
+    {
+      title: "Calendario editorial",
+      detail: `${companyPosts.length} piezas con guiones, fechas o estados para validar.`,
+      status: companyPosts.length ? "ok" : "pending",
+      icon: "calendar-days",
+    },
+    {
+      title: "Preflight de publicacion",
+      detail: `${readyPreflights} trabajos listos y ${blockedPreflights} bloqueados antes de publicar.`,
+      status: readyPreflights ? "ok" : blockedPreflights ? "mock" : "pending",
+      icon: "shield",
+    },
+    {
+      title: "Hosting y dominios",
+      detail: `${providerReady}/2 proveedores con credenciales. ${providerOrders.length} ordenes requieren cPanel/eNom.`,
+      status: providerReady ? "mock" : "pending",
+      icon: "server-cog",
+    },
+  ];
+
+  return `
+    <section class="real-test-roadmap">
+      <header>
+        <div>
+          <span>Ruta de pruebas reales</span>
+          <h3>De demo a operacion controlada</h3>
+          <p>Avanza estos puntos antes de activar publicacion o provisionamiento real.</p>
+        </div>
+        <strong>${steps.filter((step) => step.status === "ok").length}/${steps.length}</strong>
+      </header>
+      <div>
+        ${steps
+          .map(
+            (step, index) => `
+              <article class="${step.status}">
+                <span class="status-icon small"><i data-lucide="${step.icon}"></i></span>
+                <div>
+                  <small>Paso ${index + 1}</small>
+                  <strong>${escapeHtml(step.title)}</strong>
+                  <p>${escapeHtml(step.detail)}</p>
+                </div>
+                <span class="pill ${step.status === "ok" ? "done" : step.status === "mock" ? "warning" : "muted"}">${step.status === "ok" ? "Listo" : step.status === "mock" ? "Parcial" : "Falta"}</span>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderTestCenter() {
   if (!testCenterPanel) return;
   const company = activeCompany();
@@ -4445,6 +4518,7 @@ function renderTestCenter() {
   const recentActivity = activityLog.filter((item) => item.companyId === company.id).length;
 
   testCenterPanel.innerHTML = `
+    ${realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights, providerOrders, companyPosts })}
     <div class="test-center-grid">
       ${testStatusCard("Backend", backendEnabled ? "ok" : "mock", backendEnabled ? `Sincronizando con ${backendProvider}.` : "Local activo; abre desde servidor para APIs.", "server")}
       ${testStatusCard("Cuentas sociales", connectedAccounts ? "ok" : "pending", `${connectedAccounts}/${company.accounts?.length || 0} cuentas conectadas.`, "badge-check")}
