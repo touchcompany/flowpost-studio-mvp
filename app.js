@@ -3306,13 +3306,19 @@ function renderQueue() {
     scheduled: companyJobs.filter((job) => job.status === "Programado").length,
     published: companyJobs.filter((job) => job.status === "Publicado").length,
     error: companyJobs.filter((job) => job.status === "Error").length,
+    ready: companyJobs.filter((job) => job.preflight?.ready).length,
+    blocked: companyJobs.filter((job) => job.preflight && !job.preflight.ready).length,
   };
 
   queueSummary.innerHTML = `
     <article><strong>${counts.total}</strong><span>Total</span></article>
     <article><strong>${counts.scheduled}</strong><span>Programados</span></article>
-    <article><strong>${counts.published}</strong><span>Publicados</span></article>
-    <article><strong>${counts.error}</strong><span>Errores</span></article>
+    <article><strong>${counts.ready}</strong><span>Listos</span></article>
+    <article><strong>${counts.blocked + counts.error}</strong><span>Bloqueos</span></article>
+    <button class="queue-bulk-action icon-text-button" type="button" data-queue-bulk-preflight ${companyJobs.length ? "" : "disabled"}>
+      <i data-lucide="shield"></i>
+      Validar cola
+    </button>
   `;
 
   if (!companyJobs.length) {
@@ -3359,6 +3365,14 @@ function renderQueue() {
               ? `<p class="preflight-note ${job.preflight.ready ? "ready" : "blocked"}"><i data-lucide="${job.preflight.ready ? "check-circle-2" : "shield"}"></i> ${escapeHtml(job.preflight.ready ? "Validacion lista" : `${job.preflight.blockers?.length || 0} bloqueos`)}</p>`
               : ""
           }
+          ${
+            job.preflight
+              ? `<div class="preflight-details">
+                  ${(job.preflight.blockers || []).map((item) => `<span><i data-lucide="circle-alert"></i>${escapeHtml(item)}</span>`).join("")}
+                  ${(job.preflight.warnings || []).map((item) => `<span class="warning"><i data-lucide="sparkles"></i>${escapeHtml(item)}</span>`).join("")}
+                </div>`
+              : ""
+          }
           ${job.errorMessage ? `<p class="queue-warning"><i data-lucide="circle-alert"></i> ${escapeHtml(job.errorMessage)}</p>` : ""}
           <small>${escapeHtml(job.caption)}</small>
           <div class="queue-actions">
@@ -3373,6 +3387,10 @@ function renderQueue() {
             <button type="button" data-queue-action="published" data-publication-id="${job.publicationId || ""}">
               <i data-lucide="check-circle-2"></i>
               Marcar publicado
+            </button>
+            <button type="button" data-queue-action="publish-real" data-publication-id="${job.publicationId || ""}" data-queue-platform="${escapeHtml(job.platform)}">
+              <i data-lucide="send"></i>
+              Envio real
             </button>
             <button type="button" data-queue-action="retry" data-publication-id="${job.publicationId || ""}">
               <i data-lucide="refresh-cw"></i>
@@ -3454,6 +3472,33 @@ async function runPreflight(publication, job) {
   } catch {
     return localPreflight(publication, job);
   }
+}
+
+async function validateQueuePreflight() {
+  const companyJobs = jobs.filter((job) => job.companyId === activeCompanyId && job.status !== "Publicado");
+  if (!companyJobs.length) {
+    showToast("No hay trabajos pendientes para validar.");
+    return;
+  }
+
+  const results = await Promise.all(
+    companyJobs.map(async (job) => {
+      const publication = publications.find((item) => item.id === job.publicationId) || {};
+      return {
+        job,
+        result: await runPreflight(publication, job),
+      };
+    })
+  );
+
+  jobs = jobs.map((job) => {
+    const item = results.find((result) => result.job === job);
+    return item ? { ...job, preflight: item.result, errorMessage: item.result.ready ? "" : item.result.blockers.join(" ") } : job;
+  });
+  persistState();
+  renderQueue();
+  const ready = results.filter((item) => item.result.ready).length;
+  showToast(`${ready}/${results.length} trabajos listos para envio real.`);
 }
 
 async function startOAuthConnection(providerKey) {
@@ -4438,6 +4483,17 @@ queueList.addEventListener("click", async (event) => {
     persistState();
   }
 
+  if (button.dataset.queueAction === "publish-real") {
+    const job = jobs.find(
+      (item) => item.publicationId === button.dataset.publicationId && item.platform === button.dataset.queuePlatform
+    );
+    const result = await runPreflight(publication, job);
+    jobs = jobs.map((item) => (item === job ? { ...item, preflight: result, errorMessage: result.ready ? "" : result.blockers.join(" ") } : item));
+    renderQueue();
+    persistState();
+    showToast(result.ready ? "Preflight listo. Falta activar el conector server-side de publicacion real." : result.blockers[0] || "Faltan requisitos.");
+  }
+
   if (button.dataset.queueAction === "published") {
     publication.status = "Publicado";
     jobs = jobs.map((job) =>
@@ -4472,6 +4528,12 @@ queueList.addEventListener("click", async (event) => {
     persistState();
     showToast("Error simulado para validar cola.");
   }
+});
+
+queueSummary.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-queue-bulk-preflight]");
+  if (!button) return;
+  validateQueuePreflight();
 });
 
 accountsGrid.addEventListener("click", async (event) => {
