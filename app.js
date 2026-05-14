@@ -4013,7 +4013,9 @@ function apiRedirectPath(network) {
 }
 
 function apiRedirectUri(network) {
-  const base = window.location.protocol === "file:" ? "https://app.touch.com.co" : window.location.origin;
+  const host = window.location.hostname;
+  const isLocal = window.location.protocol === "file:" || host === "127.0.0.1" || host === "localhost";
+  const base = isLocal ? "https://app.touch.com.co" : window.location.origin;
   return `${base}${apiRedirectPath(network)}`;
 }
 
