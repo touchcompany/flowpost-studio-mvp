@@ -4729,6 +4729,44 @@ input[type="file"] {
   line-height: 1.35;
 }
 
+.activity-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-feed article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.activity-feed strong,
+.activity-feed p,
+.activity-feed small {
+  display: block;
+  margin: 0;
+  min-width: 0;
+}
+
+.activity-feed p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.activity-feed small {
+  margin-top: 5px;
+  color: #8b8b8b;
+  font-size: 0.72rem;
+  font-weight: 720;
+}
+
 @keyframes softRise {
   from {
     opacity: 0;

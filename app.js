@@ -534,6 +534,7 @@ const defaultAgencyServices = [
 ];
 let agencyServices = [...defaultAgencyServices];
 let serviceOrders = [];
+let activityLog = [];
 let billingDraft = {
   documentType: "Cuenta de cobro",
   issuerCompanyId: "casa-norte",
@@ -575,6 +576,9 @@ function restoreState() {
     }
     if (Array.isArray(stored.serviceOrders)) {
       serviceOrders = stored.serviceOrders;
+    }
+    if (Array.isArray(stored.activityLog)) {
+      activityLog = stored.activityLog;
     }
     if (stored.billingDraft) {
       billingDraft = { ...billingDraft, ...stored.billingDraft };
@@ -669,6 +673,9 @@ async function hydrateStateFromBackend() {
     if (Array.isArray(state.serviceOrders)) {
       serviceOrders = state.serviceOrders;
     }
+    if (Array.isArray(state.activityLog)) {
+      activityLog = state.activityLog;
+    }
     if (state.billingDraft) {
       billingDraft = { ...billingDraft, ...state.billingDraft };
     }
@@ -701,6 +708,7 @@ function persistState() {
         billingDraft,
         agencyServices,
         serviceOrders,
+        activityLog,
       })
     );
   } catch {
@@ -711,7 +719,7 @@ function persistState() {
     fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, invoices, billingDraft, agencyServices, serviceOrders }),
+      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
     }).catch(() => {
       backendEnabled = false;
       updateConnectionStatus();
@@ -732,6 +740,7 @@ function currentState() {
     billingDraft,
     agencyServices,
     serviceOrders,
+    activityLog,
     exportedAt: new Date().toISOString(),
     version: 2,
   };
@@ -779,6 +788,7 @@ function commitReviewedPublication() {
   if (!pendingPublication) return;
   const publication = pendingPublication;
   const nextJobs = pendingJobs;
+  const wasEditing = Boolean(editingPublicationId);
   if (editingPublicationId) {
     publications = publications.map((item) => (item.id === publication.id ? publication : item));
     jobs = [...nextJobs, ...jobs.filter((job) => job.publicationId !== publication.id)];
@@ -789,6 +799,9 @@ function commitReviewedPublication() {
   editingPublicationId = null;
   pendingPublication = null;
   pendingJobs = [];
+  addActivity("queue", wasEditing ? "Publicacion actualizada" : "Publicacion creada", `${publication.title} genero ${nextJobs.length} trabajo${nextJobs.length === 1 ? "" : "s"}.`, {
+    companyId: publication.companyId,
+  });
   renderQueue();
   renderCalendar();
   persistState();
@@ -1879,6 +1892,7 @@ function completeAutomationStep(orderId, stepId) {
     showToast("No encontré ese paso de automatización.");
     return;
   }
+  addActivity("automation", "Paso completado", "Se completo un paso del flujo automatico.", { companyId: activeCompanyId });
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
@@ -2348,6 +2362,7 @@ function purchaseServiceForClient(serviceId) {
   billingDraft.description = service.name;
   billingDraft.issueDate = now.toISOString().slice(0, 10);
   billingDraft.dueDate = dueDate;
+  addActivity("service", "Servicio comprado", `${service.name} para ${client.name}.`, { companyId: client.companyId, clientId: client.id });
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
@@ -2378,6 +2393,7 @@ function markServiceOrderStatus(orderId, status) {
     showToast("No encontre esa orden de servicio.");
     return;
   }
+  addActivity("service", "Servicio actualizado", `Orden marcada como ${status}.`, { companyId: activeCompanyId });
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
@@ -2432,6 +2448,7 @@ function createServiceOrderFromPurchase(purchase, client) {
     },
     ...invoices,
   ];
+  addActivity("billing", "Cuenta de cobro generada", `${serviceName} para ${client.name}.`, { companyId: client.companyId, clientId: client.id });
 }
 
 function applyPendingLandingPurchases() {
@@ -2571,6 +2588,7 @@ function markClientInvoicePaid(clientId) {
     showToast("No hay cobros pendientes para este cliente.");
     return;
   }
+  addActivity("billing", "Cobro pagado", "Se marco un documento como pagado.", { companyId: activeCompanyId, clientId });
   persistState();
   renderClientBillingPanel();
   showToast("Cobro marcado como pagado.");
@@ -2620,6 +2638,7 @@ function applyImportedState(state) {
   billingDraft = state.billingDraft ? { ...billingDraft, ...state.billingDraft } : billingDraft;
   agencyServices = Array.isArray(state.agencyServices) && state.agencyServices.length ? state.agencyServices : agencyServices;
   serviceOrders = Array.isArray(state.serviceOrders) ? state.serviceOrders : serviceOrders;
+  activityLog = Array.isArray(state.activityLog) ? state.activityLog : activityLog;
   activeCompanyId = state.activeCompanyId || companies[0]?.id;
   selectedVideoId = activeCompany().videos[0]?.id || null;
   persistState();
@@ -2705,6 +2724,73 @@ function dashboardInsight(icon, title, detail, action, view) {
         ${escapeHtml(action)}
       </button>
     </article>
+  `;
+}
+
+function activityIcon(type) {
+  const icons = {
+    automation: "workflow",
+    billing: "receipt",
+    publish: "send",
+    service: "shopping-bag",
+    queue: "shield",
+    account: "plug-zap",
+  };
+  return icons[type] || "activity-square";
+}
+
+function addActivity(type, title, detail, meta = {}) {
+  const companyId = meta.companyId || activeCompanyId;
+  const clientId = meta.clientId || "";
+  activityLog = [
+    {
+      id: `activity-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      agencyId: activeAgencyId,
+      companyId,
+      clientId,
+      type,
+      title,
+      detail,
+      createdAt: new Date().toISOString(),
+    },
+    ...activityLog,
+  ].slice(0, 80);
+}
+
+function activityTimeLabel(value) {
+  if (!value) return "Ahora";
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function renderActivityFeed(companyId = activeCompanyId, limit = 6) {
+  const items = activityLog
+    .filter((item) => item.agencyId === activeAgencyId && (!companyId || item.companyId === companyId))
+    .slice(0, limit);
+  if (!items.length) {
+    return `<div class="empty-state compact"><strong>Sin actividad reciente</strong><p>Las validaciones, compras y automatizaciones apareceran aqui.</p></div>`;
+  }
+  return `
+    <div class="activity-feed">
+      ${items
+        .map(
+          (item) => `
+            <article>
+              <span class="dashboard-icon"><i data-lucide="${activityIcon(item.type)}"></i></span>
+              <div>
+                <strong>${escapeHtml(item.title)}</strong>
+                <p>${escapeHtml(item.detail)}</p>
+                <small>${escapeHtml(activityTimeLabel(item.createdAt))}</small>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
   `;
 }
 
@@ -2863,6 +2949,17 @@ function renderDashboard() {
         <div class="dashboard-insights">
           ${insights.join("")}
         </div>
+      </article>
+
+      <article class="dashboard-card dashboard-activity-card">
+        <header>
+          <span class="dashboard-icon"><i data-lucide="activity-square"></i></span>
+          <div>
+            <strong>Actividad reciente</strong>
+            <p>Registro operativo de esta empresa.</p>
+          </div>
+        </header>
+        ${renderActivityFeed(company.id)}
       </article>
     </section>
   `;
@@ -3545,6 +3642,9 @@ async function validateQueuePreflight() {
   jobs = jobs.map((job) => {
     const item = results.find((result) => result.job === job);
     return item ? { ...job, preflight: item.result, errorMessage: item.result.ready ? "" : item.result.blockers.join(" ") } : job;
+  });
+  addActivity("queue", "Cola validada", `${results.filter((item) => item.result.ready).length}/${results.length} trabajos listos para envio real.`, {
+    companyId: activeCompanyId,
   });
   persistState();
   renderQueue();
@@ -4530,6 +4630,9 @@ queueList.addEventListener("click", async (event) => {
           }
         : item
     );
+    addActivity("queue", result.ready ? "Preflight listo" : "Preflight bloqueado", `${result.platform}: ${result.ready ? "listo para dry run" : result.blockers[0] || "faltan requisitos"}.`, {
+      companyId: publication.companyId,
+    });
     renderQueue();
     persistState();
   }
@@ -4549,6 +4652,9 @@ queueList.addEventListener("click", async (event) => {
           }
         : item
     );
+    addActivity("publish", result.sent ? "Publicacion enviada" : result.ready ? "Dry run de envio" : "Envio bloqueado", `${result.platform}: ${result.message}`, {
+      companyId: publication.companyId,
+    });
     renderQueue();
     persistState();
     showToast(result.message || (result.sent ? "Publicacion enviada." : "Intento de publicacion registrado."));
