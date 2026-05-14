@@ -4045,6 +4045,7 @@ function accountConnectedForNetwork(network) {
 
 function apiCredentialText(setup) {
   if (!setup) return "Sin revisar";
+  if (setup.connected) return `Callback recibido${setup.connectedAt ? ` · ${new Date(setup.connectedAt).toLocaleDateString("es-CO")}` : ""}`;
   if (setup.ready) return "Credenciales listas";
   return `Faltan: ${(setup.missing || []).join(", ") || "credenciales"}`;
 }

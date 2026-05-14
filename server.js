@@ -36,6 +36,74 @@ function sendError(res, status, message) {
   sendJson(res, status, { error: message });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sendHtml(res, status, html) {
+  res.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": Buffer.byteLength(html),
+  });
+  res.end(html);
+}
+
+function sendOAuthCallbackPage(res, payload) {
+  const ok = Boolean(payload.ok);
+  const title = ok ? "Conexion recibida" : "Conexion pendiente";
+  const provider = payload.provider || "OAuth";
+  const mode = payload.mode || "callback";
+  const next = payload.next || "Vuelve a Flowpost Studio para continuar.";
+  const missing = Array.isArray(payload.missing) && payload.missing.length ? payload.missing.join(", ") : "";
+  sendHtml(
+    res,
+    ok ? 200 : 400,
+    `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(title)} · Flowpost Studio</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      * { box-sizing: border-box; }
+      body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px; background: #fafafa; color: #111; }
+      main { width: min(520px, 100%); padding: 28px; border: 1px solid #dbdbdb; border-radius: 24px; background: #fff; box-shadow: 0 24px 80px rgba(0,0,0,.08); }
+      .mark { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 18px; color: #fff; font-weight: 900; background: radial-gradient(circle at 25% 110%, #feda75 0 22%, transparent 23%), radial-gradient(circle at 12% 12%, #4f5bd5 0 18%, transparent 19%), linear-gradient(135deg, #833ab4, #fd1d1d 50%, #fcb045); }
+      h1 { margin: 18px 0 8px; font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1; letter-spacing: 0; }
+      p { margin: 0; color: #737373; line-height: 1.45; }
+      dl { display: grid; gap: 10px; margin: 22px 0; }
+      div.row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; padding: 12px; border: 1px solid #ededed; border-radius: 14px; background: #fafafa; }
+      dt { color: #737373; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+      dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-weight: 750; }
+      a { display: inline-grid; min-height: 46px; place-items: center; padding: 0 18px; border-radius: 14px; background: #111; color: #fff; text-decoration: none; font-weight: 850; }
+      small { display: block; margin-top: 14px; color: #8a8a8a; line-height: 1.4; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="mark">${ok ? "✓" : "!"}</span>
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(provider)} respondio al callback de Flowpost Studio.</p>
+      <dl>
+        <div class="row"><dt>Proveedor</dt><dd>${escapeHtml(provider)}</dd></div>
+        <div class="row"><dt>Estado</dt><dd>${escapeHtml(mode)}</dd></div>
+        ${missing ? `<div class="row"><dt>Falta</dt><dd>${escapeHtml(missing)}</dd></div>` : ""}
+        <div class="row"><dt>Siguiente</dt><dd>${escapeHtml(next)}</dd></div>
+      </dl>
+      <a href="/index.html#accounts">Volver a Flowpost</a>
+      <small>Por seguridad esta pantalla no muestra codigos OAuth ni tokens.</small>
+    </main>
+  </body>
+</html>`
+  );
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -697,6 +765,20 @@ async function saveGoogleTokens(tokens, existing = {}) {
   });
 }
 
+async function saveOAuthCallbackSignal(key, payload) {
+  if (!store.saveIntegration) return null;
+  return store.saveIntegration(key, {
+    provider: payload.provider || key,
+    status: payload.status || "callback-received",
+    scopes: payload.scopes || "",
+    metadata: {
+      callbackReceivedAt: new Date().toISOString(),
+      mode: payload.mode || "oauth-callback-ready",
+      next: payload.next || "",
+    },
+  });
+}
+
 function stripeSuccessUrl(plan) {
   return (
     process.env.STRIPE_SUCCESS_URL ||
@@ -906,6 +988,17 @@ function oauthSetup(platform, required) {
   };
 }
 
+async function oauthSetupWithConnection(key, platform, required) {
+  const setup = oauthSetup(platform, required);
+  const connection = store.getIntegration ? await store.getIntegration(key) : null;
+  return {
+    ...setup,
+    connected: Boolean(connection),
+    connectionStatus: connection?.status || connection?.metadata?.mode || (connection ? "tokens-saved" : ""),
+    connectedAt: connection?.updatedAt || connection?.updated_at || connection?.metadata?.callbackReceivedAt || "",
+  };
+}
+
 function fileExists(relativePath) {
   return fs.existsSync(path.join(ROOT, relativePath));
 }
@@ -1066,11 +1159,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/oauth/status") {
     sendJson(res, 200, {
-      tiktok: oauthSetup("TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
-      meta: oauthSetup("Meta", ["META_APP_ID", "META_APP_SECRET"]),
-      google: oauthSetup("Google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
-      youtube: oauthSetup("YouTube", ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET"]),
-      linkedin: oauthSetup("LinkedIn", ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]),
+      tiktok: await oauthSetupWithConnection("tiktok", "TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
+      meta: await oauthSetupWithConnection("meta", "Meta", ["META_APP_ID", "META_APP_SECRET"]),
+      google: await oauthSetupWithConnection("googleDrive", "Google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
+      youtube: await oauthSetupWithConnection("youtube", "YouTube", ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET"]),
+      linkedin: await oauthSetupWithConnection("linkedin", "LinkedIn", ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]),
     });
     return;
   }
@@ -1362,12 +1455,17 @@ async function handleApi(req, res, url) {
       sendError(res, 400, "missing authorization code");
       return;
     }
-    sendJson(res, 200, {
+    const payload = {
       ok: true,
       provider: "TikTok",
       mode: "oauth-callback-ready",
       next: "Exchange this code server-side, store tokens in Supabase, then query creator_info before publishing.",
+    };
+    await saveOAuthCallbackSignal("tiktok", {
+      ...payload,
+      scopes: process.env.TIKTOK_SCOPES || "user.info.basic,video.publish",
     });
+    sendOAuthCallbackPage(res, payload);
     return;
   }
 
@@ -1416,12 +1514,17 @@ async function handleApi(req, res, url) {
       sendError(res, 400, "missing authorization code");
       return;
     }
-    sendJson(res, 200, {
+    const payload = {
       ok: true,
       provider: "Meta",
       mode: "oauth-callback-ready",
       next: "Exchange this code server-side, fetch pages and Instagram accounts, then store tokens in Supabase.",
+    };
+    await saveOAuthCallbackSignal("meta", {
+      ...payload,
+      scopes: "pages_show_list,pages_read_engagement,instagram_basic,instagram_content_publish",
     });
+    sendOAuthCallbackPage(res, payload);
     return;
   }
 
@@ -1479,7 +1582,7 @@ async function handleApi(req, res, url) {
     }
     const setup = oauthSetup("Google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
     if (!setup.ready) {
-      sendJson(res, 200, {
+      sendOAuthCallbackPage(res, {
         ok: true,
         provider: "Google Drive",
         mode: "oauth-callback-ready",
@@ -1491,7 +1594,7 @@ async function handleApi(req, res, url) {
     try {
       const tokens = await exchangeGoogleCode(req, code);
       await saveGoogleTokens(tokens);
-      sendJson(res, 200, {
+      sendOAuthCallbackPage(res, {
         ok: true,
         provider: "Google Drive",
         mode: "tokens-saved",
