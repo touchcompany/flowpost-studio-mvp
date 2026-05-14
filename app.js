@@ -1564,6 +1564,71 @@ function clientHealthLabel(score) {
   return "Inicial";
 }
 
+function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders) {
+  const selectedClient = clients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
+  if (!selectedClient) {
+    return `
+      <section class="client-command-center empty-state compact">
+        <strong>Sin clientes todavía</strong>
+        <p>Crea empresas y conviertelas en clientes para activar paneles, cobros y servicios comprables.</p>
+      </section>
+    `;
+  }
+
+  const company = companies.find((item) => item.id === selectedClient.companyId);
+  const orders = clientServiceOrders(selectedClient.id);
+  const invoice = pendingInvoices.find((item) => item.clientId === selectedClient.id);
+  const posts = publications.filter((publication) => publication.companyId === selectedClient.companyId);
+  const score = clientHealthScore(selectedClient, company, orders, invoice);
+  const enabledModules = serviceAccessModules(selectedClient).filter((module) => module.enabled);
+  const lockedModules = serviceAccessModules(selectedClient).filter((module) => !module.enabled);
+  const openValue = pendingInvoices
+    .filter((item) => item.clientId === selectedClient.id)
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  return `
+    <section class="client-command-center">
+      <div class="client-command-main">
+        <span class="company-avatar large" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
+          <i data-lucide="briefcase"></i>
+        </span>
+        <div>
+          <span>Panel del cliente</span>
+          <h3>${escapeHtml(selectedClient.name)}</h3>
+          <p>${escapeHtml(company?.description || selectedClient.objectives || "Cuenta lista para gestionar servicios, contenido y cobros.")}</p>
+          <div class="client-command-networks">
+            ${(company?.accounts || []).map((account) => `<span>${socialIcon(account.platform)}${escapeHtml(account.platform)}</span>`).join("") || "<span>Sin redes conectadas</span>"}
+          </div>
+        </div>
+      </div>
+      <div class="client-command-score" style="--score: ${score}%">
+        <strong>${score}%</strong>
+        <span>${escapeHtml(clientHealthLabel(score))}</span>
+      </div>
+      <div class="client-command-stats">
+        <article><span>Cobro abierto</span><strong>${formatMoney(openValue, "COP")}</strong></article>
+        <article><span>Contenido</span><strong>${posts.length}</strong></article>
+        <article><span>Servicios</span><strong>${orders.length}</strong></article>
+        <article><span>Activos</span><strong>${enabledModules.length}/${enabledModules.length + lockedModules.length}</strong></article>
+      </div>
+      <div class="client-command-actions">
+        <button class="primary-button icon-text-button" type="button" data-client-open-company="${selectedClient.companyId}">
+          <i data-lucide="folder-open"></i>
+          Abrir cuenta
+        </button>
+        <button class="secondary-button icon-text-button" type="button" data-client-invoice="${selectedClient.id}">
+          <i data-lucide="receipt"></i>
+          Generar cobro
+        </button>
+        <button class="secondary-button icon-text-button" type="button" data-client-open-store="${selectedClient.id}">
+          <i data-lucide="store"></i>
+          Comprar servicios
+        </button>
+      </div>
+    </section>
+  `;
+}
+
 function renderClientBillingPanel() {
   ensureAgencyClients();
   ensureServiceOrderAutomations();
@@ -1633,6 +1698,7 @@ function renderClientBillingPanel() {
   if (clientWorkspacePanel) {
     clientWorkspacePanel.innerHTML = `
       <section class="client-workspace">
+        ${renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)}
         ${renderAgencyServicesManager()}
         ${renderBillingDocumentEditor()}
         <div class="client-workspace-summary">
@@ -5263,6 +5329,16 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     refreshCompanyContext();
     setView("companies");
     showToast("Cuenta del cliente abierta.");
+    return;
+  }
+
+  const storeButton = event.target.closest("[data-client-open-store]");
+  if (storeButton) {
+    billingDraft.clientId = storeButton.dataset.clientOpenStore;
+    persistState();
+    renderStorePanel();
+    setView("store");
+    showToast("Tienda abierta para este cliente.");
   }
 });
 
