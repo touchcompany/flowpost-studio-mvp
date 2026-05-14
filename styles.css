@@ -5843,6 +5843,54 @@ input[type="file"] {
   font-size: 1.32rem;
 }
 
+.automation-connectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+.automation-connector {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.automation-connector.is-ready {
+  border-color: rgba(21, 128, 61, 0.24);
+  background: linear-gradient(135deg, rgba(220, 252, 231, 0.72), #fff 58%);
+}
+
+.automation-connector strong,
+.automation-connector p,
+.automation-connector small {
+  display: block;
+  margin: 0;
+  min-width: 0;
+}
+
+.automation-connector p,
+.automation-connector small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.32;
+}
+
+.automation-connector small {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.automation-connectors > button {
+  align-self: stretch;
+}
+
 .automation-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -5940,11 +5988,19 @@ input[type="file"] {
 }
 
 .automation-provider {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: #fff;
   font-size: 0.82rem;
+}
+
+.automation-provider small {
+  grid-column: 2;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .automation-card footer {
@@ -5992,6 +6048,7 @@ input[type="file"] {
   .deployment-grid,
   .deployment-commands,
   .automation-hero,
+  .automation-connectors,
   .automation-layout,
   .dashboard-metrics,
   .dashboard-grid {

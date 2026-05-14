@@ -198,6 +198,7 @@ const videoTones = ["mint", "sunset", "mocha", "orchid"];
 const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"];
 let backendEnabled = false;
 let backendProvider = "local";
+let provisioningStatus = null;
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let serviceProvisionDraft = {
@@ -237,6 +238,7 @@ const fallbackIconPaths = {
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
   receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 12h8M8 17h5"/>',
   "server-cog": '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 8h.01M7 17h.01"/><circle cx="16" cy="17" r="2"/><path d="M16 14v1M16 19v1M13 17h1M18 17h1"/>',
+  github: '<path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7a5.2 5.2 0 0 0-1.4-3.6 4.8 4.8 0 0 0-.1-3.6s-1.1-.3-3.7 1.4a12.8 12.8 0 0 0-6.8 0C5.6 1.3 4.5 1.6 4.5 1.6a4.8 4.8 0 0 0-.1 3.6A5.2 5.2 0 0 0 3 8.8c0 5.2 3.1 6.4 6.1 6.7a3 3 0 0 0-.9 1.9c-.8.4-2.9 1-4.1-1.2 0 0-.8-1.4-2.2-1.5 0 0-1.4 0-.1.9 0 0 .9.4 1.6 2 0 0 .8 2.5 4.7 1.7V22"/>',
   "monitor-smartphone": '<path d="M18 8V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8"/><path d="M10 19v-4M7 19h5"/><rect x="14" y="11" width="8" height="11" rx="2"/>',
   bot: '<path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M2 14h2M20 14h2M9 13h.01M15 13h.01M9 17h6"/>',
   "wand-sparkles": '<path d="m21.6 11.6-9.2 9.2-4-4 9.2-9.2 4 4Z"/><path d="m14 6 4 4"/><path d="M5 3v4M3 5h4M7 11v3M5.5 12.5h3M13 2v3M11.5 3.5h3"/>',
@@ -260,6 +262,7 @@ const fallbackIconPaths = {
   "server-off": '<path d="M2 2l20 20"/><rect x="3" y="4" width="18" height="8" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 8h.01M7 17h.01"/>',
   server: '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 8h.01M7 17h.01"/>',
   database: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  "globe-2": '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20"/><path d="M12 2a15.3 15.3 0 0 0 0 20"/>',
   instagram: '<rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="3.5"/><path d="M17 7.2h.01"/>',
   "music-2": '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   rocket: '<path d="M4.5 16.5c-1 1-1.5 3-1.5 4.5 1.5 0 3.5-.5 4.5-1.5"/><path d="M9 15 4 10l6-6c4-4 9-1 10-1-1 1 3 6-1 10l-6 6-5-5Z"/><path d="M14 7h.01"/>',
@@ -997,6 +1000,8 @@ function productionGroupLabel(group) {
     meta: "Meta",
     tiktok: "TikTok",
     billing: "Pagos",
+    cpanel: "cPanel/WHM",
+    enom: "eNom",
   };
   return labels[group] || group;
 }
@@ -1009,6 +1014,8 @@ function readinessIcon(group) {
     meta: "instagram",
     tiktok: "music-2",
     billing: "credit-card",
+    cpanel: "server-cog",
+    enom: "globe-2",
   };
   return icons[group] || "check-circle-2";
 }
@@ -1794,6 +1801,39 @@ function serviceNeedsProvisioning(serviceId) {
   return ["hosting", "domain", "website"].includes(serviceId);
 }
 
+function providerSetupForOrder(order) {
+  if (["hosting", "website"].includes(order.serviceId)) return provisioningStatus?.cpanel;
+  if (order.serviceId === "domain") return provisioningStatus?.enom;
+  return null;
+}
+
+function providerLabelForOrder(order) {
+  if (["hosting", "website"].includes(order.serviceId)) return "cPanel/WHM";
+  if (order.serviceId === "domain") return "eNom";
+  return "Interno";
+}
+
+function providerMissingText(setup) {
+  if (!setup) return "Sin revisar";
+  if (setup.ready) return "Listo";
+  return `Faltan ${setup.missing?.length || 0}: ${(setup.missing || []).join(", ") || "credenciales"}`;
+}
+
+function connectorCard(key, setup, description) {
+  const ready = Boolean(setup?.ready);
+  return `
+    <article class="automation-connector ${ready ? "is-ready" : ""}">
+      <span class="status-icon"><i data-lucide="${key === "cpanel" ? "server-cog" : "globe-2"}"></i></span>
+      <div>
+        <strong>${escapeHtml(setup?.provider || (key === "cpanel" ? "cPanel/WHM" : "eNom"))}</strong>
+        <p>${escapeHtml(description)}</p>
+        <small>${escapeHtml(providerMissingText(setup))}</small>
+      </div>
+      <span class="pill ${ready ? "done" : "muted"}">${ready ? "OK" : "Falta"}</span>
+    </article>
+  `;
+}
+
 function orderAutomationProgress(order) {
   const steps = order.automation?.steps || [];
   if (!steps.length) return 0;
@@ -2090,6 +2130,15 @@ function renderAutomationCenter() {
       <article><span>Bloqueadas</span><strong>${blocked.length}</strong></article>
     </section>
 
+    <section class="automation-connectors">
+      ${connectorCard("cpanel", provisioningStatus?.cpanel, "Crea hosting, correos y prepara sitios web comprados.")}
+      ${connectorCard("enom", provisioningStatus?.enom, "Compra dominios y registra datos técnicos del cliente.")}
+      <button class="secondary-button icon-text-button" type="button" data-refresh-providers>
+        <i data-lucide="refresh-cw"></i>
+        Revisar proveedores
+      </button>
+    </section>
+
     <section class="automation-layout">
       <div class="automation-board">
         ${
@@ -2098,6 +2147,7 @@ function renderAutomationCenter() {
                 .map((order) => {
                   const client = clients.find((item) => item.id === order.clientId);
                   const step = nextAutomationStep(order);
+                  const setup = providerSetupForOrder(order);
                   return `
                     <article class="automation-card">
                       <header>
@@ -2120,7 +2170,8 @@ function renderAutomationCenter() {
                         order.provisioning && order.provisioning.status !== "No requerido"
                           ? `<div class="automation-provider">
                               <i data-lucide="plug-zap"></i>
-                              <span>${escapeHtml(order.provisioning.status)}${order.provisioning.domain ? ` · ${escapeHtml(order.provisioning.domain)}` : ""}</span>
+                              <span>${escapeHtml(providerLabelForOrder(order))} · ${escapeHtml(order.provisioning.status)}${order.provisioning.domain ? ` · ${escapeHtml(order.provisioning.domain)}` : ""}</span>
+                              <small>${escapeHtml(providerMissingText(setup))}</small>
                             </div>`
                           : ""
                       }
@@ -2177,10 +2228,38 @@ function renderAutomationCenter() {
           <i data-lucide="shopping-bag"></i>
           Abrir tienda
         </button>
+        <button class="primary-button icon-text-button" type="button" data-refresh-providers>
+          <i data-lucide="refresh-cw"></i>
+          Revisar proveedores
+        </button>
       </aside>
     </section>
   `;
   renderIcons();
+}
+
+async function refreshProvisioningStatus(showFeedback = false) {
+  if (window.location.protocol === "file:") {
+    provisioningStatus = null;
+    renderAutomationCenter();
+    if (showFeedback) showToast("Abre la app desde http://127.0.0.1:4176 para revisar proveedores.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/services/provisioning/status", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("provisioning status unavailable");
+    provisioningStatus = await response.json();
+    renderAutomationCenter();
+    if (showFeedback) {
+      const ready = [provisioningStatus.cpanel, provisioningStatus.enom].filter((setup) => setup?.ready).length;
+      showToast(`${ready}/2 proveedores listos para pruebas reales.`);
+    }
+  } catch {
+    provisioningStatus = null;
+    renderAutomationCenter();
+    if (showFeedback) showToast("No se pudo consultar cPanel/eNom desde el backend.");
+  }
 }
 
 function generateClientInvoice(clientId) {
@@ -4616,6 +4695,12 @@ automationCenterPanel.addEventListener("click", (event) => {
   if (storeButton) {
     renderStorePanel();
     setView("store");
+    return;
+  }
+
+  const refreshProvidersButton = event.target.closest("[data-refresh-providers]");
+  if (refreshProvidersButton) {
+    refreshProvisioningStatus(true);
   }
 });
 
@@ -4996,6 +5081,7 @@ async function init() {
   renderAccounts();
   renderStorePanel();
   renderAutomationCenter();
+  refreshProvisioningStatus(false);
   renderDiagnostics();
   refreshDeploymentStatus();
   renderProductionReadinessFromServer();
