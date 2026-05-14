@@ -212,6 +212,7 @@ let serviceProvisionDraft = {
   domain: "",
   contactEmail: "",
   hostingPlan: "",
+  domainCheck: null,
 };
 let sidebarCollapsed = false;
 let queueCollapsed = false;
@@ -2082,6 +2083,10 @@ function renderStorePanel() {
         <span>Dominio</span>
         <input data-provision-field="domain" type="text" placeholder="cliente.com" value="${escapeHtml(serviceProvisionDraft.domain)}" />
       </label>
+      <button class="secondary-button icon-text-button" type="button" data-check-domain>
+        <i data-lucide="globe-2"></i>
+        Verificar dominio
+      </button>
       <label class="field compact">
         <span>Email técnico</span>
         <input data-provision-field="contactEmail" type="email" placeholder="admin@cliente.com" value="${escapeHtml(serviceProvisionDraft.contactEmail || selectedClient?.email || "")}" />
@@ -2097,6 +2102,14 @@ function renderStorePanel() {
             : `<input data-provision-field="hostingPlan" type="text" placeholder="default" value="${escapeHtml(serviceProvisionDraft.hostingPlan)}" />`
         }
       </label>
+      ${
+        serviceProvisionDraft.domainCheck
+          ? `<article class="domain-check-result ${serviceProvisionDraft.domainCheck.available ? "available" : "blocked"}">
+              <strong>${escapeHtml(serviceProvisionDraft.domainCheck.domain || serviceProvisionDraft.domain || "Dominio")}</strong>
+              <p>${escapeHtml(serviceProvisionDraft.domainCheck.message || "Consulta realizada.")}</p>
+            </article>`
+          : ""
+      }
     </section>
 
     <section class="store-summary">
@@ -2349,6 +2362,40 @@ async function refreshProvisioningStatus(showFeedback = false) {
     provisioningStatus = null;
     renderAutomationCenter();
     if (showFeedback) showToast("No se pudo consultar cPanel/eNom desde el backend.");
+  }
+}
+
+async function checkDomainAvailability() {
+  const domain = serviceProvisionDraft.domain.trim();
+  if (!domain) {
+    showToast("Escribe un dominio para consultar.");
+    return;
+  }
+  if (window.location.protocol === "file:") {
+    serviceProvisionDraft.domainCheck = {
+      ready: false,
+      available: false,
+      domain,
+      message: "Abre la app desde el backend para consultar eNom.",
+    };
+    renderStorePanel();
+    return;
+  }
+  try {
+    const response = await fetch(`/api/domains/check?domain=${encodeURIComponent(domain)}`, { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("domain check failed");
+    serviceProvisionDraft.domainCheck = await response.json();
+    renderStorePanel();
+    showToast(serviceProvisionDraft.domainCheck.message || "Consulta de dominio completada.");
+  } catch {
+    serviceProvisionDraft.domainCheck = {
+      ready: false,
+      available: false,
+      domain,
+      message: "No se pudo consultar eNom desde el backend.",
+    };
+    renderStorePanel();
+    showToast("No se pudo consultar disponibilidad.");
   }
 }
 
@@ -5130,6 +5177,12 @@ clientWorkspacePanel.addEventListener("change", (event) => {
 });
 
 storePanel.addEventListener("click", (event) => {
+  const checkDomainButton = event.target.closest("[data-check-domain]");
+  if (checkDomainButton) {
+    checkDomainAvailability();
+    return;
+  }
+
   const buyButton = event.target.closest("[data-store-buy]");
   if (buyButton) {
     purchaseServiceForClient(buyButton.dataset.storeBuy);
@@ -5156,6 +5209,9 @@ storePanel.addEventListener("input", (event) => {
   const provisionField = event.target.closest("[data-provision-field]");
   if (!provisionField) return;
   serviceProvisionDraft[provisionField.dataset.provisionField] = provisionField.value;
+  if (provisionField.dataset.provisionField === "domain") {
+    serviceProvisionDraft.domainCheck = null;
+  }
 });
 
 automationCenterPanel.addEventListener("click", (event) => {

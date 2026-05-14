@@ -5830,6 +5830,36 @@ input[type="file"] {
   margin: 0;
 }
 
+.domain-check-result {
+  grid-column: 1 / -1;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.domain-check-result.available {
+  border-color: rgba(21, 128, 61, 0.22);
+  background: #f0fdf4;
+}
+
+.domain-check-result.blocked {
+  border-color: rgba(190, 18, 60, 0.16);
+  background: #fff7f7;
+}
+
+.domain-check-result strong,
+.domain-check-result p {
+  display: block;
+  margin: 0;
+}
+
+.domain-check-result p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .store-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;

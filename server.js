@@ -361,6 +361,55 @@ async function purchaseEnomDomain({ domain, years = 1 }) {
   };
 }
 
+async function checkEnomDomainAvailability(domain) {
+  const setup = enomSetup();
+  const parsed = splitDomain(domain);
+  if (!parsed.sld || !parsed.tld) {
+    return { ready: false, available: false, provider: "eNom", missingFields: ["domain"], message: "Escribe un dominio valido para consultar disponibilidad." };
+  }
+  if (!setup.ready) {
+    return {
+      ready: false,
+      available: false,
+      ...setup,
+      domain: parsed.domain,
+      message: "Configura ENOM_UID y ENOM_TOKEN para consultar disponibilidad real.",
+    };
+  }
+
+  const host = process.env.ENOM_ENV === "live" ? "reseller.enom.com" : "resellertest.enom.com";
+  const params = new URLSearchParams({
+    command: "Check",
+    uid: process.env.ENOM_UID,
+    pw: process.env.ENOM_TOKEN,
+    sld: parsed.sld,
+    tld: parsed.tld,
+    ResponseType: "JSON",
+  });
+  const response = await fetch(`https://${host}/interface.asp?${params.toString()}`, {
+    headers: { Accept: "application/json,text/plain,*/*" },
+  });
+  const text = await response.text();
+  let result = {};
+  try {
+    result = JSON.parse(text);
+  } catch {
+    result = { raw: text.slice(0, 800) };
+  }
+  const normalized = JSON.stringify(result).toLowerCase();
+  const available = response.ok && (normalized.includes("available") || normalized.includes('"r_rpcode":"210"') || normalized.includes('"r_code":"210"'));
+  return {
+    ready: response.ok,
+    available,
+    provider: "eNom",
+    action: "Check",
+    environment: process.env.ENOM_ENV === "live" ? "live" : "test",
+    domain: parsed.domain,
+    result,
+    message: available ? "Dominio disponible segun eNom." : "Dominio no disponible o eNom no confirmo disponibilidad.",
+  };
+}
+
 async function provisionService(payload) {
   const serviceId = payload.serviceId || payload.service?.id || "";
   const provisioning = payload.provisioning || {};
@@ -988,6 +1037,11 @@ async function handleApi(req, res, url) {
         domain: ["domain"],
       },
     });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/domains/check") {
+    sendJson(res, 200, await checkEnomDomainAvailability(url.searchParams.get("domain") || ""));
     return;
   }
 
