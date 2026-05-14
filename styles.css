@@ -3064,7 +3064,8 @@ input[type="file"]:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.diagnostics-panel {
+.diagnostics-panel,
+.test-center-panel {
   margin-bottom: 18px;
   padding: 18px;
   border: 1px solid var(--line);
@@ -3426,6 +3427,43 @@ input[type="file"]:focus {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fafafa;
+}
+
+.test-center-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.test-status-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.test-status-card strong,
+.test-status-card p {
+  display: block;
+  margin: 0;
+}
+
+.test-status-card p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.test-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .diagnostic-card header {

@@ -88,6 +88,7 @@ const readinessSummary = document.querySelector("#readinessSummary");
 const readinessGrid = document.querySelector("#readinessGrid");
 const diagnosticsGrid = document.querySelector("#diagnosticsGrid");
 const technicalGrid = document.querySelector("#technicalGrid");
+const testCenterPanel = document.querySelector("#testCenterPanel");
 const refreshDiagnosticsButton = document.querySelector("#refreshDiagnosticsButton");
 const checkList = document.querySelector("#checkList");
 const toast = document.querySelector("#toast");
@@ -4073,6 +4074,63 @@ function diagnosticCard(label, status, detail) {
   `;
 }
 
+function testStatusCard(label, status, detail, icon) {
+  const className = status === "ok" ? "done" : status === "mock" ? "warning" : "muted";
+  const statusText = status === "ok" ? "Funciona" : status === "mock" ? "Parcial" : "Pendiente";
+  return `
+    <article class="test-status-card">
+      <span class="status-icon"><i data-lucide="${icon}"></i></span>
+      <div>
+        <strong>${escapeHtml(label)}</strong>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <span class="pill ${className}">${statusText}</span>
+    </article>
+  `;
+}
+
+function renderTestCenter() {
+  if (!testCenterPanel) return;
+  const company = activeCompany();
+  const companyJobs = jobs.filter((job) => job.companyId === company.id);
+  const companyPosts = publications.filter((publication) => publication.companyId === company.id);
+  const providerOrders = serviceOrders.filter((order) => order.companyId === company.id && serviceNeedsProvisioning(order.serviceId));
+  const connectedAccounts = (company.accounts || []).filter((account) => account.status === "Conectada").length;
+  const readyPreflights = companyJobs.filter((job) => job.preflight?.ready).length;
+  const blockedPreflights = companyJobs.filter((job) => job.preflight && !job.preflight.ready).length;
+  const recentActivity = activityLog.filter((item) => item.companyId === company.id).length;
+
+  testCenterPanel.innerHTML = `
+    <div class="test-center-grid">
+      ${testStatusCard("Backend", backendEnabled ? "ok" : "mock", backendEnabled ? `Sincronizando con ${backendProvider}.` : "Local activo; abre desde servidor para APIs.", "server")}
+      ${testStatusCard("Cuentas sociales", connectedAccounts ? "ok" : "pending", `${connectedAccounts}/${company.accounts?.length || 0} cuentas conectadas.`, "badge-check")}
+      ${testStatusCard("Cola y preflight", readyPreflights ? "ok" : blockedPreflights ? "mock" : "pending", `${readyPreflights} listos · ${blockedPreflights} bloqueados · ${companyJobs.length} trabajos.`, "shield")}
+      ${testStatusCard("Proveedores", providerOrders.length ? "mock" : "pending", `${providerOrders.length} ordenes requieren cPanel/eNom/web.`, "plug-zap")}
+      ${testStatusCard("Calendario", companyPosts.length ? "ok" : "pending", `${companyPosts.length} piezas para planear y guardar guiones.`, "calendar-days")}
+      ${testStatusCard("Auditoria", recentActivity ? "ok" : "pending", `${recentActivity} eventos registrados para esta empresa.`, "activity-square")}
+    </div>
+    <div class="test-actions">
+      <button class="primary-button icon-text-button" type="button" data-test-action="queue">
+        <i data-lucide="shield"></i>
+        Validar cola
+      </button>
+      <button class="secondary-button icon-text-button" type="button" data-test-action="apis">
+        <i data-lucide="plug-zap"></i>
+        Revisar APIs
+      </button>
+      <button class="secondary-button icon-text-button" type="button" data-test-action="providers">
+        <i data-lucide="server-cog"></i>
+        Revisar proveedores
+      </button>
+      <button class="secondary-button icon-text-button" type="button" data-test-action="diagnostics">
+        <i data-lucide="refresh-cw"></i>
+        Probar sistema
+      </button>
+    </div>
+  `;
+  renderIcons();
+}
+
 function technicalCard(label, setup, redirectUri, variables) {
   const missing = setup?.missing || [];
   const ready = setup?.ready;
@@ -4165,6 +4223,7 @@ async function renderDiagnostics() {
     renderBillingPanel(null);
   }
   renderIcons();
+  renderTestCenter();
 }
 
 function renderDeploymentPanel(status = null) {
@@ -4721,6 +4780,32 @@ accountsGrid.addEventListener("click", async (event) => {
     return;
   }
   showToast(result.message || `Faltan credenciales: ${(result.missing || []).join(", ")}`);
+});
+
+testCenterPanel.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-test-action]");
+  if (!button) return;
+  const action = button.dataset.testAction;
+  if (action === "queue") {
+    await validateQueuePreflight();
+    renderTestCenter();
+    return;
+  }
+  if (action === "apis") {
+    await refreshOAuthStatus(true);
+    renderTestCenter();
+    return;
+  }
+  if (action === "providers") {
+    await refreshProvisioningStatus(true);
+    renderTestCenter();
+    return;
+  }
+  if (action === "diagnostics") {
+    await renderDiagnostics();
+    await renderProductionReadinessFromServer();
+    renderTestCenter();
+  }
 });
 
 refreshDiagnosticsButton.addEventListener("click", renderDiagnostics);
@@ -5420,6 +5505,7 @@ async function init() {
   renderAutomationCenter();
   refreshProvisioningStatus(false);
   renderDiagnostics();
+  renderTestCenter();
   refreshDeploymentStatus();
   renderProductionReadinessFromServer();
   renderCompanies();
