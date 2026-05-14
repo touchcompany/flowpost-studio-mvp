@@ -1967,7 +1967,7 @@ function completeAutomationStep(orderId, stepId) {
 function applyProvisionResult(orderId, result) {
   serviceOrders = serviceOrders.map((order) => {
     if (order.id !== orderId) return order;
-    const provisioningStatus = result.ready ? "Provisionado" : result.missingFields?.length ? "Faltan datos" : "Conector pendiente";
+    const provisioningStatus = result.ready ? "Provisionado" : result.dryRun ? "Simulado" : result.missingFields?.length ? "Faltan datos" : "Conector pendiente";
     const steps = (order.automation?.steps || []).map((step) => {
       const title = step.title.toLowerCase();
       const shouldComplete =
@@ -2030,6 +2030,8 @@ async function provisionServiceOrder(orderId) {
     applyProvisionResult(orderId, result);
     if (result.ready) {
       showToast("Proveedor externo ejecutado correctamente.");
+    } else if (result.dryRun) {
+      showToast("Modo seguro: orden validada sin ejecutar proveedor.");
     } else {
       showToast(result.message || "Provisionamiento preparado; faltan datos o credenciales.");
     }
@@ -2239,6 +2241,15 @@ function renderAutomationCenter() {
     </section>
 
     <section class="automation-connectors">
+      <article class="automation-connector ${provisioningStatus?.mode?.live ? "is-ready" : ""}">
+        <span class="status-icon"><i data-lucide="${provisioningStatus?.mode?.live ? "zap" : "shield-check"}"></i></span>
+        <div>
+          <strong>Modo proveedores</strong>
+          <p>${escapeHtml(provisioningStatus?.mode?.message || "Revisa proveedores para conocer el modo actual.")}</p>
+          <small>${escapeHtml(provisioningStatus?.mode?.live ? "Compras y creaciones reales habilitadas" : "Seguro para pruebas internas")}</small>
+        </div>
+        <span class="pill ${provisioningStatus?.mode?.live ? "done" : "muted"}">${escapeHtml(provisioningStatus?.mode?.label || "sin revisar")}</span>
+      </article>
       ${connectorCard("cpanel", provisioningStatus?.cpanel, "Crea hosting, correos y prepara sitios web comprados.")}
       ${connectorCard("enom", provisioningStatus?.enom, "Compra dominios y registra datos técnicos del cliente.")}
       <button class="secondary-button icon-text-button" type="button" data-refresh-providers>

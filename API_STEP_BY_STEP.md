@@ -330,6 +330,7 @@ CPANEL_WHM_TOKEN=
 CPANEL_DEFAULT_PLAN=
 CPANEL_DEFAULT_CONTACT_EMAIL=
 CPANEL_FEATURELIST=
+ENABLE_REAL_PROVISIONING=false
 ```
 
 Pasos:
@@ -340,7 +341,8 @@ Pasos:
 4. Guardar token solo en backend o variables de cPanel Node.js.
 5. Probar `GET /api/services/provisioning/status`.
 6. Comprar un servicio `hosting` o `website` desde Tienda con dominio y email tecnico.
-7. La app llamara `POST /api/services/provision` y ejecutara WHM API `createacct` si las credenciales estan listas.
+7. La app llamara `POST /api/services/provision` en modo seguro si `ENABLE_REAL_PROVISIONING=false`.
+8. Cuando todo este probado, activar `ENABLE_REAL_PROVISIONING=true` para ejecutar WHM API `createacct`.
 
 Notas:
 
@@ -359,6 +361,7 @@ ENOM_ENV=test
 ENOM_UID=
 ENOM_TOKEN=
 ENOM_DEFAULT_YEARS=1
+ENABLE_REAL_PROVISIONING=false
 ```
 
 Pasos:
@@ -368,13 +371,15 @@ Pasos:
 3. Whitelistear la IP publica del servidor si eNom lo requiere.
 4. Crear token API.
 5. Configurar `ENOM_ENV=test` hasta validar todo.
-6. Comprar un servicio `Dominio anual` desde Tienda con el dominio.
-7. La app llamara `POST /api/services/provision` y ejecutara comando eNom `Purchase` si las credenciales estan listas.
+6. Comprar un servicio `Dominio anual` desde Tienda con el dominio previamente verificado.
+7. La app llamara `POST /api/services/provision` en modo seguro si `ENABLE_REAL_PROVISIONING=false`.
+8. Cuando todo este probado, activar `ENABLE_REAL_PROVISIONING=true` para ejecutar comando eNom `Purchase`.
 
 Notas:
 
 - Usar `ENOM_ENV=live` solo despues de pruebas controladas.
 - En produccion conviene agregar validacion previa de disponibilidad, datos de titular y confirmacion final antes de compra irreversible.
+- `ENOM_UID` es el usuario/API login de eNom; el token debe vivir solo en variables del servidor.
 
 ## Checklist antes de produccion
 

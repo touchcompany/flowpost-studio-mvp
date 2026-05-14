@@ -314,6 +314,14 @@ function cpanelPlanForService(serviceId, provisioning = {}) {
   return process.env[envKey] || process.env.CPANEL_DEFAULT_PLAN || "";
 }
 
+function realProvisioningEnabled() {
+  return process.env.ENABLE_REAL_PROVISIONING === "true";
+}
+
+function serviceNeedsExternalProvider(serviceId) {
+  return ["hosting", "website", "domain"].includes(serviceId);
+}
+
 async function purchaseEnomDomain({ domain, years = 1 }) {
   const setup = enomSetup();
   const parsed = splitDomain(domain);
@@ -415,21 +423,55 @@ async function provisionService(payload) {
   const provisioning = payload.provisioning || {};
   const domain = sanitizeDomain(provisioning.domain || payload.domain);
   const contactEmail = provisioning.contactEmail || payload.contactEmail || "";
+  const missingFields = [];
   const actions = [];
 
+  if (serviceNeedsExternalProvider(serviceId) && !domain) missingFields.push("domain");
+  if (["hosting", "website"].includes(serviceId) && !contactEmail) missingFields.push("contactEmail");
+
   if (["hosting", "website"].includes(serviceId)) {
-    actions.push(await createCpanelAccount({
-      domain,
-      contactEmail,
-      plan: cpanelPlanForService(serviceId, provisioning),
-      username: provisioning.username,
-    }));
+    if (!realProvisioningEnabled()) {
+      const setup = cpanelSetup();
+      actions.push({
+        ready: setup.ready && !missingFields.length,
+        dryRun: true,
+        provider: "cPanel/WHM",
+        action: "createacct",
+        domain,
+        contactEmail,
+        plan: cpanelPlanForService(serviceId, provisioning),
+        missingFields: [...new Set([...(setup.missing || []), ...missingFields])],
+        message: "Modo seguro: no se creo cuenta en WHM. Activa ENABLE_REAL_PROVISIONING=true para ejecutar.",
+      });
+    } else {
+      actions.push(await createCpanelAccount({
+        domain,
+        contactEmail,
+        plan: cpanelPlanForService(serviceId, provisioning),
+        username: provisioning.username,
+      }));
+    }
   }
   if (serviceId === "domain") {
-    actions.push(await purchaseEnomDomain({
-      domain,
-      years: provisioning.years || process.env.ENOM_DEFAULT_YEARS || 1,
-    }));
+    if (!realProvisioningEnabled()) {
+      const setup = enomSetup();
+      actions.push({
+        ready: setup.ready && !missingFields.length,
+        dryRun: true,
+        provider: "eNom",
+        action: "Purchase",
+        environment: process.env.ENOM_ENV === "live" ? "live" : "test",
+        domain,
+        years: provisioning.years || process.env.ENOM_DEFAULT_YEARS || 1,
+        missingFields: [...new Set([...(setup.missing || []), ...missingFields])],
+        message: "Modo seguro: no se compro dominio en eNom. Activa ENABLE_REAL_PROVISIONING=true para ejecutar.",
+      });
+    } else {
+      actions.push(await purchaseEnomDomain({
+        domain,
+        years: provisioning.years || process.env.ENOM_DEFAULT_YEARS || 1,
+      }));
+    }
   }
 
   if (!actions.length) {
@@ -442,10 +484,16 @@ async function provisionService(payload) {
   }
 
   return {
-    ready: actions.every((action) => action.ready),
+    ready: realProvisioningEnabled() && actions.every((action) => action.ready),
+    dryRun: !realProvisioningEnabled(),
     automated: true,
     serviceId,
     domain,
+    missingFields: [...new Set(actions.flatMap((action) => action.missingFields || []))],
+    mode: realProvisioningEnabled() ? "live" : "dry-run",
+    message: realProvisioningEnabled()
+      ? "Provisionamiento ejecutado."
+      : "Modo seguro activo: se valido la orden sin ejecutar compras ni crear hosting.",
     actions,
   };
 }
@@ -1031,6 +1079,13 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, {
       cpanel: { ...cpanelSetup(), plans: cpanelPlanConfig() },
       enom: enomSetup(),
+      mode: {
+        live: realProvisioningEnabled(),
+        label: realProvisioningEnabled() ? "live" : "dry-run",
+        message: realProvisioningEnabled()
+          ? "Provisionamiento real activo."
+          : "Modo seguro activo: se validan ordenes sin comprar dominios ni crear hosting.",
+      },
       requiredFields: {
         hosting: ["domain", "contactEmail"],
         website: ["domain", "contactEmail"],
