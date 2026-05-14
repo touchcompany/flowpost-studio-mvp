@@ -208,6 +208,7 @@ let backendEnabled = false;
 let backendProvider = "local";
 let provisioningStatus = null;
 let oauthStatus = null;
+let apiProbeResults = {};
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let serviceProvisionDraft = {
@@ -3999,6 +4000,41 @@ async function startOAuthConnection(providerKey) {
   }
 }
 
+async function probeOAuthConnection(providerKey) {
+  const endpoints = {
+    google: "/api/oauth/google/start?mode=json",
+    drive: "/api/oauth/google/start?mode=json",
+    instagram: "/api/oauth/meta/start?mode=json",
+    facebook: "/api/oauth/meta/start?mode=json",
+    tiktok: "/api/oauth/tiktok/start?mode=json",
+    youtube: "/api/oauth/youtube/start?mode=json",
+    linkedin: "/api/oauth/linkedin/start?mode=json",
+  };
+  const endpoint = endpoints[providerKey];
+  if (!endpoint || window.location.protocol === "file:") {
+    return { ready: false, provider: providerKey, message: "Abre la app con npm run dev para probar el backend." };
+  }
+  try {
+    const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
+    const result = await response.json();
+    return {
+      ...result,
+      httpStatus: response.status,
+      checkedAt: new Date().toISOString(),
+      canBuildAuthUrl: Boolean(result.authUrl),
+    };
+  } catch {
+    return {
+      ready: false,
+      provider: providerKey,
+      httpStatus: 0,
+      checkedAt: new Date().toISOString(),
+      canBuildAuthUrl: false,
+      message: "No se pudo consultar el backend de conexion.",
+    };
+  }
+}
+
 function apiProviderKey(network) {
   const keys = {
     Instagram: "instagram",
@@ -4021,10 +4057,18 @@ function apiRedirectPath(network) {
 }
 
 function apiRedirectUri(network, setup = null) {
-  if (setup?.redirectUri) return setup.redirectUri;
   const host = window.location.hostname;
   const isLocal = window.location.protocol === "file:" || host === "127.0.0.1" || host === "localhost";
   const base = isLocal ? "https://app.touch.com.co" : window.location.origin;
+  if (setup?.redirectUri) {
+    try {
+      const parsed = new URL(setup.redirectUri);
+      const setupIsLocal = parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost";
+      if (!isLocal || !setupIsLocal) return setup.redirectUri;
+    } catch {
+      return setup.redirectUri;
+    }
+  }
   return `${base}${apiRedirectPath(network)}`;
 }
 
@@ -4114,6 +4158,36 @@ function renderApiTestSteps(network, setup, configured) {
         )
         .join("")}
     </ol>
+  `;
+}
+
+function apiProbeForNetwork(network) {
+  return apiProbeResults[apiProviderKey(network)] || null;
+}
+
+function renderApiProbeResult(network) {
+  const probe = apiProbeForNetwork(network);
+  if (!probe) {
+    return `
+      <div class="api-probe-box muted">
+        <span><i data-lucide="flask-conical"></i></span>
+        <div>
+          <strong>Prueba backend pendiente</strong>
+          <small>Ejecuta una prueba segura para validar endpoint, redirect y URL OAuth.</small>
+        </div>
+      </div>
+    `;
+  }
+  const ok = Boolean(probe.ready && (probe.canBuildAuthUrl || probe.authUrl === ""));
+  return `
+    <div class="api-probe-box ${ok ? "done" : "warning"}">
+      <span><i data-lucide="${ok ? "check" : "triangle-alert"}"></i></span>
+      <div>
+        <strong>${ok ? "Backend responde" : "Backend incompleto"}</strong>
+        <small>${escapeHtml(probe.message || probe.next || (probe.canBuildAuthUrl ? "URL OAuth generada correctamente." : "Faltan datos para construir OAuth."))}</small>
+        <small>HTTP ${escapeHtml(String(probe.httpStatus || "sin respuesta"))} · ${escapeHtml(activityTimeLabel(probe.checkedAt))}</small>
+      </div>
+    </div>
   `;
 }
 
@@ -4472,6 +4546,7 @@ function renderAccounts() {
             <span>Scopes</span>
             <code>${escapeHtml(apiScopesText(network, setup))}</code>
           </div>
+          ${renderApiProbeResult(network)}
           ${renderApiTestSteps(network, setup, configured)}
           <ul class="api-requirements">
             ${integration.requirements.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
@@ -4488,6 +4563,10 @@ function renderAccounts() {
             <button class="secondary-button icon-text-button" type="button" data-copy-api-scopes="${network}">
               <i data-lucide="key-round"></i>
               Scopes
+            </button>
+            <button class="secondary-button icon-text-button" type="button" data-probe-api="${apiProviderKey(network)}">
+              <i data-lucide="flask-conical"></i>
+              Probar
             </button>
           </div>
         </article>
@@ -5343,6 +5422,17 @@ accountsGrid.addEventListener("click", async (event) => {
     } catch {
       showToast(scopes);
     }
+    return;
+  }
+
+  const probeButton = event.target.closest("[data-probe-api]");
+  if (probeButton) {
+    const providerKey = probeButton.dataset.probeApi;
+    probeButton.disabled = true;
+    const result = await probeOAuthConnection(providerKey);
+    apiProbeResults = { ...apiProbeResults, [providerKey]: result };
+    renderAccounts();
+    showToast(result.ready ? "Backend OAuth validado." : result.message || `Faltan credenciales: ${(result.missing || []).join(", ")}`);
     return;
   }
 

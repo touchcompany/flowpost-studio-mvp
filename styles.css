@@ -3797,6 +3797,70 @@ input[type="file"]:focus {
   overflow-wrap: anywhere;
 }
 
+.api-probe-box {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(250, 250, 250, 0.78);
+}
+
+.api-probe-box > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+}
+
+.api-probe-box.done {
+  border-color: rgba(22, 163, 74, 0.2);
+  background: rgba(240, 253, 244, 0.84);
+}
+
+.api-probe-box.done > span {
+  color: #15803d;
+}
+
+.api-probe-box.warning {
+  border-color: rgba(217, 119, 6, 0.22);
+  background: rgba(255, 251, 235, 0.82);
+}
+
+.api-probe-box.warning > span {
+  color: #b45309;
+}
+
+.api-probe-box svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.3;
+}
+
+.api-probe-box strong,
+.api-probe-box small {
+  display: block;
+  min-width: 0;
+}
+
+.api-probe-box strong {
+  font-size: 0.82rem;
+}
+
+.api-probe-box small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+
 .api-step-list {
   display: grid;
   gap: 8px;
@@ -3856,7 +3920,7 @@ input[type="file"]:focus {
 
 .account-card-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
