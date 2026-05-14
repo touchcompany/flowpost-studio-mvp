@@ -4098,6 +4098,65 @@ function accountConnectedForNetwork(network) {
   return activeCompany().accounts.some((account) => account.platform === network && account.status === "Conectada");
 }
 
+function canLinkApiToCompany(network, setup) {
+  const probe = apiProbeForNetwork(network);
+  return Boolean(setup?.connected || setup?.connectionStatus === "tokens-saved" || probe?.ready);
+}
+
+function linkApiToCompany(network) {
+  const company = activeCompany();
+  const key = apiProviderKey(network);
+  if (network === "Google Drive") {
+    company.mediaSource = {
+      provider: "Google Drive",
+      folder: company.mediaSource?.folder || `/${company.name}/Videos aprobados`,
+      connected: true,
+    };
+    addActivity("account", "Drive vinculado", `${company.name} quedo lista para listar recursos desde Google Drive.`, { companyId: company.id });
+  } else {
+    const existing = company.accounts.find((account) => account.platform === network);
+    const nextAccount = {
+      platform: network,
+      key,
+      handle: company.handle || `@${company.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}`,
+      status: "Conectada",
+      note: "Vinculada en modo prueba desde el laboratorio OAuth.",
+    };
+    company.accounts = existing
+      ? company.accounts.map((account) => (account.platform === network ? { ...account, ...nextAccount } : account))
+      : [...company.accounts, nextAccount];
+    addActivity("account", `${network} vinculado`, `${company.name} quedo lista para pruebas internas de cola.`, { companyId: company.id });
+  }
+  persistState();
+  refreshCompanyContext();
+  renderAccounts();
+  renderQueue();
+  renderDashboard();
+  showToast(`${network} vinculado a ${company.name} en modo prueba.`);
+}
+
+function unlinkApiFromCompany(network) {
+  const company = activeCompany();
+  if (network === "Google Drive") {
+    company.mediaSource = {
+      provider: "Google Drive",
+      folder: company.mediaSource?.folder || `/${company.name}/Videos aprobados`,
+      connected: false,
+    };
+  } else {
+    company.accounts = company.accounts.map((account) =>
+      account.platform === network ? { ...account, status: "Pendiente", note: "Desvinculada para pruebas." } : account
+    );
+  }
+  addActivity("account", `${network} desvinculado`, `${company.name} vuelve a estado pendiente.`, { companyId: company.id });
+  persistState();
+  refreshCompanyContext();
+  renderAccounts();
+  renderQueue();
+  renderDashboard();
+  showToast(`${network} queda pendiente para ${company.name}.`);
+}
+
 function apiCredentialText(setup) {
   if (!setup) return "Sin revisar";
   if (setup.connected && setup.connectionStatus === "tokens-saved") {
@@ -4525,6 +4584,7 @@ function renderAccounts() {
       const setup = oauthSetupForNetwork(network);
       const ready = Boolean(setup?.ready);
       const stage = apiConnectionStage(setup, configured);
+      const canLink = canLinkApiToCompany(network, setup);
       return `
         <article class="account-card ${stage.cardClass}">
           <header>
@@ -4568,6 +4628,17 @@ function renderAccounts() {
               <i data-lucide="flask-conical"></i>
               Probar
             </button>
+            ${
+              configured
+                ? `<button class="secondary-button icon-text-button" type="button" data-unlink-api="${network}">
+                    <i data-lucide="unlink"></i>
+                    Desvincular
+                  </button>`
+                : `<button class="secondary-button icon-text-button" type="button" data-link-api="${network}" ${canLink ? "" : "disabled"}>
+                    <i data-lucide="link"></i>
+                    Vincular prueba
+                  </button>`
+            }
           </div>
         </article>
       `;
@@ -5433,6 +5504,18 @@ accountsGrid.addEventListener("click", async (event) => {
     apiProbeResults = { ...apiProbeResults, [providerKey]: result };
     renderAccounts();
     showToast(result.ready ? "Backend OAuth validado." : result.message || `Faltan credenciales: ${(result.missing || []).join(", ")}`);
+    return;
+  }
+
+  const linkButton = event.target.closest("[data-link-api]");
+  if (linkButton) {
+    linkApiToCompany(linkButton.dataset.linkApi);
+    return;
+  }
+
+  const unlinkButton = event.target.closest("[data-unlink-api]");
+  if (unlinkButton) {
+    unlinkApiFromCompany(unlinkButton.dataset.unlinkApi);
     return;
   }
 

@@ -3925,6 +3925,11 @@ input[type="file"]:focus {
   margin-top: 12px;
 }
 
+.account-card-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .account-pills {
   display: flex;
   flex-wrap: wrap;
