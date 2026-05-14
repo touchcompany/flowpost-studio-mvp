@@ -300,6 +300,12 @@ async function createCpanelAccount({ domain, contactEmail, plan, username }) {
   };
 }
 
+function cpanelPlanForService(serviceId, provisioning = {}) {
+  if (provisioning.hostingPlan) return provisioning.hostingPlan;
+  const envKey = `CPANEL_PLAN_${String(serviceId || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+  return process.env[envKey] || process.env.CPANEL_DEFAULT_PLAN || "";
+}
+
 async function purchaseEnomDomain({ domain, years = 1 }) {
   const setup = enomSetup();
   const parsed = splitDomain(domain);
@@ -358,7 +364,7 @@ async function provisionService(payload) {
     actions.push(await createCpanelAccount({
       domain,
       contactEmail,
-      plan: provisioning.hostingPlan || process.env.CPANEL_DEFAULT_PLAN,
+      plan: cpanelPlanForService(serviceId, provisioning),
       username: provisioning.username,
     }));
   }

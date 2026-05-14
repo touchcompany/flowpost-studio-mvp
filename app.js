@@ -280,6 +280,7 @@ const fallbackIconPaths = {
   "check-circle-2": '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
   "circle-alert": '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   "refresh-cw": '<path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8"/><path d="M21 3v5h-5"/>',
   "plug-zap": '<path d="M13 2 7 12h5l-1 10 6-12h-5l1-8Z"/><path d="M6 3v4M10 3v4M8 7v3"/>',
   workflow: '<rect x="3" y="4" width="6" height="6" rx="2"/><rect x="15" y="14" width="6" height="6" rx="2"/><path d="M9 7h2a3 3 0 0 1 3 3v4"/><path d="m12 12 2 2 2-2"/><path d="M15 17H9a3 3 0 0 1-3-3v-4"/>',
@@ -1253,6 +1254,57 @@ function clientServiceOrders(clientId) {
   return serviceOrders.filter((order) => order.agencyId === activeAgencyId && order.clientId === clientId);
 }
 
+function purchasedServiceIdsForClient(client) {
+  const ids = new Set();
+  if (client?.serviceId) ids.add(client.serviceId);
+  clientServiceOrders(client.id)
+    .filter((order) => !["Cancelado", "Rechazado"].includes(order.status))
+    .forEach((order) => ids.add(order.serviceId));
+  return ids;
+}
+
+function serviceAccessModules(client) {
+  const purchased = purchasedServiceIdsForClient(client);
+  return activeAgencyServices()
+    .filter((service) => service.clientVisible !== false)
+    .map((service) => ({
+      service,
+      enabled: purchased.has(service.id),
+    }));
+}
+
+function renderClientAccessPanel(client) {
+  const modules = serviceAccessModules(client);
+  const enabled = modules.filter((module) => module.enabled);
+  return `
+    <section class="client-access-panel">
+      <header>
+        <div>
+          <h3>Panel visible del cliente</h3>
+          <p>Solo se muestran como activos los servicios comprados. El resto queda bloqueado hasta nueva compra.</p>
+        </div>
+        <span class="pill ${enabled.length ? "done" : "muted"}">${enabled.length}/${modules.length} activos</span>
+      </header>
+      <div class="client-access-grid">
+        ${modules
+          .map(
+            ({ service, enabled: isEnabled }) => `
+              <article class="${isEnabled ? "enabled" : "locked"}">
+                <span class="status-icon small"><i data-lucide="${isEnabled ? serviceIcon(service) : "lock"}"></i></span>
+                <div>
+                  <strong>${escapeHtml(service.name)}</strong>
+                  <p>${isEnabled ? "Disponible en el panel del cliente." : "Bloqueado hasta comprar este servicio."}</p>
+                </div>
+                <span class="pill ${isEnabled ? "done" : "muted"}">${isEnabled ? "Activo" : "Bloqueado"}</span>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function serviceOrderStatusClass(status) {
   if (status === "Completado") return "done";
   if (status === "En proceso") return "warning";
@@ -1653,6 +1705,7 @@ function renderClientBillingPanel() {
                         : `<article class="client-order-empty">Este cliente aun no ha comprado servicios adicionales.</article>`
                     }
                   </section>
+                  ${renderClientAccessPanel(client)}
                   <details class="client-edit-panel">
                     <summary>
                       <span><i data-lucide="pencil"></i> Editar perfil</span>

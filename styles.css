@@ -5566,6 +5566,61 @@ input[type="file"] {
   background: #fff;
 }
 
+.client-access-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.client-access-panel header,
+.client-access-grid article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.client-access-panel h3,
+.client-access-panel p,
+.client-access-grid strong,
+.client-access-grid p {
+  display: block;
+  margin: 0;
+}
+
+.client-access-panel p,
+.client-access-grid p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.client-access-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+}
+
+.client-access-grid article {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.client-access-grid article.enabled {
+  border-color: rgba(21, 128, 61, 0.2);
+  background: #f0fdf4;
+}
+
+.client-access-grid article.locked {
+  opacity: 0.72;
+}
+
 .automation-steps {
   display: grid;
   gap: 7px;
