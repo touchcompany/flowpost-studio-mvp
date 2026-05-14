@@ -4144,6 +4144,46 @@ function renderApiStatusSummary(networks) {
   `;
 }
 
+function renderApiEventPanel(networks) {
+  const events = networks
+    .map((network) => ({ network, setup: oauthSetupForNetwork(network), configured: accountConnectedForNetwork(network) }))
+    .filter((item) => item.setup?.connected || item.configured)
+    .sort((a, b) => String(b.setup?.connectedAt || "").localeCompare(String(a.setup?.connectedAt || "")));
+
+  return `
+    <section class="api-event-panel">
+      <header>
+        <span class="status-icon large"><i data-lucide="radar"></i></span>
+        <div>
+          <h3>Eventos de conexion</h3>
+          <p>Auditoria simple para validar callbacks y cuentas vinculadas durante pruebas reales.</p>
+        </div>
+      </header>
+      ${
+        events.length
+          ? `<div class="api-event-list">
+              ${events
+                .map((item) => {
+                  const stage = apiConnectionStage(item.setup, item.configured);
+                  return `
+                    <article>
+                      <span>${socialIcon(item.network)}</span>
+                      <div>
+                        <strong>${escapeHtml(item.network)}</strong>
+                        <p>${escapeHtml(apiCredentialText(item.setup))}</p>
+                      </div>
+                      <small class="pill ${stage.className}">${stage.label}</small>
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>`
+          : `<div class="empty-state compact"><strong>Sin callbacks todavia</strong><p>Cuando autorices una API, el callback quedara visible aqui antes de activar publicacion real.</p></div>`
+      }
+    </section>
+  `;
+}
+
 function calendarPost(publication, compact = false) {
   const scriptReady = Boolean((publication.script || "").trim());
   const isSelected = selectedCalendarPublicationId === publication.id;
@@ -4404,6 +4444,7 @@ function renderAccounts() {
   const networks = ["Instagram", "Facebook", "TikTok", "Google Drive", "LinkedIn", "YouTube"];
   accountsGrid.innerHTML = [
     renderApiStatusSummary(networks),
+    renderApiEventPanel(networks),
     ...networks.map((network) => {
       const integration = integrationRequirements[network];
       const configured = accountConnectedForNetwork(network);

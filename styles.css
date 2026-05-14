@@ -3626,6 +3626,19 @@ input[type="file"]:focus {
     #fff;
 }
 
+.api-event-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255, 48, 108, 0.1), transparent 32%),
+    #fff;
+}
+
+.api-event-panel header,
 .api-status-panel > div {
   display: flex;
   gap: 12px;
@@ -3633,6 +3646,8 @@ input[type="file"]:focus {
   min-width: 0;
 }
 
+.api-event-panel h3,
+.api-event-panel p,
 .api-status-panel h3,
 .api-status-panel p,
 .api-status-panel small {
@@ -3640,6 +3655,7 @@ input[type="file"]:focus {
   margin: 0;
 }
 
+.api-event-panel p,
 .api-status-panel p,
 .api-status-panel small,
 .api-status-line {
@@ -3647,6 +3663,7 @@ input[type="file"]:focus {
   line-height: 1.35;
 }
 
+.api-event-panel p,
 .api-status-panel p {
   margin-top: 3px;
 }
@@ -3656,6 +3673,45 @@ input[type="file"]:focus {
   margin-top: 5px;
   font-size: 0.8rem;
   overflow-wrap: anywhere;
+}
+
+.api-event-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.api-event-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.api-event-list .social-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.api-event-list strong,
+.api-event-list p {
+  display: block;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-event-list p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 
 .account-card.api-ready {
@@ -7685,6 +7741,19 @@ input[type="file"] {
 
   .account-card-actions {
     grid-template-columns: 1fr;
+  }
+
+  .api-event-list {
+    grid-template-columns: 1fr;
+  }
+
+  .api-event-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .api-event-list article > small {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .real-test-roadmap {
