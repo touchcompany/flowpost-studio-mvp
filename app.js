@@ -4074,6 +4074,49 @@ function apiConnectionStage(setup, configured) {
   return { label: "Faltan keys", className: "muted", cardClass: "api-missing" };
 }
 
+function apiScopesText(network, setup) {
+  if (setup?.scopes) return setup.scopes;
+  if (["Instagram", "Facebook"].includes(network)) return "instagram_basic,pages_show_list,pages_read_engagement,instagram_content_publish";
+  if (network === "Google Drive") return "openid email profile https://www.googleapis.com/auth/drive.file";
+  if (network === "TikTok") return "user.info.basic,video.publish";
+  if (network === "YouTube") return "https://www.googleapis.com/auth/youtube.upload";
+  if (network === "LinkedIn") return "openid profile email w_member_social";
+  return "";
+}
+
+function apiTestSteps(network, setup, configured) {
+  const ready = Boolean(setup?.ready);
+  const callback = Boolean(setup?.connected);
+  const tokenized = setup?.connectionStatus === "tokens-saved";
+  return [
+    { label: "Credenciales servidor", done: ready, detail: ready ? "Variables listas" : (setup?.missing || []).join(", ") || "Pendiente" },
+    { label: "Redirect configurado", done: Boolean(apiRedirectUri(network, setup)), detail: apiRedirectUri(network, setup) },
+    { label: "OAuth autorizado", done: callback, detail: callback ? apiCredentialText(setup) : "Abrir OAuth desde esta tarjeta" },
+    { label: network === "Google Drive" ? "Tokens guardados" : "Permisos validados", done: tokenized || configured, detail: tokenized || configured ? "Listo para prueba controlada" : "Pendiente de intercambio y validacion" },
+    { label: "Empresa vinculada", done: configured, detail: configured ? activeCompany().name : "Falta enlazar con la empresa activa" },
+  ];
+}
+
+function renderApiTestSteps(network, setup, configured) {
+  return `
+    <ol class="api-step-list">
+      ${apiTestSteps(network, setup, configured)
+        .map(
+          (step) => `
+            <li class="${step.done ? "done" : ""}">
+              <span><i data-lucide="${step.done ? "check" : "circle"}"></i></span>
+              <div>
+                <strong>${escapeHtml(step.label)}</strong>
+                <small>${escapeHtml(step.detail)}</small>
+              </div>
+            </li>
+          `
+        )
+        .join("")}
+    </ol>
+  `;
+}
+
 function renderApiStatusSummary(networks) {
   const setups = networks.map((network) => oauthSetupForNetwork(network)).filter(Boolean);
   const ready = setups.filter((setup) => setup.ready).length;
@@ -4384,6 +4427,11 @@ function renderAccounts() {
             <strong>${escapeHtml(apiNextStepText(network, setup, configured))}</strong>
             <small>${escapeHtml(apiRedirectUri(network, setup))}</small>
           </div>
+          <div class="api-scope-box">
+            <span>Scopes</span>
+            <code>${escapeHtml(apiScopesText(network, setup))}</code>
+          </div>
+          ${renderApiTestSteps(network, setup, configured)}
           <ul class="api-requirements">
             ${integration.requirements.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
           </ul>
@@ -4395,6 +4443,10 @@ function renderAccounts() {
             <button class="secondary-button icon-text-button" type="button" data-copy-api-redirect="${network}">
               <i data-lucide="copy"></i>
               Redirect
+            </button>
+            <button class="secondary-button icon-text-button" type="button" data-copy-api-scopes="${network}">
+              <i data-lucide="key-round"></i>
+              Scopes
             </button>
           </div>
         </article>
@@ -5236,6 +5288,19 @@ accountsGrid.addEventListener("click", async (event) => {
       showToast("Redirect URI copiada.");
     } catch {
       showToast(uri);
+    }
+    return;
+  }
+
+  const copyScopesButton = event.target.closest("[data-copy-api-scopes]");
+  if (copyScopesButton) {
+    const network = copyScopesButton.dataset.copyApiScopes;
+    const scopes = apiScopesText(network, oauthSetupForNetwork(network));
+    try {
+      await navigator.clipboard.writeText(scopes);
+      showToast("Scopes copiados.");
+    } catch {
+      showToast(scopes);
     }
     return;
   }

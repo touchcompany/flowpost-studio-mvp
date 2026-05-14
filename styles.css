@@ -3713,9 +3713,94 @@ input[type="file"]:focus {
   overflow-wrap: anywhere;
 }
 
+.api-scope-box {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.api-scope-box span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.api-scope-box code {
+  display: block;
+  max-width: 100%;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 760;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.api-step-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.api-step-list li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+}
+
+.api-step-list li > span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+}
+
+.api-step-list li.done > span {
+  border-color: rgba(22, 163, 74, 0.18);
+  background: rgba(220, 252, 231, 0.85);
+  color: #15803d;
+}
+
+.api-step-list svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.4;
+}
+
+.api-step-list strong,
+.api-step-list small {
+  display: block;
+  min-width: 0;
+}
+
+.api-step-list strong {
+  font-size: 0.82rem;
+}
+
+.api-step-list small {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+
 .account-card-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   margin-top: 12px;
 }
