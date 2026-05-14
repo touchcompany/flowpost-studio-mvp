@@ -83,6 +83,7 @@ const deploymentPanel = document.querySelector("#deploymentPanel");
 const clientBillingPanel = document.querySelector("#clientBillingPanel");
 const clientWorkspacePanel = document.querySelector("#clientWorkspacePanel");
 const storePanel = document.querySelector("#storePanel");
+const automationCenterPanel = document.querySelector("#automationCenterPanel");
 const readinessSummary = document.querySelector("#readinessSummary");
 const readinessGrid = document.querySelector("#readinessGrid");
 const diagnosticsGrid = document.querySelector("#diagnosticsGrid");
@@ -271,6 +272,7 @@ const fallbackIconPaths = {
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
   "refresh-cw": '<path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8"/><path d="M21 3v5h-5"/>',
   "plug-zap": '<path d="M13 2 7 12h5l-1 10 6-12h-5l1-8Z"/><path d="M6 3v4M10 3v4M8 7v3"/>',
+  workflow: '<rect x="3" y="4" width="6" height="6" rx="2"/><rect x="15" y="14" width="6" height="6" rx="2"/><path d="M9 7h2a3 3 0 0 1 3 3v4"/><path d="m12 12 2 2 2-2"/><path d="M15 17H9a3 3 0 0 1-3-3v-4"/>',
   "mouse-pointer-click": '<path d="M4 3 14 14l-5 1 3 6 3-2-3-5 5-2L4 3Z"/><path d="M16 4h4M18 2v4"/>',
   pencil: '<path d="m4 20 4-1 11-11-3-3L5 16l-1 4Z"/><path d="m14 6 3 3"/>',
   download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
@@ -1834,6 +1836,7 @@ function completeAutomationStep(orderId, stepId) {
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
+  renderAutomationCenter();
   renderDashboard();
   showToast("Paso automático completado.");
 }
@@ -1872,6 +1875,7 @@ function applyProvisionResult(orderId, result) {
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
+  renderAutomationCenter();
   renderDashboard();
 }
 
@@ -2045,6 +2049,140 @@ function renderStorePanel() {
   renderIcons();
 }
 
+function allAutomationOrders() {
+  ensureServiceOrderAutomations();
+  return serviceOrders.filter((order) => order.agencyId === activeAgencyId);
+}
+
+function nextAutomationStep(order) {
+  return (order.automation?.steps || []).find((step) => step.status !== "Completado") || null;
+}
+
+function renderAutomationCenter() {
+  if (!automationCenterPanel) return;
+  const orders = allAutomationOrders();
+  const pending = orders.filter((order) => order.status !== "Completado");
+  const providerOrders = orders.filter((order) => serviceNeedsProvisioning(order.serviceId));
+  const blocked = providerOrders.filter((order) => ["Faltan datos", "Conector pendiente", "Pendiente"].includes(order.provisioning?.status));
+  const completedSteps = orders.reduce((sum, order) => sum + (order.automation?.steps || []).filter((step) => step.status === "Completado").length, 0);
+  const totalSteps = orders.reduce((sum, order) => sum + (order.automation?.steps || []).length, 0);
+  const progress = totalSteps ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+  automationCenterPanel.innerHTML = `
+    <section class="automation-hero">
+      <div>
+        <span class="status-icon large"><i data-lucide="workflow"></i></span>
+        <div>
+          <h2>Operación automática de ${escapeHtml(activeAgency().name)}</h2>
+          <p>Cada venta dispara pasos, cobros, proveedores y entregas para el cliente correcto.</p>
+        </div>
+      </div>
+      <div class="automation-score" style="--score: ${progress}%">
+        <strong>${progress}%</strong>
+        <span>Avance total</span>
+      </div>
+    </section>
+
+    <section class="automation-summary">
+      <article><span>Órdenes</span><strong>${orders.length}</strong></article>
+      <article><span>Activas</span><strong>${pending.length}</strong></article>
+      <article><span>Proveedor</span><strong>${providerOrders.length}</strong></article>
+      <article><span>Bloqueadas</span><strong>${blocked.length}</strong></article>
+    </section>
+
+    <section class="automation-layout">
+      <div class="automation-board">
+        ${
+          orders.length
+            ? orders
+                .map((order) => {
+                  const client = clients.find((item) => item.id === order.clientId);
+                  const step = nextAutomationStep(order);
+                  return `
+                    <article class="automation-card">
+                      <header>
+                        <span class="status-icon"><i data-lucide="${serviceIcon(serviceById(order.serviceId))}"></i></span>
+                        <div>
+                          <strong>${escapeHtml(order.serviceName)}</strong>
+                          <p>${escapeHtml(client?.name || "Cliente")} · ${formatMoney(order.amount, order.currency)}</p>
+                        </div>
+                        <span class="pill ${serviceOrderStatusClass(order.status)}">${escapeHtml(order.status)}</span>
+                      </header>
+                      <div class="automation-progress">
+                        <span style="width: ${orderAutomationProgress(order)}%"></span>
+                      </div>
+                      <div class="automation-next">
+                        <span>${step ? "Siguiente paso" : "Flujo completado"}</span>
+                        <strong>${escapeHtml(step?.title || "Listo")}</strong>
+                        <p>${escapeHtml(step?.detail || "Todos los pasos de este servicio están completos.")}</p>
+                      </div>
+                      ${
+                        order.provisioning && order.provisioning.status !== "No requerido"
+                          ? `<div class="automation-provider">
+                              <i data-lucide="plug-zap"></i>
+                              <span>${escapeHtml(order.provisioning.status)}${order.provisioning.domain ? ` · ${escapeHtml(order.provisioning.domain)}` : ""}</span>
+                            </div>`
+                          : ""
+                      }
+                      <footer>
+                        ${
+                          step
+                            ? `<button class="secondary-button icon-text-button" type="button" data-center-step="${order.id}" data-step-id="${step.id}">
+                                <i data-lucide="check"></i>
+                                Completar siguiente
+                              </button>`
+                            : ""
+                        }
+                        ${
+                          serviceNeedsProvisioning(order.serviceId)
+                            ? `<button class="secondary-button icon-text-button" type="button" data-center-provision="${order.id}">
+                                <i data-lucide="plug-zap"></i>
+                                Provisionar
+                              </button>`
+                            : ""
+                        }
+                        <button class="primary-button icon-text-button" type="button" data-center-client="${order.clientId}">
+                          <i data-lucide="folder-open"></i>
+                          Ver cliente
+                        </button>
+                      </footer>
+                    </article>
+                  `;
+                })
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin automatizaciones</strong><p>Compra un servicio en Tienda para crear el primer flujo automático.</p></div>`
+        }
+      </div>
+
+      <aside class="automation-aside">
+        <div class="section-heading small">
+          <h2>Bloqueos</h2>
+          <p>Lo que impide que algo se ejecute completo.</p>
+        </div>
+        ${
+          blocked.length
+            ? blocked
+                .map(
+                  (order) => `
+                    <article>
+                      <strong>${escapeHtml(order.serviceName)}</strong>
+                      <p>${escapeHtml(order.provisioning?.status || "Pendiente")} · ${escapeHtml(order.provisioning?.lastResult?.message || "Faltan datos o credenciales del proveedor.")}</p>
+                    </article>
+                  `
+                )
+                .join("")
+            : `<article><strong>Sin bloqueos críticos</strong><p>Los flujos activos no reportan bloqueos de proveedor.</p></article>`
+        }
+        <button class="secondary-button icon-text-button" type="button" data-center-store>
+          <i data-lucide="shopping-bag"></i>
+          Abrir tienda
+        </button>
+      </aside>
+    </section>
+  `;
+  renderIcons();
+}
+
 function generateClientInvoice(clientId) {
   const client = clients.find((item) => item.id === clientId);
   if (!client) return;
@@ -2128,6 +2266,7 @@ function purchaseServiceForClient(serviceId) {
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
+  renderAutomationCenter();
   renderDashboard();
   showToast("Servicio comprado y cuenta de cobro creada.");
   provisionServiceOrder(order.id);
@@ -2157,6 +2296,7 @@ function markServiceOrderStatus(orderId, status) {
   persistState();
   renderClientBillingPanel();
   renderStorePanel();
+  renderAutomationCenter();
   renderDashboard();
   showToast(`Servicio marcado como ${status.toLowerCase()}.`);
 }
@@ -2223,6 +2363,7 @@ function applyPendingLandingPurchases() {
   localStorage.removeItem(PENDING_PURCHASES_KEY);
   persistState();
   renderStorePanel();
+  renderAutomationCenter();
   showToast(`${purchases.length} compra${purchases.length === 1 ? "" : "s"} agregada${purchases.length === 1 ? "" : "s"} al cliente ${client.name}.`);
 }
 
@@ -4446,6 +4587,38 @@ storePanel.addEventListener("input", (event) => {
   serviceProvisionDraft[provisionField.dataset.provisionField] = provisionField.value;
 });
 
+automationCenterPanel.addEventListener("click", (event) => {
+  const stepButton = event.target.closest("[data-center-step]");
+  if (stepButton) {
+    completeAutomationStep(stepButton.dataset.centerStep, stepButton.dataset.stepId);
+    return;
+  }
+
+  const provisionButton = event.target.closest("[data-center-provision]");
+  if (provisionButton) {
+    provisionServiceOrder(provisionButton.dataset.centerProvision);
+    return;
+  }
+
+  const clientButton = event.target.closest("[data-center-client]");
+  if (clientButton) {
+    const client = clients.find((item) => item.id === clientButton.dataset.centerClient);
+    if (client) {
+      activeCompanyId = client.companyId;
+      refreshCompanyContext();
+    }
+    renderClientBillingPanel();
+    setView("clients");
+    return;
+  }
+
+  const storeButton = event.target.closest("[data-center-store]");
+  if (storeButton) {
+    renderStorePanel();
+    setView("store");
+  }
+});
+
 logoutButton.addEventListener("click", () => {
   const session = currentSession();
   if (!session.id) {
@@ -4822,6 +4995,7 @@ async function init() {
   renderCalendar();
   renderAccounts();
   renderStorePanel();
+  renderAutomationCenter();
   renderDiagnostics();
   refreshDeploymentStatus();
   renderProductionReadinessFromServer();
