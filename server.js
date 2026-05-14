@@ -1007,6 +1007,93 @@ async function oauthStatusEntry(req, key, platform, required, redirectUri, scope
   };
 }
 
+function scriptFallback(payload = {}) {
+  const company = payload.company || {};
+  const publication = payload.publication || payload;
+  const brand = company.name || "la marca";
+  const voice = company.voice || "claro, cercano y comercial";
+  const hook = publication.hook || publication.title || `Una idea potente de ${brand}`;
+  const cta = publication.cta || "Escríbenos para recibir más información.";
+  return [
+    `Hook: ${hook}.`,
+    `Escena 1: abre con el resultado final y una frase corta que conecte con el problema del cliente.`,
+    `Escena 2: muestra el producto, servicio o proceso con una toma cercana y ritmo ágil.`,
+    `Escena 3: agrega prueba social, beneficio concreto o comparación antes/después con tono ${voice}.`,
+    `Escena 4: refuerza por qué ${brand} es una opción confiable sin sonar agresivo.`,
+    `Cierre: ${cta}`,
+  ].join("\n");
+}
+
+function aiPromptForScript(payload = {}) {
+  const company = payload.company || {};
+  const publication = payload.publication || payload;
+  return [
+    "Actua como estratega senior de contenido para Instagram, Facebook y TikTok.",
+    "Escribe en español natural para una pyme o marca personal.",
+    "Crea un guion corto, accionable y grabable para video vertical.",
+    `Marca: ${company.name || "marca"}.`,
+    `Tono de voz: ${company.voice || "claro, cercano y comercial"}.`,
+    `Descripcion: ${company.description || "sin descripcion"}.`,
+    `Titulo de la pieza: ${publication.title || "pieza de contenido"}.`,
+    `Tipo: ${publication.type || "Video / Reel"}.`,
+    `Hook base: ${publication.hook || publication.copy || "crear una apertura fuerte"}.`,
+    `CTA: ${publication.cta || "invitar a escribir o comprar"}.`,
+    `Notas: ${publication.notes || "sin notas"}.`,
+    "Formato exacto: Hook, Escena 1, Escena 2, Escena 3, Cierre.",
+    "Evita frases genericas. Incluye acciones visuales concretas y una promesa clara.",
+  ].join("\n");
+}
+
+async function generateAiScript(payload) {
+  const prompt = aiPromptForScript(payload);
+  if (process.env.OPENAI_API_KEY) {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Eres un estratega creativo experto en guiones de social media para negocios reales." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.75,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error?.message || "OpenAI script generation failed");
+    return {
+      mode: "openai",
+      script: result.choices?.[0]?.message?.content?.trim() || scriptFallback(payload),
+    };
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.75 },
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error?.message || "Gemini script generation failed");
+    return {
+      mode: "gemini",
+      script: result.candidates?.[0]?.content?.parts?.map((part) => part.text).join("").trim() || scriptFallback(payload),
+    };
+  }
+
+  return {
+    mode: "mock",
+    script: scriptFallback(payload),
+  };
+}
+
 function fileExists(relativePath) {
   return fs.existsSync(path.join(ROOT, relativePath));
 }
@@ -1757,6 +1844,20 @@ async function handleApi(req, res, url) {
       mode: process.env.OPENAI_API_KEY ? "mock-ready-for-openai" : "mock",
       copy,
     });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/ai/script") {
+    const payload = await readBody(req);
+    try {
+      sendJson(res, 200, await generateAiScript(payload));
+    } catch (error) {
+      sendJson(res, 200, {
+        mode: "mock-after-error",
+        script: scriptFallback(payload),
+        message: error.message || "No se pudo generar con IA real; se entrego mock editable.",
+      });
+    }
     return;
   }
 

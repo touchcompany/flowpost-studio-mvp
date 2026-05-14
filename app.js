@@ -229,6 +229,8 @@ const fallbackIconPaths = {
   "plus-square": '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',
   "building-2": '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>',
   clapperboard: '<path d="M4 11h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z"/><path d="M4 11 6 3h12l2 8"/><path d="m8 3 4 8M14 3l4 8"/>',
+  photo: '<rect x="3.75" y="5" width="16.5" height="14" rx="2.25"/><circle cx="9" cy="10" r="1.75"/><path d="m4.5 17 4.8-4.8a2 2 0 0 1 2.8 0l1.4 1.4 2.1-2.1a2 2 0 0 1 2.8 0L20 13.1"/>',
+  bolt: '<path d="M13.5 2.25 4.75 13h6l-1.25 8.75L19.25 10h-6l.25-7.75Z"/>',
   "calendar-days": '<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',
   calendar: '<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
@@ -295,28 +297,31 @@ const fallbackIconPaths = {
   upload: '<path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/>',
   store: '<path d="M4 10h16"/><path d="M5 10l1-5h12l1 5"/><path d="M6 10v10h12V10"/><path d="M9 20v-5h6v5"/><path d="M3 10c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2"/>',
   ellipsis: '<path d="M5 12h.01M12 12h.01M19 12h.01"/>',
+  circle: '<circle cx="12" cy="12" r="9"/>',
+  "file-plus-2": '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6"/><path d="M12 12v6M9 15h6"/>',
+  "shopping-bag": '<path d="M6.75 8.25h10.5l1 11.25a2 2 0 0 1-2 2.25h-8.5a2 2 0 0 1-2-2.25l1-11.25Z"/><path d="M9 8.25a3 3 0 0 1 6 0"/>',
+  "shield-check": '<path d="M12 21s7.5-3.75 7.5-10V5.25L12 2.75 4.5 5.25V11c0 6.25 7.5 10 7.5 10Z"/><path d="m8.75 11.75 2.25 2.25 4.5-5"/>',
+  zap: '<path d="m13 2-8 12h6l-1 8 9-13h-6l0-7Z"/>',
+  "key-round": '<circle cx="8" cy="14" r="4"/><path d="M11 11 21 1M17 5l3 3M14.5 7.5l3 3"/>',
+  "flask-conical": '<path d="M10 2v5.5L4.25 18a2.5 2.5 0 0 0 2.2 3.75h11.1A2.5 2.5 0 0 0 19.75 18L14 7.5V2"/><path d="M8 2h8M7 16h10"/>',
+  "triangle-alert": '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5M12 17h.01"/>',
+  radar: '<path d="M12 12 19 5"/><path d="M20.5 12A8.5 8.5 0 1 1 12 3.5"/><path d="M16.5 12a4.5 4.5 0 1 1-4.5-4.5"/><circle cx="12" cy="12" r="1"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1 1"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20l1-1"/>',
+  unlink: '<path d="m4 4 16 16"/><path d="M9.5 14.5 7 17a5 5 0 0 1-7.1-7.1l2-2A5 5 0 0 1 8 6.8"/><path d="M14.5 9.5 17 7a5 5 0 0 1 7.1 7.1l-2 2a5 5 0 0 1-6.1.7"/>',
 };
 
 function fallbackIcon(name) {
   const path = fallbackIconPaths[name] || fallbackIconPaths.plus;
-  return `<svg class="lucide lucide-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  return `<svg class="heroicon heroicon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 }
 
 function renderIcons() {
-  if (window.lucide) {
-    window.lucide.createIcons({
-      attrs: {
-        "stroke-width": 1.65,
-      },
-    });
-  } else {
-    document.querySelectorAll("i[data-lucide]").forEach((icon) => {
-      const wrapper = document.createElement("span");
-      wrapper.className = "lucide-fallback";
-      wrapper.innerHTML = fallbackIcon(icon.dataset.lucide);
-      icon.replaceWith(wrapper.firstElementChild);
-    });
-  }
+  document.querySelectorAll("i[data-lucide]").forEach((icon) => {
+    const wrapper = document.createElement("span");
+    wrapper.className = "heroicon-fallback";
+    wrapper.innerHTML = fallbackIcon(icon.dataset.lucide);
+    icon.replaceWith(wrapper.firstElementChild);
+  });
   renderSocialIcons();
 }
 
@@ -1368,18 +1373,17 @@ function renderAgencyServicesManager() {
           .map(
             (service) => `
               <article>
-                <div>
+                <span class="agency-service-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
+                <div class="agency-service-copy">
                   <strong>${escapeHtml(service.name)}</strong>
                   <span>${escapeHtml(service.group)} · ${formatMoney(service.price, "COP")}</span>
                 </div>
                 <div class="service-card-actions">
-                  <button class="secondary-button icon-text-button" type="button" data-service-apply="${service.id}">
+                  <button class="secondary-button icon-only-button" type="button" data-service-apply="${service.id}" aria-label="Crear documento" title="Crear documento">
                     <i data-lucide="file-plus-2"></i>
-                    Documento
                   </button>
-                  <button class="primary-button icon-text-button" type="button" data-service-purchase="${service.id}">
+                  <button class="primary-button icon-only-button" type="button" data-service-purchase="${service.id}" aria-label="Comprar servicio" title="Comprar servicio">
                     <i data-lucide="shopping-bag"></i>
-                    Comprar
                   </button>
                 </div>
               </article>
@@ -1590,9 +1594,11 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
   return `
     <section class="client-command-center">
       <div class="client-command-main">
-        <span class="company-avatar large" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
-          <i data-lucide="briefcase"></i>
-        </span>
+        <div class="client-brand-chip" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
+          <span class="company-avatar large">
+            <i data-lucide="building-2"></i>
+          </span>
+        </div>
         <div>
           <span>Panel del cliente</span>
           <h3>${escapeHtml(selectedClient.name)}</h3>
@@ -1725,7 +1731,7 @@ function renderClientBillingPanel() {
                 <article class="client-profile-card">
                   <header class="client-profile-head">
                     <span class="company-avatar" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
-                      <i data-lucide="briefcase"></i>
+                      <i data-lucide="building-2"></i>
                     </span>
                     <div>
                       <strong>${escapeHtml(client.name)}</strong>
@@ -5158,19 +5164,35 @@ function updateCalendarScript(publicationId, field, value, shouldRender = false)
   }
 }
 
-function generateCalendarScript(publicationId) {
+async function generateCalendarScript(publicationId) {
   const publication = publications.find((item) => item.id === publicationId);
   if (!publication) return;
   const company = companies.find((item) => item.id === publication.companyId) || activeCompany();
   const hook = publication.hook || `Esto es lo nuevo de ${company.name}`;
   const cta = publication.cta || "Escríbenos para recibir más información.";
-  const script = [
+  let script = [
     `Hook: ${hook}.`,
     `Escena 1: muestra el resultado final en los primeros 2 segundos.`,
     `Escena 2: presenta el proceso o beneficio principal con una toma cercana.`,
     `Escena 3: agrega prueba social, detalle del producto o antes/despues.`,
     `Cierre: ${cta}`,
   ].join("\n");
+  let mode = "mock-local";
+
+  try {
+    const response = await fetch("/api/ai/script", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ company, publication: { ...publication, hook, cta } }),
+    });
+    if (!response.ok) throw new Error("script ai unavailable");
+    const result = await response.json();
+    script = result.script || script;
+    mode = result.mode || mode;
+  } catch {
+    mode = "mock-local";
+  }
+
   publications = publications.map((item) =>
     item.id === publicationId
       ? {
@@ -5184,7 +5206,7 @@ function generateCalendarScript(publicationId) {
   );
   persistState();
   renderCalendar();
-  showToast("Guion sugerido para esta pieza.");
+  showToast(mode === "openai" ? "Guion generado con ChatGPT." : mode === "gemini" ? "Guion generado con Gemini." : "Guion mock editable generado.");
 }
 
 function resetComposer() {

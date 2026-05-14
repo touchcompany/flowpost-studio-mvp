@@ -167,6 +167,12 @@ Copiar `.env.example` a `.env` cuando se conecten servicios reales.
 cp .env.example .env
 ```
 
+Para guiones con IA desde backend:
+
+- `OPENAI_API_KEY` + `OPENAI_MODEL` activa ChatGPT/OpenAI.
+- `GEMINI_API_KEY` + `GEMINI_MODEL` activa Gemini si no hay llave de OpenAI.
+- Sin llaves, `/api/ai/script` responde en modo mock editable para no romper calendario.
+
 ## Supabase
 
 Supabase queda como la base de datos recomendada para produccion. Ver [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) y ejecutar [supabase/schema.sql](./supabase/schema.sql) cuando ya tengas creado el proyecto en Supabase.
@@ -265,6 +271,7 @@ En modo `DATA_PROVIDER=local` se guarda dentro de `data/db.json`. En modo `DATA_
 - `DELETE /api/publications/:id`
 - `POST /api/posts`
 - `POST /api/ai/copy`
+- `POST /api/ai/script`
 - `POST /api/publish/preflight`
 - `GET /api/media/files?provider=Google%20Drive`
 - `GET /api/auth/google/start`
