@@ -3476,7 +3476,7 @@ function statusIcon(value) {
 
 const socialIcons = {
   instagram:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="3.4"/><circle cx="16.7" cy="7.3" r="1.1"/></svg>',
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="igGlow" cx="30%" cy="25%" r="85%"><stop offset="0%" stop-color="#ffd776"/><stop offset="34%" stop-color="#f56040"/><stop offset="62%" stop-color="#e1306c"/><stop offset="100%" stop-color="#833ab4"/></radialGradient></defs><rect x="2.4" y="2.4" width="19.2" height="19.2" rx="6" style="fill:url(#igGlow)"/><rect x="6.8" y="6.8" width="10.4" height="10.4" rx="3.2" style="fill:none;stroke:#fff;stroke-width:1.65"/><circle cx="12" cy="12" r="2.65" style="fill:none;stroke:#fff;stroke-width:1.65"/><circle cx="16.1" cy="7.9" r="1.05" style="fill:#fff"/></svg>',
   facebook:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.2h2.1V4.6c-.4-.1-1.7-.2-3.2-.2-3.2 0-5.3 1.9-5.3 5.5V13H4v4h3.6v7h4.3v-7h3.4l.5-4h-3.9v-2.7c0-1.1.3-2.1 2.1-2.1Z"/></svg>',
   tiktok:
@@ -4003,6 +4003,26 @@ function apiProviderKey(network) {
   return keys[network] || platformKey(network);
 }
 
+function apiRedirectPath(network) {
+  if (["Instagram", "Facebook"].includes(network)) return "/api/oauth/meta/callback";
+  if (network === "Google Drive") return "/api/oauth/google/callback";
+  if (network === "TikTok") return "/api/oauth/tiktok/callback";
+  if (network === "YouTube") return "/api/oauth/youtube/callback";
+  if (network === "LinkedIn") return "/api/oauth/linkedin/callback";
+  return "/api/oauth/callback";
+}
+
+function apiRedirectUri(network) {
+  const base = window.location.protocol === "file:" ? "https://app.touch.com.co" : window.location.origin;
+  return `${base}${apiRedirectPath(network)}`;
+}
+
+function apiNextStepText(network, setup, connected) {
+  if (connected) return "Cuenta conectada a esta empresa. El siguiente paso es validar permisos y publicar una pieza de prueba.";
+  if (setup?.ready) return `Credenciales listas. Abre OAuth y autoriza ${network} para esta empresa.`;
+  return `Configura en el servidor: ${(setup?.missing || []).join(", ") || "credenciales OAuth"}.`;
+}
+
 function oauthSetupForNetwork(network) {
   if (!oauthStatus) return null;
   if (["Instagram", "Facebook"].includes(network)) return oauthStatus.meta;
@@ -4332,13 +4352,24 @@ function renderAccounts() {
           <p><strong>${escapeHtml(activeCompany().handle)}</strong></p>
           <p>${escapeHtml(integration.provider)}</p>
           <p class="api-status-line">${escapeHtml(apiCredentialText(setup))}</p>
+          <div class="api-next-step">
+            <span>Siguiente paso</span>
+            <strong>${escapeHtml(apiNextStepText(network, setup, configured))}</strong>
+            <small>${escapeHtml(apiRedirectUri(network))}</small>
+          </div>
           <ul class="api-requirements">
             ${integration.requirements.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
           </ul>
-          <button class="connect-button icon-text-button" type="button" data-api-platform="${apiProviderKey(network)}">
-            <i data-lucide="plug-zap"></i>
-            ${ready ? "Abrir OAuth" : "Ver faltantes"}
-          </button>
+          <div class="account-card-actions">
+            <button class="connect-button icon-text-button" type="button" data-api-platform="${apiProviderKey(network)}">
+              <i data-lucide="plug-zap"></i>
+              ${ready ? "Abrir OAuth" : "Ver faltantes"}
+            </button>
+            <button class="secondary-button icon-text-button" type="button" data-copy-api-redirect="${network}">
+              <i data-lucide="copy"></i>
+              Redirect
+            </button>
+          </div>
         </article>
       `;
     }),
@@ -5083,6 +5114,18 @@ accountsGrid.addEventListener("click", async (event) => {
   const refreshButton = event.target.closest("[data-refresh-api-status]");
   if (refreshButton) {
     refreshOAuthStatus(true);
+    return;
+  }
+
+  const copyRedirectButton = event.target.closest("[data-copy-api-redirect]");
+  if (copyRedirectButton) {
+    const uri = apiRedirectUri(copyRedirectButton.dataset.copyApiRedirect);
+    try {
+      await navigator.clipboard.writeText(uri);
+      showToast("Redirect URI copiada.");
+    } catch {
+      showToast(uri);
+    }
     return;
   }
 
