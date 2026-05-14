@@ -440,6 +440,58 @@ function validatePublishJob(payload) {
   };
 }
 
+function publishModeForPlatform(platform) {
+  const key = String(platform || "").toLowerCase();
+  if (key === "instagram" || key === "facebook") return "Meta Graph API";
+  if (key === "tiktok") return "TikTok Content Posting API";
+  if (key === "youtube") return "YouTube Data API";
+  if (key === "linkedin") return "LinkedIn API";
+  return "Conector social";
+}
+
+function createPublishAttempt(payload) {
+  const preflight = validatePublishJob(payload);
+  const realPublishingEnabled = process.env.ENABLE_REAL_PUBLISHING === "true";
+  const platform = preflight.platform || payload.job?.platform || "Plataforma";
+
+  if (!preflight.ready) {
+    return {
+      ready: false,
+      sent: false,
+      dryRun: true,
+      platform,
+      provider: publishModeForPlatform(platform),
+      preflight,
+      message: "Publicacion bloqueada por preflight. Resuelve los requisitos antes de enviar.",
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  if (!realPublishingEnabled) {
+    return {
+      ready: true,
+      sent: false,
+      dryRun: true,
+      platform,
+      provider: publishModeForPlatform(platform),
+      preflight,
+      message: "Dry run correcto. Activa ENABLE_REAL_PUBLISHING=true y tokens guardados para enviar de verdad.",
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  return {
+    ready: true,
+    sent: false,
+    dryRun: false,
+    platform,
+    provider: publishModeForPlatform(platform),
+    preflight,
+    message: "Conector real pendiente de implementar para esta plataforma.",
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 function demoMediaFiles(company) {
   const safeName = slugify(company?.name || "empresa") || "empresa";
   return [
@@ -1441,6 +1493,12 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/publish/preflight") {
     sendJson(res, 200, validatePublishJob(await readBody(req)));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/publish/send") {
+    const result = createPublishAttempt(await readBody(req));
+    sendJson(res, result.ready ? 200 : 202, result);
     return;
   }
 

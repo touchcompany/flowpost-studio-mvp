@@ -2485,6 +2485,41 @@ input[type="file"]:focus {
   color: #9f1239 !important;
 }
 
+.publish-attempt {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fafafa;
+  font-size: 0.78rem !important;
+  font-weight: 760;
+  line-height: 1.3 !important;
+}
+
+.publish-attempt svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.publish-attempt.sent {
+  color: var(--accent-dark) !important;
+  background: #f0fdf4;
+}
+
+.publish-attempt.dry {
+  color: #334155 !important;
+  background: #f8fafc;
+}
+
+.publish-attempt.blocked {
+  color: #9f1239 !important;
+  background: #fff7f7;
+}
+
 .preflight-details {
   display: grid;
   gap: 6px;

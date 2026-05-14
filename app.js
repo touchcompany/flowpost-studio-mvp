@@ -3366,6 +3366,14 @@ function renderQueue() {
               : ""
           }
           ${
+            job.publishAttempt
+              ? `<p class="publish-attempt ${job.publishAttempt.sent ? "sent" : job.publishAttempt.ready ? "dry" : "blocked"}">
+                  <i data-lucide="${job.publishAttempt.sent ? "send" : job.publishAttempt.ready ? "radio-tower" : "circle-alert"}"></i>
+                  ${escapeHtml(job.publishAttempt.message || "Intento registrado.")}
+                </p>`
+              : ""
+          }
+          ${
             job.preflight
               ? `<div class="preflight-details">
                   ${(job.preflight.blockers || []).map((item) => `<span><i data-lucide="circle-alert"></i>${escapeHtml(item)}</span>`).join("")}
@@ -3471,6 +3479,49 @@ async function runPreflight(publication, job) {
     return response.json();
   } catch {
     return localPreflight(publication, job);
+  }
+}
+
+async function sendPublicationAttempt(publication, job) {
+  const fallback = await runPreflight(publication, job);
+  if (window.location.protocol === "file:") {
+    return {
+      ready: fallback.ready,
+      sent: false,
+      dryRun: true,
+      platform: job?.platform || fallback.platform,
+      provider: "Publicacion local",
+      preflight: fallback,
+      message: fallback.ready
+        ? "Dry run local correcto. Abre el backend para enviar desde servidor."
+        : "Publicacion bloqueada por preflight local.",
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  try {
+    const response = await fetch("/api/publish/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        company: activeCompany(),
+        publication,
+        job,
+      }),
+    });
+    if (!response.ok && response.status !== 202) throw new Error("publish send unavailable");
+    return response.json();
+  } catch {
+    return {
+      ready: fallback.ready,
+      sent: false,
+      dryRun: true,
+      platform: job?.platform || fallback.platform,
+      provider: "Publicacion fallback",
+      preflight: fallback,
+      message: "No se pudo contactar /api/publish/send; se guardo validacion local.",
+      checkedAt: new Date().toISOString(),
+    };
   }
 }
 
@@ -4487,11 +4538,20 @@ queueList.addEventListener("click", async (event) => {
     const job = jobs.find(
       (item) => item.publicationId === button.dataset.publicationId && item.platform === button.dataset.queuePlatform
     );
-    const result = await runPreflight(publication, job);
-    jobs = jobs.map((item) => (item === job ? { ...item, preflight: result, errorMessage: result.ready ? "" : result.blockers.join(" ") } : item));
+    const result = await sendPublicationAttempt(publication, job);
+    jobs = jobs.map((item) =>
+      item === job
+        ? {
+            ...item,
+            preflight: result.preflight,
+            publishAttempt: result,
+            errorMessage: result.ready ? "" : result.preflight?.blockers?.join(" ") || result.message,
+          }
+        : item
+    );
     renderQueue();
     persistState();
-    showToast(result.ready ? "Preflight listo. Falta activar el conector server-side de publicacion real." : result.blockers[0] || "Faltan requisitos.");
+    showToast(result.message || (result.sent ? "Publicacion enviada." : "Intento de publicacion registrado."));
   }
 
   if (button.dataset.queueAction === "published") {
