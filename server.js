@@ -999,6 +999,14 @@ async function oauthSetupWithConnection(key, platform, required) {
   };
 }
 
+async function oauthStatusEntry(req, key, platform, required, redirectUri, scopes) {
+  return {
+    ...(await oauthSetupWithConnection(key, platform, required)),
+    redirectUri,
+    scopes,
+  };
+}
+
 function fileExists(relativePath) {
   return fs.existsSync(path.join(ROOT, relativePath));
 }
@@ -1159,11 +1167,46 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/oauth/status") {
     sendJson(res, 200, {
-      tiktok: await oauthSetupWithConnection("tiktok", "TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
-      meta: await oauthSetupWithConnection("meta", "Meta", ["META_APP_ID", "META_APP_SECRET"]),
-      google: await oauthSetupWithConnection("googleDrive", "Google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
-      youtube: await oauthSetupWithConnection("youtube", "YouTube", ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET"]),
-      linkedin: await oauthSetupWithConnection("linkedin", "LinkedIn", ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]),
+      tiktok: await oauthStatusEntry(
+        req,
+        "tiktok",
+        "TikTok",
+        ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"],
+        tiktokRedirectUri(req),
+        process.env.TIKTOK_SCOPES || "user.info.basic,video.publish"
+      ),
+      meta: await oauthStatusEntry(
+        req,
+        "meta",
+        "Meta",
+        ["META_APP_ID", "META_APP_SECRET"],
+        metaRedirectUri(req),
+        "instagram_basic,pages_show_list,pages_read_engagement,instagram_content_publish"
+      ),
+      google: await oauthStatusEntry(
+        req,
+        "googleDrive",
+        "Google",
+        ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+        googleRedirectUri(req),
+        googleScopes()
+      ),
+      youtube: await oauthStatusEntry(
+        req,
+        "youtube",
+        "YouTube",
+        ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET"],
+        youtubeRedirectUri(req),
+        "https://www.googleapis.com/auth/youtube.upload"
+      ),
+      linkedin: await oauthStatusEntry(
+        req,
+        "linkedin",
+        "LinkedIn",
+        ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+        linkedinRedirectUri(req),
+        "openid profile email w_member_social"
+      ),
     });
     return;
   }

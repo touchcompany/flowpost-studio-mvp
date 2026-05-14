@@ -3002,12 +3002,20 @@ function shortDateLabel(dateValue) {
   return new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short" }).format(new Date(`${dateValue}T00:00:00`));
 }
 
-function setView(viewName) {
-  views.forEach((view) => view.classList.toggle("active", view.dataset.view === viewName));
-  viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === viewName));
-  mobileMoreButton?.classList.toggle("active", ["library", "calendar", "automations", "accounts"].includes(viewName));
+function normalizeViewName(viewName) {
+  return [...views].some((view) => view.dataset.view === viewName) ? viewName : "dashboard";
+}
+
+function setView(viewName, options = {}) {
+  const targetView = normalizeViewName(viewName);
+  views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
+  viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
+  mobileMoreButton?.classList.toggle("active", ["library", "calendar", "automations", "accounts"].includes(targetView));
   sidebar?.classList.remove("more-open");
   mobileMoreButton?.setAttribute("aria-expanded", "false");
+  if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
+    window.history.replaceState(null, "", `#${targetView}`);
+  }
   renderIcons();
 }
 
@@ -4012,7 +4020,8 @@ function apiRedirectPath(network) {
   return "/api/oauth/callback";
 }
 
-function apiRedirectUri(network) {
+function apiRedirectUri(network, setup = null) {
+  if (setup?.redirectUri) return setup.redirectUri;
   const host = window.location.hostname;
   const isLocal = window.location.protocol === "file:" || host === "127.0.0.1" || host === "localhost";
   const base = isLocal ? "https://app.touch.com.co" : window.location.origin;
@@ -4021,6 +4030,8 @@ function apiRedirectUri(network) {
 
 function apiNextStepText(network, setup, connected) {
   if (connected) return "Cuenta conectada a esta empresa. El siguiente paso es validar permisos y publicar una pieza de prueba.";
+  if (setup?.connected && setup.connectionStatus === "tokens-saved") return "Tokens guardados. Ya puedes hacer una prueba controlada de lectura o carga de archivos.";
+  if (setup?.connected) return "Callback recibido. Falta completar intercambio de token, permisos y vincular la cuenta a esta empresa.";
   if (setup?.ready) return `Credenciales listas. Abre OAuth y autoriza ${network} para esta empresa.`;
   return `Configura en el servidor: ${(setup?.missing || []).join(", ") || "credenciales OAuth"}.`;
 }
@@ -4045,26 +4056,40 @@ function accountConnectedForNetwork(network) {
 
 function apiCredentialText(setup) {
   if (!setup) return "Sin revisar";
+  if (setup.connected && setup.connectionStatus === "tokens-saved") {
+    return `Tokens guardados${setup.connectedAt ? ` · ${new Date(setup.connectedAt).toLocaleDateString("es-CO")}` : ""}`;
+  }
   if (setup.connected) return `Callback recibido${setup.connectedAt ? ` · ${new Date(setup.connectedAt).toLocaleDateString("es-CO")}` : ""}`;
   if (setup.ready) return "Credenciales listas";
   return `Faltan: ${(setup.missing || []).join(", ") || "credenciales"}`;
 }
 
+function apiConnectionStage(setup, configured) {
+  if (configured) return { label: "Conectada", className: "done", cardClass: "api-connected" };
+  if (setup?.connected && setup.connectionStatus === "tokens-saved") {
+    return { label: "Tokens guardados", className: "done", cardClass: "api-tokenized" };
+  }
+  if (setup?.connected) return { label: "Callback recibido", className: "warning", cardClass: "api-callback" };
+  if (setup?.ready) return { label: "OAuth listo", className: "ready", cardClass: "api-ready" };
+  return { label: "Faltan keys", className: "muted", cardClass: "api-missing" };
+}
+
 function renderApiStatusSummary(networks) {
   const setups = networks.map((network) => oauthSetupForNetwork(network)).filter(Boolean);
   const ready = setups.filter((setup) => setup.ready).length;
+  const callbacks = setups.filter((setup) => setup.connected).length;
   const connected = networks.filter(accountConnectedForNetwork).length;
   const total = networks.length;
   const next = networks
     .map((network) => ({ network, setup: oauthSetupForNetwork(network) }))
-    .find((item) => item.setup && !item.setup.ready);
+    .find((item) => item.setup && !item.setup.connected && !item.setup.ready);
   return `
     <section class="api-status-panel">
       <div>
         <span class="status-icon large"><i data-lucide="plug-zap"></i></span>
         <div>
           <h3>Centro de APIs</h3>
-          <p>${connected}/${total} conexiones activas · ${ready}/${setups.length || total} credenciales listas para OAuth.</p>
+          <p>${connected}/${total} conexiones activas · ${callbacks} callbacks recibidos · ${ready}/${setups.length || total} OAuth listos.</p>
           <small>${next ? `${next.network}: ${apiCredentialText(next.setup)}` : "Listo para abrir pruebas OAuth controladas."}</small>
         </div>
       </div>
@@ -4341,15 +4366,14 @@ function renderAccounts() {
       const configured = accountConnectedForNetwork(network);
       const setup = oauthSetupForNetwork(network);
       const ready = Boolean(setup?.ready);
+      const stage = apiConnectionStage(setup, configured);
       return `
-        <article class="account-card ${ready ? "api-ready" : ""}">
+        <article class="account-card ${stage.cardClass}">
           <header>
             <h3>${socialIcon(network)}${network}</h3>
             <div class="account-pills">
-              <span class="pill ${configured ? "done" : integration.status === "Siguiente" ? "ready" : "warning"}">
-                ${configured ? "Conectada" : integration.status}
-              </span>
-              <span class="pill ${ready ? "done" : "muted"}">${ready ? "OAuth listo" : "Faltan keys"}</span>
+              <span class="pill ${stage.className}">${stage.label}</span>
+              <span class="pill ${integration.status === "Siguiente" ? "ready" : "warning"}">${integration.status}</span>
             </div>
           </header>
           <p><strong>${escapeHtml(activeCompany().handle)}</strong></p>
@@ -4358,7 +4382,7 @@ function renderAccounts() {
           <div class="api-next-step">
             <span>Siguiente paso</span>
             <strong>${escapeHtml(apiNextStepText(network, setup, configured))}</strong>
-            <small>${escapeHtml(apiRedirectUri(network))}</small>
+            <small>${escapeHtml(apiRedirectUri(network, setup))}</small>
           </div>
           <ul class="api-requirements">
             ${integration.requirements.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
@@ -4366,7 +4390,7 @@ function renderAccounts() {
           <div class="account-card-actions">
             <button class="connect-button icon-text-button" type="button" data-api-platform="${apiProviderKey(network)}">
               <i data-lucide="plug-zap"></i>
-              ${ready ? "Abrir OAuth" : "Ver faltantes"}
+              ${ready ? "Abrir OAuth" : setup?.connected ? "Revisar callback" : "Ver faltantes"}
             </button>
             <button class="secondary-button icon-text-button" type="button" data-copy-api-redirect="${network}">
               <i data-lucide="copy"></i>
@@ -4945,6 +4969,15 @@ viewLinks.forEach((link) => {
   });
 });
 
+window.addEventListener("hashchange", () => {
+  setView(window.location.hash.replace("#", ""), { syncHash: false });
+});
+
+function restoreInitialViewFromHash() {
+  const hashView = window.location.hash.replace("#", "");
+  if (hashView) setView(hashView, { syncHash: false });
+}
+
 document.querySelectorAll('input[name="platform"]').forEach((input) => {
   input.addEventListener("change", () => {
     updatePlatformCards();
@@ -5196,7 +5229,8 @@ accountsGrid.addEventListener("click", async (event) => {
 
   const copyRedirectButton = event.target.closest("[data-copy-api-redirect]");
   if (copyRedirectButton) {
-    const uri = apiRedirectUri(copyRedirectButton.dataset.copyApiRedirect);
+    const network = copyRedirectButton.dataset.copyApiRedirect;
+    const uri = apiRedirectUri(network, oauthSetupForNetwork(network));
     try {
       await navigator.clipboard.writeText(uri);
       showToast("Redirect URI copiada.");
@@ -5977,6 +6011,7 @@ async function init() {
   renderAccount();
   updatePreview();
   renderDashboard();
+  restoreInitialViewFromHash();
   if (new URLSearchParams(window.location.search).get("welcome")) {
     showToast("Cuenta MVP creada. Ya puedes probar el flujo completo.");
   }

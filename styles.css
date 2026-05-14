@@ -3663,6 +3663,21 @@ input[type="file"]:focus {
   background: linear-gradient(135deg, rgba(240, 253, 244, 0.84), #fff 54%);
 }
 
+.account-card.api-callback {
+  border-color: rgba(217, 119, 6, 0.22);
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.86), #fff 58%);
+}
+
+.account-card.api-tokenized,
+.account-card.api-connected {
+  border-color: rgba(15, 118, 110, 0.24);
+  background: linear-gradient(135deg, rgba(240, 253, 250, 0.9), #fff 58%);
+}
+
+.account-card.api-missing {
+  background: #fff;
+}
+
 .api-next-step {
   display: grid;
   gap: 5px;
@@ -7336,10 +7351,7 @@ input[type="file"] {
   }
 
   .mobile-sync-card {
-    margin-top: -2px;
-    margin-bottom: 14px;
-    padding: 10px;
-    border-radius: 16px;
+    display: none;
   }
 
   .mobile-sync-card p {
