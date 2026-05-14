@@ -2333,20 +2333,21 @@ input[type="file"]:focus {
 
 .app-shell.queue-collapsed .queue-mini {
   display: grid;
-  justify-items: center;
-  gap: 8px;
-  margin-top: 24px;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 850;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  margin: 22px auto 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
   cursor: pointer;
+  box-shadow: 0 10px 26px rgba(17, 17, 17, 0.06);
 }
 
 .app-shell.queue-collapsed .queue-mini svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .queue-list,
