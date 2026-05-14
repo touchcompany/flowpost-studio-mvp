@@ -7104,11 +7104,16 @@ input[type="file"] {
 
   .topbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 48px;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) 40px 40px;
+    gap: 8px;
     min-height: 0;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 28px rgba(17, 17, 17, 0.045);
   }
 
   .topbar > div:first-child {
@@ -7116,15 +7121,14 @@ input[type="file"] {
   }
 
   .workspace-label {
-    margin-bottom: 1px;
-    font-size: 0.62rem;
-    letter-spacing: 0.04em;
+    display: none;
   }
 
   .topbar h1 {
     max-width: 100%;
-    font-size: 1.28rem;
+    font-size: 1.05rem;
     line-height: 1.12;
+    font-weight: 850;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -7133,40 +7137,41 @@ input[type="file"] {
   .topbar .icon-button {
     grid-column: 2;
     grid-row: 1;
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
     background: #fff;
     color: #111;
     border: 1px solid var(--line);
   }
 
   .account-chip {
-    grid-column: 1 / -1;
-    width: 100%;
-    max-width: none;
+    grid-column: 3;
+    grid-row: 1;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    max-width: 40px;
     min-width: 0;
-    padding: 6px;
-    border-radius: 16px;
+    grid-template-columns: 1fr;
+    place-items: center;
+    padding: 0;
+    border-radius: 13px;
   }
 
   .account-chip .account-avatar {
     width: 30px;
     height: 30px;
-    font-size: 0.86rem;
+    font-size: 0.8rem;
   }
 
-  .account-chip strong {
-    font-size: 0.82rem;
-  }
-
+  .account-chip > div,
   .account-chip p {
-    font-size: 0.76rem;
+    display: none;
   }
 
   .account-chip button {
-    min-height: 34px;
-    padding: 0 12px;
+    display: none;
   }
 
   .mobile-sync-card {
@@ -7249,9 +7254,7 @@ input[type="file"] {
   }
 
   .company-switcher {
-    order: 3;
-    width: 100%;
-    min-width: 100%;
+    display: none;
   }
 
   .action-row {
@@ -7414,21 +7417,7 @@ input[type="file"] {
   }
 
   .company-switcher {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-width: 0;
-    margin: 0;
-    gap: 0;
-  }
-
-  .company-switcher span {
     display: none;
-  }
-
-  .company-switcher select {
-    min-height: 40px;
-    border-radius: 14px;
-    font-size: 0.92rem;
   }
 
   .client-order-row .pill,
