@@ -158,6 +158,11 @@ const integrationRequirements = {
     provider: "TikTok Content Posting API",
     requirements: ["App TikTok Developers", "Producto Content Posting", "Scope video.publish aprobado"],
   },
+  "Google Drive": {
+    status: "Siguiente",
+    provider: "Google Drive Picker API",
+    requirements: ["Proyecto Google Cloud", "OAuth consent", "Drive API habilitada", "Carpeta por empresa"],
+  },
   LinkedIn: {
     status: "Despues",
     provider: "LinkedIn Marketing API",
@@ -199,6 +204,7 @@ const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Pr
 let backendEnabled = false;
 let backendProvider = "local";
 let provisioningStatus = null;
+let oauthStatus = null;
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let serviceProvisionDraft = {
@@ -3070,6 +3076,8 @@ const socialIcons = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.8 8.9H3.2V21h3.6V8.9ZM5 3a2.1 2.1 0 1 0 0 4.2A2.1 2.1 0 0 0 5 3Zm16 11.3c0-3.6-1.9-5.6-4.8-5.6-2.1 0-3.1 1.2-3.6 2v-1.8H9V21h3.6v-6.1c0-1.6.8-2.8 2.4-2.8 1.4 0 2.1 1 2.1 2.8V21H21v-6.7Z"/></svg>',
   youtube:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 8.2a3 3 0 0 0-2.1-2.1C18 5.6 12 5.6 12 5.6s-6 0-7.9.5A3 3 0 0 0 2 8.2 31.4 31.4 0 0 0 1.5 12c0 1.3.1 2.6.5 3.8a3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5a3 3 0 0 0 2.1-2.1c.4-1.2.5-2.5.5-3.8s-.1-2.6-.5-3.8ZM10 15.4V8.6l6 3.4-6 3.4Z"/></svg>',
+  "google-drive":
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.8 3h6.4l6.3 10.9-3.2 5.6L12 8.6 5.7 19.5 2.5 13.9 8.8 3Z"/><path d="M5.7 19.5h12.6L21.5 14H8.9l-3.2 5.5Z"/></svg>',
 };
 
 function socialIcon(platform) {
@@ -3475,6 +3483,68 @@ async function startOAuthConnection(providerKey) {
   }
 }
 
+function apiProviderKey(network) {
+  const keys = {
+    Instagram: "instagram",
+    Facebook: "facebook",
+    TikTok: "tiktok",
+    "Google Drive": "drive",
+    YouTube: "youtube",
+    LinkedIn: "linkedin",
+  };
+  return keys[network] || platformKey(network);
+}
+
+function oauthSetupForNetwork(network) {
+  if (!oauthStatus) return null;
+  if (["Instagram", "Facebook"].includes(network)) return oauthStatus.meta;
+  if (network === "Google Drive") return oauthStatus.google;
+  if (network === "TikTok") return oauthStatus.tiktok;
+  if (network === "YouTube") return oauthStatus.youtube;
+  if (network === "LinkedIn") return oauthStatus.linkedin;
+  return null;
+}
+
+function accountConnectedForNetwork(network) {
+  if (network === "Google Drive") {
+    const source = activeCompany().mediaSource || {};
+    return source.provider === "Google Drive" && Boolean(source.connected);
+  }
+  return activeCompany().accounts.some((account) => account.platform === network && account.status === "Conectada");
+}
+
+function apiCredentialText(setup) {
+  if (!setup) return "Sin revisar";
+  if (setup.ready) return "Credenciales listas";
+  return `Faltan: ${(setup.missing || []).join(", ") || "credenciales"}`;
+}
+
+function renderApiStatusSummary(networks) {
+  const setups = networks.map((network) => oauthSetupForNetwork(network)).filter(Boolean);
+  const ready = setups.filter((setup) => setup.ready).length;
+  const connected = networks.filter(accountConnectedForNetwork).length;
+  const total = networks.length;
+  const next = networks
+    .map((network) => ({ network, setup: oauthSetupForNetwork(network) }))
+    .find((item) => item.setup && !item.setup.ready);
+  return `
+    <section class="api-status-panel">
+      <div>
+        <span class="status-icon large"><i data-lucide="plug-zap"></i></span>
+        <div>
+          <h3>Centro de APIs</h3>
+          <p>${connected}/${total} conexiones activas · ${ready}/${setups.length || total} credenciales listas para OAuth.</p>
+          <small>${next ? `${next.network}: ${apiCredentialText(next.setup)}` : "Listo para abrir pruebas OAuth controladas."}</small>
+        </div>
+      </div>
+      <button class="secondary-button icon-text-button" type="button" data-refresh-api-status>
+        <i data-lucide="refresh-cw"></i>
+        Revisar APIs
+      </button>
+    </section>
+  `;
+}
+
 function calendarPost(publication, compact = false) {
   const scriptReady = Boolean((publication.script || "").trim());
   const isSelected = selectedCalendarPublicationId === publication.id;
@@ -3732,33 +3802,65 @@ function renderSummary() {
 }
 
 function renderAccounts() {
-  const networks = ["Instagram", "Facebook", "TikTok", "LinkedIn", "YouTube"];
-  accountsGrid.innerHTML = networks
-    .map((network) => {
+  const networks = ["Instagram", "Facebook", "TikTok", "Google Drive", "LinkedIn", "YouTube"];
+  accountsGrid.innerHTML = [
+    renderApiStatusSummary(networks),
+    ...networks.map((network) => {
       const integration = integrationRequirements[network];
-      const configured = activeCompany().accounts.some((account) => account.platform === network && account.status === "Conectada");
+      const configured = accountConnectedForNetwork(network);
+      const setup = oauthSetupForNetwork(network);
+      const ready = Boolean(setup?.ready);
       return `
-        <article class="account-card">
+        <article class="account-card ${ready ? "api-ready" : ""}">
           <header>
             <h3>${socialIcon(network)}${network}</h3>
-            <span class="pill ${configured ? "done" : integration.status === "Siguiente" ? "ready" : "warning"}">
-              ${configured ? "Conectada" : integration.status}
-            </span>
+            <div class="account-pills">
+              <span class="pill ${configured ? "done" : integration.status === "Siguiente" ? "ready" : "warning"}">
+                ${configured ? "Conectada" : integration.status}
+              </span>
+              <span class="pill ${ready ? "done" : "muted"}">${ready ? "OAuth listo" : "Faltan keys"}</span>
+            </div>
           </header>
           <p><strong>${escapeHtml(activeCompany().handle)}</strong></p>
           <p>${escapeHtml(integration.provider)}</p>
+          <p class="api-status-line">${escapeHtml(apiCredentialText(setup))}</p>
           <ul class="api-requirements">
             ${integration.requirements.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
           </ul>
-          <button class="connect-button icon-text-button" type="button" data-api-platform="${platformKey(network)}">
+          <button class="connect-button icon-text-button" type="button" data-api-platform="${apiProviderKey(network)}">
             <i data-lucide="plug-zap"></i>
-            Preparar conexion
+            ${ready ? "Abrir OAuth" : "Ver faltantes"}
           </button>
         </article>
       `;
-    })
-    .join("");
+    }),
+  ].join("");
   renderIcons();
+}
+
+async function refreshOAuthStatus(showFeedback = false) {
+  if (window.location.protocol === "file:") {
+    oauthStatus = null;
+    renderAccounts();
+    if (showFeedback) showToast("Abre la app desde http://127.0.0.1:4176 para revisar APIs.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/oauth/status", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("oauth status unavailable");
+    oauthStatus = await response.json();
+    renderAccounts();
+    if (showFeedback) {
+      const providers = Object.values(oauthStatus);
+      const ready = providers.filter((setup) => setup.ready).length;
+      showToast(`${ready}/${providers.length} APIs con credenciales listas.`);
+    }
+  } catch {
+    oauthStatus = null;
+    renderAccounts();
+    if (showFeedback) showToast("No se pudo consultar /api/oauth/status.");
+  }
 }
 
 function diagnosticCard(label, status, detail) {
@@ -4373,6 +4475,12 @@ queueList.addEventListener("click", async (event) => {
 });
 
 accountsGrid.addEventListener("click", async (event) => {
+  const refreshButton = event.target.closest("[data-refresh-api-status]");
+  if (refreshButton) {
+    refreshOAuthStatus(true);
+    return;
+  }
+
   const button = event.target.closest("[data-api-platform]");
   if (!button) return;
   const result = await startOAuthConnection(button.dataset.apiPlatform);
@@ -5079,6 +5187,7 @@ async function init() {
   renderQueue();
   renderCalendar();
   renderAccounts();
+  refreshOAuthStatus(false);
   renderStorePanel();
   renderAutomationCenter();
   refreshProvisioningStatus(false);
