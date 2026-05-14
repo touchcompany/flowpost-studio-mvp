@@ -3,6 +3,8 @@ const views = document.querySelectorAll("[data-view]");
 const appShell = document.querySelector("#appShell");
 const dashboardPanel = document.querySelector("#dashboardPanel");
 const sidebarToggle = document.querySelector("#sidebarToggle");
+const sidebar = document.querySelector(".sidebar");
+const mobileMoreButton = document.querySelector("#mobileMoreButton");
 const queueToggle = document.querySelector("#queueToggle");
 const form = document.querySelector("#composerForm");
 const captionInput = document.querySelector("#caption");
@@ -290,6 +292,8 @@ const fallbackIconPaths = {
   pencil: '<path d="m4 20 4-1 11-11-3-3L5 16l-1 4Z"/><path d="m14 6 3 3"/>',
   download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
   upload: '<path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/>',
+  store: '<path d="M4 10h16"/><path d="M5 10l1-5h12l1 5"/><path d="M6 10v10h12V10"/><path d="M9 20v-5h6v5"/><path d="M3 10c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2"/>',
+  ellipsis: '<path d="M5 12h.01M12 12h.01M19 12h.01"/>',
 };
 
 function fallbackIcon(name) {
@@ -1537,6 +1541,29 @@ function renderBillingDocumentEditor() {
   `;
 }
 
+function clientHealthScore(client, company, orders, invoice) {
+  const companyPublications = publications.filter((publication) => publication.companyId === client.companyId);
+  const completedOrders = orders.filter((order) => order.status === "Completado").length;
+  const connectedAccounts = (company?.accounts || []).filter((account) => account.status === "Conectada").length;
+  return Math.min(
+    100,
+    Math.round(
+      (client.status === "Activo" ? 22 : 8) +
+        (invoice ? 8 : 20) +
+        Math.min(24, companyPublications.length * 6) +
+        Math.min(18, completedOrders * 9) +
+        Math.min(16, connectedAccounts * 8)
+    )
+  );
+}
+
+function clientHealthLabel(score) {
+  if (score >= 78) return "Premium";
+  if (score >= 56) return "En avance";
+  if (score >= 34) return "Necesita foco";
+  return "Inicial";
+}
+
 function renderClientBillingPanel() {
   ensureAgencyClients();
   ensureServiceOrderAutomations();
@@ -1563,6 +1590,7 @@ function renderClientBillingPanel() {
           const company = companies.find((item) => item.id === client.companyId);
           const invoice = invoices.find((item) => item.clientId === client.id && item.status !== "Pagada");
           const orders = clientServiceOrders(client.id);
+          const score = clientHealthScore(client, company, orders, invoice);
           return `
             <article class="client-row">
               <span class="company-avatar small" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
@@ -1571,6 +1599,10 @@ function renderClientBillingPanel() {
               <div>
                 <strong>${escapeHtml(client.name)}</strong>
                 <p>${escapeHtml(serviceById(client.serviceId).name || client.plan)} · ${escapeHtml(client.billingCycle)} · ${formatMoney(client.amount, client.currency)} · ${orders.length} servicio${orders.length === 1 ? "" : "s"}</p>
+              </div>
+              <div class="client-health-mini">
+                <strong>${score}%</strong>
+                <span>${escapeHtml(clientHealthLabel(score))}</span>
               </div>
               <span class="pill ${invoice ? "warning" : "done"}">${invoice ? "Por cobrar" : "Al dia"}</span>
               <div class="client-actions">
@@ -1617,9 +1649,14 @@ function renderClientBillingPanel() {
               const companyAssets = company?.videos?.length || 0;
               const invoice = invoices.find((item) => item.clientId === client.id && item.status !== "Pagada");
               const orders = clientServiceOrders(client.id);
+              const score = clientHealthScore(client, company, orders, invoice);
+              const completedOrders = orders.filter((order) => order.status === "Completado").length;
+              const openValue = invoices
+                .filter((item) => item.clientId === client.id && item.status !== "Pagada")
+                .reduce((sum, item) => sum + Number(item.amount || 0), 0);
               return `
                 <article class="client-profile-card">
-                  <header>
+                  <header class="client-profile-head">
                     <span class="company-avatar" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
                       <i data-lucide="briefcase"></i>
                     </span>
@@ -1629,16 +1666,29 @@ function renderClientBillingPanel() {
                     </div>
                     <span class="pill ${client.status === "Activo" ? "done" : "muted"}">${escapeHtml(client.status)}</span>
                   </header>
+                  <section class="client-premium-strip">
+                    <div>
+                      <span>Salud del cliente</span>
+                      <strong>${score}%</strong>
+                      <p>${escapeHtml(clientHealthLabel(score))} · ${invoice ? "cobro pendiente" : "cobros al dia"}</p>
+                    </div>
+                    <div class="client-score-ring" style="--score: ${score}%">
+                      <span>${score}%</span>
+                    </div>
+                  </section>
                   <div class="client-metrics">
                     <span><b>${escapeHtml(serviceById(client.serviceId).name || client.plan)}</b>Servicio</span>
                     <span><b>${formatMoney(client.amount, client.currency)}</b>${escapeHtml(client.billingCycle)}</span>
                     <span><b>${companyPublications.length}</b>Posts</span>
-                    <span><b>${orders.length}</b>Compras</span>
+                    <span><b>${completedOrders}/${orders.length}</b>Listos</span>
+                  </div>
+                  <div class="client-progress-line" aria-label="Avance operativo">
+                    <span style="width:${score}%"></span>
                   </div>
                   <div class="client-profile-body">
                     <section>
                       <h3>Cobro actual</h3>
-                      <p>${invoice ? `${invoice.concept} vence ${invoice.dueDate}` : "Cliente al dia."}</p>
+                      <p>${invoice ? `${invoice.concept} vence ${invoice.dueDate} · ${formatMoney(openValue, "COP")}` : "Cliente al dia."}</p>
                     </section>
                     <section>
                       <h3>Objetivo</h3>
@@ -2889,6 +2939,9 @@ function shortDateLabel(dateValue) {
 function setView(viewName) {
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === viewName));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === viewName));
+  mobileMoreButton?.classList.toggle("active", ["library", "calendar", "automations", "accounts"].includes(viewName));
+  sidebar?.classList.remove("more-open");
+  mobileMoreButton?.setAttribute("aria-expanded", "false");
   renderIcons();
 }
 
@@ -4761,6 +4814,11 @@ sidebarToggle.addEventListener("click", () => {
   sidebarCollapsed = !sidebarCollapsed;
   applyPanelState();
   persistUiState();
+});
+
+mobileMoreButton?.addEventListener("click", () => {
+  const isOpen = sidebar?.classList.toggle("more-open");
+  mobileMoreButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
 });
 
 queueToggle.addEventListener("click", () => {

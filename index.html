@@ -53,9 +53,13 @@
             Clientes
           </a>
           <a class="nav-item" href="#store" data-view-link="store">
-            <span class="nav-icon"><i data-lucide="shopping-bag"></i></span>
+            <span class="nav-icon"><i data-lucide="store"></i></span>
             Tienda
           </a>
+          <button class="nav-item mobile-more-button" id="mobileMoreButton" type="button" aria-expanded="false" aria-controls="mobileMoreMenu">
+            <span class="nav-icon"><i data-lucide="ellipsis"></i></span>
+            Más
+          </button>
           <a class="nav-item" href="#automations" data-view-link="automations">
             <span class="nav-icon"><i data-lucide="workflow"></i></span>
             Automatizaciones
@@ -65,6 +69,25 @@
             Cuentas
           </a>
         </nav>
+
+        <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="Mas secciones">
+          <a class="mobile-more-item" href="#library" data-view-link="library">
+            <span class="nav-icon"><i data-lucide="clapperboard"></i></span>
+            Biblioteca
+          </a>
+          <a class="mobile-more-item" href="#calendar" data-view-link="calendar">
+            <span class="nav-icon"><i data-lucide="calendar-days"></i></span>
+            Calendario
+          </a>
+          <a class="mobile-more-item" href="#automations" data-view-link="automations">
+            <span class="nav-icon"><i data-lucide="workflow"></i></span>
+            Automatizaciones
+          </a>
+          <a class="mobile-more-item" href="#accounts" data-view-link="accounts">
+            <span class="nav-icon"><i data-lucide="badge-check"></i></span>
+            Cuentas
+          </a>
+        </div>
 
         <section class="sync-card" aria-label="Estado de integraciones">
           <span class="status-dot" id="connectionDot"></span>
