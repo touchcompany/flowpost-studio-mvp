@@ -212,6 +212,7 @@ let serviceProvisionDraft = {
   domain: "",
   contactEmail: "",
   hostingPlan: "",
+  years: "1",
   domainCheck: null,
 };
 let sidebarCollapsed = false;
@@ -2102,6 +2103,10 @@ function renderStorePanel() {
             : `<input data-provision-field="hostingPlan" type="text" placeholder="default" value="${escapeHtml(serviceProvisionDraft.hostingPlan)}" />`
         }
       </label>
+      <label class="field compact">
+        <span>Años dominio</span>
+        <input data-provision-field="years" type="number" min="1" max="10" inputmode="numeric" value="${escapeHtml(serviceProvisionDraft.years || "1")}" />
+      </label>
       ${
         serviceProvisionDraft.domainCheck
           ? `<article class="domain-check-result ${serviceProvisionDraft.domainCheck.available ? "available" : "blocked"}">
@@ -2366,7 +2371,8 @@ async function refreshProvisioningStatus(showFeedback = false) {
 }
 
 async function checkDomainAvailability() {
-  const domain = serviceProvisionDraft.domain.trim();
+  const domain = normalizeDomainValue(serviceProvisionDraft.domain);
+  serviceProvisionDraft.domain = domain;
   if (!domain) {
     showToast("Escribe un dominio para consultar.");
     return;
@@ -2397,6 +2403,61 @@ async function checkDomainAvailability() {
     renderStorePanel();
     showToast("No se pudo consultar disponibilidad.");
   }
+}
+
+function normalizeDomainValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split("/")[0]
+    .replace(/\s+/g, "");
+}
+
+function updateProvisionDraftField(field) {
+  const name = field.dataset.provisionField;
+  if (!name) return;
+  serviceProvisionDraft[name] = field.value;
+  if (name === "domain") {
+    serviceProvisionDraft.domainCheck = null;
+  }
+}
+
+function validateProvisioningForService(service, client) {
+  if (!serviceNeedsProvisioning(service.id)) return true;
+
+  const domain = normalizeDomainValue(serviceProvisionDraft.domain);
+  const contactEmail = String(serviceProvisionDraft.contactEmail || client.email || "").trim();
+  serviceProvisionDraft.domain = domain;
+  serviceProvisionDraft.contactEmail = contactEmail;
+
+  if (!domain) {
+    showToast("Agrega el dominio antes de comprar este servicio.");
+    renderStorePanel();
+    return false;
+  }
+
+  if (["hosting", "website"].includes(service.id) && !contactEmail) {
+    showToast("Agrega un email tecnico para crear el servicio.");
+    renderStorePanel();
+    return false;
+  }
+
+  if (service.id === "domain") {
+    const checkedDomain = normalizeDomainValue(serviceProvisionDraft.domainCheck?.domain);
+    if (!serviceProvisionDraft.domainCheck || checkedDomain !== domain) {
+      showToast("Verifica el dominio antes de comprarlo.");
+      renderStorePanel();
+      return false;
+    }
+    if (!serviceProvisionDraft.domainCheck.available) {
+      showToast(serviceProvisionDraft.domainCheck.message || "Ese dominio no esta disponible.");
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function generateClientInvoice(clientId) {
@@ -2433,6 +2494,8 @@ function purchaseServiceForClient(serviceId) {
     showToast("Selecciona cliente y servicio.");
     return;
   }
+  if (!validateProvisioningForService(service, client)) return;
+
   const now = new Date();
   const dueDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString().slice(0, 10);
   const order = {
@@ -2449,6 +2512,7 @@ function purchaseServiceForClient(serviceId) {
       domain: serviceProvisionDraft.domain,
       contactEmail: serviceProvisionDraft.contactEmail || client.email || "",
       hostingPlan: serviceProvisionDraft.hostingPlan,
+      years: serviceProvisionDraft.years || "1",
       status: serviceNeedsProvisioning(service.id) ? "Pendiente" : "No requerido",
     },
     automation: buildOrderAutomation(service),
@@ -2540,6 +2604,7 @@ function createServiceOrderFromPurchase(purchase, client) {
       domain: purchase.domain || "",
       contactEmail: purchase.contactEmail || client.email || "",
       hostingPlan: purchase.hostingPlan || "",
+      years: purchase.years || "1",
       status: serviceNeedsProvisioning(purchase.serviceId || service.id) ? "Pendiente" : "No requerido",
     },
     automation: buildOrderAutomation(service),
@@ -5202,16 +5267,17 @@ storePanel.addEventListener("change", (event) => {
     billingDraft.clientId = clientSelect.value;
     persistState();
     renderStorePanel();
+    return;
   }
+
+  const provisionField = event.target.closest("[data-provision-field]");
+  if (provisionField) updateProvisionDraftField(provisionField);
 });
 
 storePanel.addEventListener("input", (event) => {
   const provisionField = event.target.closest("[data-provision-field]");
   if (!provisionField) return;
-  serviceProvisionDraft[provisionField.dataset.provisionField] = provisionField.value;
-  if (provisionField.dataset.provisionField === "domain") {
-    serviceProvisionDraft.domainCheck = null;
-  }
+  updateProvisionDraftField(provisionField);
 });
 
 automationCenterPanel.addEventListener("click", (event) => {
