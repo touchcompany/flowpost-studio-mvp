@@ -1,4 +1,7 @@
 ---
 deployment:
   tasks:
-    - /bin/echo "Flowpost Studio files are deployed from the repository root."
+    - /bin/echo "Deploying Flowpost Studio from the repository root."
+    - /usr/bin/env node scripts/cleanup-cpanel-sample.js
+    - /bin/mkdir -p tmp
+    - /bin/touch tmp/restart.txt
