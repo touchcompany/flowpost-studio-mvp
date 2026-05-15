@@ -5227,6 +5227,29 @@ input[type="file"] {
   margin-bottom: 16px;
 }
 
+.portal-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.portal-notice strong,
+.portal-notice p {
+  margin: 0;
+}
+
+.portal-notice p {
+  margin-top: 3px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .dashboard-metric {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

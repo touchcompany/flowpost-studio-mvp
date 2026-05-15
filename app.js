@@ -223,6 +223,11 @@ const roleProfiles = {
     description: "Crea contenido, guiones y publicaciones para una marca.",
     icon: "sparkles",
   },
+  client_user: {
+    label: "Cliente invitado",
+    description: "Solo visualiza la empresa asignada, guiones, recursos y avances compartidos.",
+    icon: "eye",
+  },
 };
 const featureCatalog = [
   { key: "content", label: "Contenido y calendario", icon: "calendar-days", plans: ["starter", "pro", "agency"] },
@@ -1009,6 +1014,10 @@ function isTouchSuperAdmin(session = currentSession()) {
   return session.role === "super_admin" || identity.includes("touch");
 }
 
+function isClientPortalSession(session = currentSession()) {
+  return session.role === "client_user";
+}
+
 function normalizeClientSession(session = {}) {
   const isTouch = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase().includes("touch");
   const plan = isTouch ? "agency" : planLimits[session.plan] ? session.plan : "starter";
@@ -1032,17 +1041,26 @@ function currentPlan() {
 
 function featureEnabled(feature, session = currentSession()) {
   if (isTouchSuperAdmin(session)) return true;
+  if (isClientPortalSession(session)) {
+    return ["content", "library", "aiScripts"].includes(feature.key);
+  }
   const plan = currentPlan();
   return feature.plans.includes(plan);
 }
 
 const viewFeatureMap = {
+  compose: "content",
+  companies: "content",
   clients: "clients",
   store: "store",
   automations: "apiAdmin",
+  accounts: "apiAdmin",
 };
 
 function canAccessView(viewName, session = currentSession()) {
+  if (isClientPortalSession(session)) {
+    return ["dashboard", "library", "calendar", "accounts"].includes(viewName);
+  }
   const featureKey = viewFeatureMap[viewName];
   if (!featureKey) return true;
   const feature = featureCatalog.find((item) => item.key === featureKey);
@@ -1162,7 +1180,7 @@ function renderPlanPanel() {
       </div>
     </section>
     <div class="role-switcher" aria-label="Tipo de cuenta">
-      ${["business_owner", "agency_owner", "creator"]
+      ${["business_owner", "agency_owner", "creator", "client_user"]
         .map((roleKey) => {
           const item = roleProfiles[roleKey];
           return `
@@ -3352,8 +3370,30 @@ function applyImportedState(state) {
   showToast("Respaldo importado.");
 }
 
+function visibleCompaniesForSession(session = currentSession()) {
+  if (!isClientPortalSession(session) || isTouchSuperAdmin(session)) return companies;
+  const email = String(session.email || "").trim().toLowerCase();
+  const allowedCompanyIds = new Set(
+    accessMembers
+      .filter((member) => member.role === "client_viewer" || member.role === "approver" || member.role === "billing")
+      .filter((member) => (email ? String(member.email || "").toLowerCase() === email : member.companyId === activeCompanyId))
+      .map((member) => member.companyId)
+  );
+  const scoped = companies.filter((company) => allowedCompanyIds.has(company.id));
+  return scoped.length ? scoped : companies.slice(0, 1);
+}
+
+function ensureActiveCompanyAccess() {
+  const visible = visibleCompaniesForSession();
+  if (!visible.some((company) => company.id === activeCompanyId)) {
+    activeCompanyId = visible[0]?.id || companies[0]?.id || "";
+  }
+  return visible;
+}
+
 function activeCompany() {
-  return companies.find((company) => company.id === activeCompanyId) || companies[0];
+  const visible = ensureActiveCompanyAccess();
+  return visible.find((company) => company.id === activeCompanyId) || visible[0] || companies[0];
 }
 
 function selectedVideo() {
@@ -3579,6 +3619,18 @@ function renderDashboard() {
         <span>Preparacion</span>
       </div>
     </section>
+
+    ${
+      isClientPortalSession()
+        ? `<section class="portal-notice">
+            <span class="dashboard-icon"><i data-lucide="eye"></i></span>
+            <div>
+              <strong>Vista de cliente invitado</strong>
+              <p>Solo estas viendo la empresa asignada, sus guiones, calendario y recursos compartidos.</p>
+            </div>
+          </section>`
+        : ""
+    }
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
@@ -5054,6 +5106,20 @@ function renderSummary() {
 
 function renderAccounts() {
   const networks = ["Instagram", "Facebook", "TikTok", "Google Drive", "LinkedIn", "YouTube"];
+  if (isClientPortalSession()) {
+    accountsGrid.innerHTML = `
+      <article class="account-card">
+        <header>
+          <h3><i data-lucide="eye"></i>Portal del cliente</h3>
+          <span class="pill ready">Limitado</span>
+        </header>
+        <p>Tu acceso esta limitado a las empresas asignadas por la agencia.</p>
+        <p>Las conexiones API, proveedores, cobros internos y automatizaciones quedan ocultas para este rol.</p>
+      </article>
+    `;
+    renderIcons();
+    return;
+  }
   accountsGrid.innerHTML = [
     renderApiStatusSummary(networks),
     renderTrashPanel(),
@@ -5537,15 +5603,16 @@ async function copyDeploymentCommand(type) {
 }
 
 function renderCompanies() {
+  const visibleCompanies = ensureActiveCompanyAccess();
   activeCompanyName.textContent = activeCompany().name;
-  activeCompanySelect.innerHTML = companies
+  activeCompanySelect.innerHTML = visibleCompanies
     .map(
       (company) =>
         `<option value="${company.id}" ${company.id === activeCompanyId ? "selected" : ""}>${escapeHtml(company.name)}</option>`
     )
     .join("");
 
-  companiesGrid.innerHTML = companies
+  companiesGrid.innerHTML = visibleCompanies
     .map((company) => {
       const isActive = company.id === activeCompanyId;
       return `
@@ -5567,14 +5634,22 @@ function renderCompanies() {
               .join("")}
           </div>
           <div class="company-actions">
-            <button class="secondary-button" type="button" data-company-id="${company.id}">
-              <i data-lucide="mouse-pointer-click"></i>
-              Usar
-            </button>
-            <button class="secondary-button" type="button" data-edit-company-id="${company.id}">
-              <i data-lucide="pencil"></i>
-              Editar
-            </button>
+            ${
+              isActive || isClientPortalSession()
+                ? ""
+                : `<button class="secondary-button" type="button" data-company-id="${company.id}">
+                    <i data-lucide="mouse-pointer-click"></i>
+                    Usar
+                  </button>`
+            }
+            ${
+              isClientPortalSession()
+                ? ""
+                : `<button class="secondary-button" type="button" data-edit-company-id="${company.id}">
+                    <i data-lucide="pencil"></i>
+                    Editar
+                  </button>`
+            }
           </div>
         </article>
       `;
