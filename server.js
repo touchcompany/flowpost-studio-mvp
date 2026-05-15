@@ -1221,6 +1221,51 @@ async function supabaseConnectionCheck() {
   }
 }
 
+function adminTokenValid(req, url) {
+  const expectedToken = process.env.ADMIN_MIGRATION_TOKEN || "";
+  if (!expectedToken) return false;
+  const headerToken = req.headers["x-admin-token"] || "";
+  const queryToken = url.searchParams.get("token") || "";
+  return headerToken === expectedToken || queryToken === expectedToken;
+}
+
+function readLocalJsonState() {
+  const dbPath = path.join(ROOT, "data", "db.json");
+  if (!fs.existsSync(dbPath)) {
+    throw new Error("No existe data/db.json en el servidor.");
+  }
+  return JSON.parse(fs.readFileSync(dbPath, "utf8"));
+}
+
+async function migrateLocalJsonToActiveStore() {
+  if (store.provider !== "supabase") {
+    throw new Error("La migracion protegida solo corre cuando DATA_PROVIDER=supabase.");
+  }
+
+  const state = readLocalJsonState();
+  const nextState = {
+    activeCompanyId: state.activeCompanyId || state.companies?.[0]?.id || "",
+    companies: state.companies || [],
+    publications: state.publications || [],
+    jobs: state.jobs || [],
+  };
+
+  await store.saveState(nextState);
+
+  if (state.session && store.saveSession) {
+    await store.saveSession(state.session);
+  }
+
+  return {
+    ok: true,
+    dataProvider: store.provider,
+    companies: nextState.companies.length,
+    publications: nextState.publications.length,
+    jobs: nextState.jobs.length,
+    session: Boolean(state.session),
+  };
+}
+
 function productionReadiness(req) {
   const expectedUrl = "https://app.touch.com.co";
   const currentPublicUrl = process.env.APP_PUBLIC_URL || publicUrl(req);
@@ -1275,6 +1320,35 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/supabase/check") {
     sendJson(res, 200, await supabaseConnectionCheck());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/migration-status") {
+    if (!adminTokenValid(req, url)) {
+      sendError(res, 404, "not found");
+      return;
+    }
+    const localState = readLocalJsonState();
+    sendJson(res, 200, {
+      ok: true,
+      dataProvider: store.provider,
+      localJson: {
+        companies: localState.companies?.length || 0,
+        publications: localState.publications?.length || 0,
+        jobs: localState.jobs?.length || 0,
+        session: Boolean(localState.session),
+      },
+      currentStore: await store.getState(),
+    });
+    return;
+  }
+
+  if ((req.method === "POST" || req.method === "GET") && url.pathname === "/api/admin/migrate-local-to-supabase") {
+    if (!adminTokenValid(req, url)) {
+      sendError(res, 404, "not found");
+      return;
+    }
+    sendJson(res, 200, await migrateLocalJsonToActiveStore());
     return;
   }
 
