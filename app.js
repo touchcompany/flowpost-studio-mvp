@@ -995,6 +995,27 @@ async function hydrateSessionFromBackend() {
   }
 }
 
+async function saveClientSession(session) {
+  const normalized = normalizeClientSession(session);
+  localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
+  if (window.location.protocol !== "file:") {
+    try {
+      const response = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(normalized),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.session?.id) localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+      }
+    } catch {
+      // Keep local session if the backend is not reachable.
+    }
+  }
+  return currentSession();
+}
+
 function renderPlanPanel() {
   if (!planPanel) return;
   const session = currentSession();
@@ -1026,6 +1047,19 @@ function renderPlanPanel() {
         <p>${escapeHtml(role.description)}</p>
       </div>
     </section>
+    <div class="role-switcher" aria-label="Tipo de cuenta">
+      ${["business_owner", "agency_owner", "creator"]
+        .map((roleKey) => {
+          const item = roleProfiles[roleKey];
+          return `
+            <button class="${session.role === roleKey ? "active" : ""}" type="button" data-role-change="${roleKey}">
+              <i data-lucide="${item.icon}"></i>
+              <span>${escapeHtml(item.label)}</span>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
     <div class="usage-grid">
       <article>
         <header>
@@ -5838,7 +5872,24 @@ deploymentPanel.addEventListener("click", (event) => {
   }
 });
 
-planPanel.addEventListener("click", (event) => {
+planPanel.addEventListener("click", async (event) => {
+  const roleButton = event.target.closest("[data-role-change]");
+  if (roleButton) {
+    const session = currentSession();
+    const role = roleButton.dataset.roleChange;
+    const nextSession = {
+      ...session,
+      id: session.id || `user-${Date.now()}`,
+      role,
+      updatedAt: new Date().toISOString(),
+    };
+    await saveClientSession(nextSession);
+    renderAccount();
+    renderDiagnostics();
+    showToast(`Perfil ${roleProfiles[role]?.label || "operativo"} activado.`);
+    return;
+  }
+
   const button = event.target.closest("[data-plan-change]");
   if (!button) return;
   const session = currentSession();
@@ -5850,11 +5901,12 @@ planPanel.addEventListener("click", (event) => {
     provider: session.provider || "demo",
     plan,
     planLabel: planLimits[plan].label,
+    role: session.role || (plan === "agency" ? "agency_owner" : "business_owner"),
     status: "trial",
     createdAt: session.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+  await saveClientSession(nextSession);
   renderAccount();
   renderDiagnostics();
   showToast(`Plan ${planLimits[plan].label} activado en modo demo.`);

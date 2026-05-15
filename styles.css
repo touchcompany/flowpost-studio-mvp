@@ -3242,6 +3242,47 @@ input[type="file"]:focus {
   line-height: 1.35;
 }
 
+.role-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.role-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 760;
+}
+
+.role-switcher button.active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.role-switcher svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.role-switcher span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .usage-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7804,6 +7845,7 @@ input[type="file"] {
   .filter-bar,
   .summary-strip,
   .usage-grid,
+  .role-switcher,
   .entitlement-grid,
   .billing-grid,
   .readiness-summary {
