@@ -10,6 +10,10 @@ In cPanel > Setup Node.js App:
 Application URL: app.touch.com.co
 Application root: app.touch.com.co
 Application startup file: cpanel-server.js
+
+If the Node.js app is mounted only under `/api`, use:
+
+Application startup file: cpanel-api-server.js
 Application mode: Production
 ```
 

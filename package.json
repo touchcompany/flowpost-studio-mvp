@@ -8,7 +8,7 @@
     "dev": "node server.js",
     "start:prod": "node cpanel-server.js",
     "build": "node scripts/build.js",
-    "check": "node --check app.js && node --check login.js && node --check onboarding.js && node --check server.js && node --check cpanel-server.js && node --check lib/data-store.js && node --check lib/local-store.js && node --check lib/supabase-store.js && node --check lib/oauth-utils.js",
+    "check": "node --check app.js && node --check login.js && node --check onboarding.js && node --check server.js && node --check cpanel-server.js && node --check cpanel-api-server.js && node --check lib/data-store.js && node --check lib/local-store.js && node --check lib/supabase-store.js && node --check lib/oauth-utils.js",
     "smoke": "node scripts/smoke.js",
     "production:check": "node scripts/check-production.js",
     "live:check": "node scripts/check-live.js",
