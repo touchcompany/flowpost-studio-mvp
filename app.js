@@ -4899,6 +4899,14 @@ function selectedPrompt() {
   return promptLibrary.find((prompt) => prompt.id === selectedPromptId) || null;
 }
 
+function promptProviderLabel(value = "auto") {
+  return {
+    auto: "Auto",
+    openai: "ChatGPT",
+    gemini: "Gemini",
+  }[value] || "Auto";
+}
+
 function renderPromptLibraryPanel() {
   const prompts = activeCompanyPrompts();
   const selected = selectedPrompt();
@@ -4935,7 +4943,7 @@ function renderPromptLibraryPanel() {
                       <span class="status-icon small"><i data-lucide="${type.icon}"></i></span>
                       <div>
                         <strong>${escapeHtml(prompt.title)}</strong>
-                        <p>${escapeHtml(type.label)} · ${escapeHtml(prompt.body)}</p>
+                        <p>${escapeHtml(type.label)} · ${escapeHtml(promptProviderLabel(prompt.provider))} · ${escapeHtml(prompt.body)}</p>
                       </div>
                       <button class="secondary-button icon-button compact" type="button" data-prompt-use="${escapeHtml(prompt.id)}" aria-label="Usar prompt">
                         <i data-lucide="${isSelected ? "check" : "mouse-pointer-click"}"></i>
@@ -4953,6 +4961,15 @@ function renderPromptLibraryPanel() {
       <div class="prompt-form">
         <select data-prompt-field="type">
           ${Object.entries(promptTypes).map(([key, type]) => `<option value="${key}">${escapeHtml(type.label)}</option>`).join("")}
+        </select>
+        <select data-prompt-field="provider">
+          ${[
+            ["auto", "Auto"],
+            ["openai", "ChatGPT"],
+            ["gemini", "Gemini"],
+          ]
+            .map(([value, label]) => `<option value="${value}">${label}</option>`)
+            .join("")}
         </select>
         <input data-prompt-field="title" type="text" placeholder="Nombre del prompt" />
         <textarea data-prompt-field="body" rows="3" placeholder="Escribe el prompt que quieres reutilizar para esta empresa"></textarea>
@@ -5970,6 +5987,7 @@ calendarPlannerPanel.addEventListener("click", (event) => {
   const savePromptButton = event.target.closest("[data-prompt-save]");
   if (savePromptButton) {
     const type = calendarPlannerPanel.querySelector('[data-prompt-field="type"]')?.value || "script";
+    const provider = calendarPlannerPanel.querySelector('[data-prompt-field="provider"]')?.value || selectedAiProvider || "auto";
     const title = calendarPlannerPanel.querySelector('[data-prompt-field="title"]')?.value.trim();
     const body = calendarPlannerPanel.querySelector('[data-prompt-field="body"]')?.value.trim();
     if (!title || !body) {
@@ -5982,10 +6000,12 @@ calendarPlannerPanel.addEventListener("click", (event) => {
       type,
       title,
       body,
+      provider,
       createdAt: new Date().toISOString(),
     };
     promptLibrary = [prompt, ...promptLibrary];
     selectedPromptId = prompt.id;
+    selectedAiProvider = provider;
     persistState();
     renderCalendar();
     showToast("Prompt guardado para esta empresa.");
@@ -5995,6 +6015,9 @@ calendarPlannerPanel.addEventListener("click", (event) => {
   const usePromptButton = event.target.closest("[data-prompt-use]");
   if (usePromptButton) {
     selectedPromptId = usePromptButton.dataset.promptUse;
+    const prompt = selectedPrompt();
+    if (prompt?.provider) selectedAiProvider = prompt.provider;
+    persistState();
     renderCalendar();
     showToast("Prompt seleccionado para la proxima generacion.");
     return;

@@ -200,7 +200,7 @@ Para pruebas internas puedes activar el perfil `Touch Studio` como super admin c
 
 La base multiusuario ya esta preparada con `company_members`: cada empresa puede tener propietario, administrador, editor, aprobador, cliente invitado o facturacion. En esta fase se registran permisos y accesos; el siguiente paso es conectar Supabase Auth para enviar invitaciones reales por email y aplicar RLS por usuario autenticado.
 
-La biblioteca de prompts guarda plantillas por empresa y por tipo (`guion`, `imagen`, `video`). En esta fase se conserva en el estado del navegador/local para no bloquear la app; el siguiente paso de base de datos es crear una tabla `prompt_templates` por `company_id` y `created_by`.
+La biblioteca de prompts guarda plantillas por empresa y por tipo (`guion`, `imagen`, `video`) en `prompt_templates`. Si tu base fue creada antes de esta funcion, ejecuta [supabase/prompt-templates.sql](./supabase/prompt-templates.sql) en Supabase SQL Editor.
 
 ## APIs de redes y Drive
 
