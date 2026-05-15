@@ -73,6 +73,8 @@ npm start
 
 Abrir `http://127.0.0.1:4176`.
 
+En desarrollo local puedes usar `npm run dev`. En cPanel Node.js usa `npm start` o configura el startup file como `cpanel-server.js`.
+
 Rutas principales:
 
 - `http://127.0.0.1:4176/landing.html`
@@ -138,6 +140,7 @@ npm run deploy:package
 - Endpoint de readiness: `/api/production-readiness`.
 
 Ver [CPANEL_DEPLOYMENT.md](./CPANEL_DEPLOYMENT.md) para subir la app a `app.touch.com.co`.
+Si el dominio abre pero `/api/health` da 404, revisa [CPANEL_NODE_SETUP.md](./CPANEL_NODE_SETUP.md).
 
 ## Despliegue
 
