@@ -175,7 +175,8 @@ cp .env.example .env
 Para guiones con IA desde backend:
 
 - `OPENAI_API_KEY` + `OPENAI_MODEL` activa ChatGPT/OpenAI.
-- `GEMINI_API_KEY` + `GEMINI_MODEL` activa Gemini si no hay llave de OpenAI.
+- `GEMINI_API_KEY` + `GEMINI_MODEL` activa Gemini como respaldo o como proveedor principal.
+- `AI_PROVIDER=openai` o `AI_PROVIDER=gemini` define que proveedor se intenta primero.
 - Sin llaves, `/api/ai/script` responde en modo mock editable para no romper calendario.
 
 ## Supabase
@@ -194,6 +195,8 @@ Archivos clave:
 - `lib/data-store.js`
 - `lib/local-store.js`
 - `lib/supabase-store.js`
+
+Para pruebas internas puedes activar el perfil `Touch Studio` como super admin con `GET /api/admin/seed-touch?token=TU_ADMIN_MIGRATION_TOKEN`. Ese endpoint solo responde si existe `ADMIN_MIGRATION_TOKEN` en variables de entorno y desbloquea todos los modulos para validar la plataforma completa.
 
 ## APIs de redes y Drive
 

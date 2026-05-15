@@ -241,6 +241,7 @@ let backendProvider = "local";
 let provisioningStatus = null;
 let oauthStatus = null;
 let apiProbeResults = {};
+let deletedCompanies = [];
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let serviceProvisionDraft = {
@@ -322,6 +323,8 @@ const fallbackIconPaths = {
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   "refresh-cw": '<path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8"/><path d="M21 3v5h-5"/>',
+  "archive-restore": '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/><path d="m9 17 3-3 3 3"/>',
+  "rotate-ccw": '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/>',
   "plug-zap": '<path d="M13 2 7 12h5l-1 10 6-12h-5l1-8Z"/><path d="M6 3v4M10 3v4M8 7v3"/>',
   workflow: '<rect x="3" y="4" width="6" height="6" rx="2"/><rect x="15" y="14" width="6" height="6" rx="2"/><path d="M9 7h2a3 3 0 0 1 3 3v4"/><path d="m12 12 2 2 2-2"/><path d="M15 17H9a3 3 0 0 1-3-3v-4"/>',
   "mouse-pointer-click": '<path d="M4 3 14 14l-5 1 3 6 3-2-3-5 5-2L4 3Z"/><path d="M16 4h4M18 2v4"/>',
@@ -919,6 +922,28 @@ function featureEnabled(feature, session = currentSession()) {
   return feature.plans.includes(plan);
 }
 
+const viewFeatureMap = {
+  clients: "clients",
+  store: "store",
+  automations: "apiAdmin",
+};
+
+function canAccessView(viewName, session = currentSession()) {
+  const featureKey = viewFeatureMap[viewName];
+  if (!featureKey) return true;
+  const feature = featureCatalog.find((item) => item.key === featureKey);
+  return feature ? featureEnabled(feature, session) : true;
+}
+
+function syncViewEntitlements() {
+  const session = currentSession();
+  viewLinks.forEach((link) => {
+    const locked = !canAccessView(link.dataset.viewLink, session);
+    link.classList.toggle("locked", locked);
+    link.setAttribute("aria-disabled", locked ? "true" : "false");
+  });
+}
+
 function formatLimit(value) {
   return value === Infinity ? "Ilimitado" : String(value);
 }
@@ -950,6 +975,7 @@ function renderAccount() {
   accountPlan.textContent = `${planLabel} · ${providerLabel}`;
   accountAvatar.textContent = name.trim().charAt(0).toUpperCase() || "M";
   logoutButton.textContent = session.id ? "Salir" : "Entrar";
+  syncViewEntitlements();
   renderPlanPanel();
   renderBillingPanel();
   renderClientBillingPanel();
@@ -3108,7 +3134,15 @@ function normalizeViewName(viewName) {
 }
 
 function setView(viewName, options = {}) {
-  const targetView = normalizeViewName(viewName);
+  let targetView = normalizeViewName(viewName);
+  syncViewEntitlements();
+  if (!canAccessView(targetView)) {
+    const lockedFeature = featureCatalog.find((item) => item.key === viewFeatureMap[targetView]);
+    targetView = "accounts";
+    if (!options.silent) {
+      showToast(`${lockedFeature?.label || "Esta seccion"} se activa al comprar un plan compatible.`);
+    }
+  }
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
   mobileMoreButton?.classList.toggle("active", ["library", "calendar", "automations", "accounts"].includes(targetView));
@@ -4677,6 +4711,7 @@ function renderAccounts() {
   const networks = ["Instagram", "Facebook", "TikTok", "Google Drive", "LinkedIn", "YouTube"];
   accountsGrid.innerHTML = [
     renderApiStatusSummary(networks),
+    renderTrashPanel(),
     renderApiEventPanel(networks),
     ...networks.map((network) => {
       const integration = integrationRequirements[network];
@@ -4745,6 +4780,65 @@ function renderAccounts() {
     }),
   ].join("");
   renderIcons();
+}
+
+function renderTrashPanel() {
+  const rows = deletedCompanies.slice(0, 5);
+  return `
+    <section class="trash-panel">
+      <header>
+        <span class="dashboard-icon"><i data-lucide="archive-restore"></i></span>
+        <div>
+          <h3>Papelera recuperable</h3>
+          <p>Empresas y cuentas borradas se pueden recuperar durante 30 dias.</p>
+        </div>
+        <button class="secondary-button icon-button compact" type="button" data-refresh-trash aria-label="Actualizar papelera">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+      </header>
+      ${
+        rows.length
+          ? `<div class="trash-list">
+              ${rows
+                .map(
+                  (company) => `
+                    <article>
+                      <div>
+                        <strong>${escapeHtml(company.name)}</strong>
+                        <p>Eliminada ${escapeHtml(shortDateLabel((company.deletedAt || "").slice(0, 10)))} · recuperable hasta ${escapeHtml(shortDateLabel((company.deletionExpiresAt || "").slice(0, 10)))}</p>
+                      </div>
+                      <button class="secondary-button icon-text-button" type="button" data-restore-company="${escapeHtml(company.id)}">
+                        <i data-lucide="rotate-ccw"></i>
+                        Restaurar
+                      </button>
+                    </article>
+                  `
+                )
+                .join("")}
+            </div>`
+          : `<div class="empty-state compact"><strong>Papelera vacia</strong><p>Cuando elimines una empresa, aparecera aqui antes de borrarse definitivo.</p></div>`
+      }
+      <div class="trash-panel-actions">
+        <button class="secondary-button icon-text-button" type="button" data-purge-trash>
+          <i data-lucide="trash-2"></i>
+          Limpiar vencidos
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+async function refreshTrash(showFeedback = false) {
+  if (window.location.protocol === "file:") return;
+  try {
+    const response = await fetch("/api/trash/companies", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("trash unavailable");
+    deletedCompanies = await response.json();
+    renderAccounts();
+    if (showFeedback) showToast("Papelera actualizada.");
+  } catch {
+    if (showFeedback) showToast("No se pudo consultar la papelera.");
+  }
 }
 
 async function refreshOAuthStatus(showFeedback = false) {
@@ -5278,7 +5372,7 @@ async function generateCalendarScript(publicationId) {
     const response = await fetch("/api/ai/script", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company, publication: { ...publication, hook, cta } }),
+      body: JSON.stringify({ company, publication: { ...publication, hook, cta }, profile: currentSession() }),
     });
     if (!response.ok) throw new Error("script ai unavailable");
     const result = await response.json();
@@ -5581,6 +5675,58 @@ queueSummary.addEventListener("click", (event) => {
 });
 
 accountsGrid.addEventListener("click", async (event) => {
+  const refreshTrashButton = event.target.closest("[data-refresh-trash]");
+  if (refreshTrashButton) {
+    await refreshTrash(true);
+    return;
+  }
+
+  const restoreCompanyButton = event.target.closest("[data-restore-company]");
+  if (restoreCompanyButton) {
+    restoreCompanyButton.disabled = true;
+    try {
+      const response = await fetch(`/api/companies/${encodeURIComponent(restoreCompanyButton.dataset.restoreCompany)}/restore`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("restore failed");
+      await hydrateStateFromBackend();
+      await refreshTrash(false);
+      renderCompanies();
+      renderDashboard();
+      renderCalendar();
+      renderQueue();
+      renderMediaLocation();
+      renderVideoLibrary();
+      renderAccounts();
+      updateCompanySwitcher();
+      showToast("Empresa restaurada.");
+    } catch {
+      showToast("No se pudo restaurar la empresa.");
+      renderAccounts();
+    }
+    return;
+  }
+
+  const purgeTrashButton = event.target.closest("[data-purge-trash]");
+  if (purgeTrashButton) {
+    purgeTrashButton.disabled = true;
+    try {
+      const response = await fetch("/api/trash/purge-expired", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("purge failed");
+      const result = await response.json();
+      await refreshTrash(false);
+      showToast(`${result.purged || 0} registros vencidos limpiados.`);
+    } catch {
+      showToast("No se pudo limpiar la papelera.");
+      renderAccounts();
+    }
+    return;
+  }
+
   const refreshButton = event.target.closest("[data-refresh-api-status]");
   if (refreshButton) {
     refreshOAuthStatus(true);
@@ -6388,6 +6534,7 @@ async function init() {
   renderQueue();
   renderCalendar();
   renderAccounts();
+  refreshTrash(false);
   refreshOAuthStatus(false);
   renderStorePanel();
   renderAutomationCenter();

@@ -1029,26 +1029,37 @@ function scriptFallback(payload = {}) {
 function aiPromptForScript(payload = {}) {
   const company = payload.company || {};
   const publication = payload.publication || payload;
+  const profile = payload.profile || {};
+  const role = profile.role || profile.roleLabel || "pyme, marca personal o agencia";
+  const objective = company.objective || publication.objective || "atraer clientes reales y explicar la oferta con claridad";
   return [
     "Actua como estratega senior de contenido para Instagram, Facebook y TikTok.",
-    "Escribe en español natural para una pyme o marca personal.",
-    "Crea un guion corto, accionable y grabable para video vertical.",
+    "Escribe en español natural, directo y facil de grabar.",
+    "Crea un guion premium para video vertical que una persona real pueda producir sin equipo complejo.",
+    `Tipo de usuario: ${role}.`,
     `Marca: ${company.name || "marca"}.`,
     `Tono de voz: ${company.voice || "claro, cercano y comercial"}.`,
     `Descripcion: ${company.description || "sin descripcion"}.`,
+    `Objetivo comercial: ${objective}.`,
     `Titulo de la pieza: ${publication.title || "pieza de contenido"}.`,
     `Tipo: ${publication.type || "Video / Reel"}.`,
     `Hook base: ${publication.hook || publication.copy || "crear una apertura fuerte"}.`,
     `CTA: ${publication.cta || "invitar a escribir o comprar"}.`,
     `Notas: ${publication.notes || "sin notas"}.`,
-    "Formato exacto: Hook, Escena 1, Escena 2, Escena 3, Cierre.",
-    "Evita frases genericas. Incluye acciones visuales concretas y una promesa clara.",
+    "Formato exacto: Hook, Escena 1, Escena 2, Escena 3, Cierre, Caption sugerido.",
+    "Cada escena debe incluir accion visual, texto en pantalla y frase de voz.",
+    "Evita frases genericas, promesas exageradas y lenguaje dificil de grabar.",
+    "Incluye una promesa clara, especifica y creible para pymes, marcas personales o agencias.",
   ].join("\n");
 }
 
 async function generateAiScript(payload) {
   const prompt = aiPromptForScript(payload);
-  if (process.env.OPENAI_API_KEY) {
+  const preferred = (process.env.AI_PROVIDER || "").toLowerCase();
+  const providers = preferred === "gemini" ? ["gemini", "openai"] : ["openai", "gemini"];
+  const errors = [];
+
+  async function generateWithOpenAI() {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1072,7 +1083,7 @@ async function generateAiScript(payload) {
     };
   }
 
-  if (process.env.GEMINI_API_KEY) {
+  async function generateWithGemini() {
     const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: "POST",
@@ -1090,8 +1101,18 @@ async function generateAiScript(payload) {
     };
   }
 
+  for (const provider of providers) {
+    try {
+      if (provider === "openai" && process.env.OPENAI_API_KEY) return await generateWithOpenAI();
+      if (provider === "gemini" && process.env.GEMINI_API_KEY) return await generateWithGemini();
+    } catch (error) {
+      errors.push(`${provider}: ${error.message}`);
+    }
+  }
+
   return {
     mode: "mock",
+    warning: errors.join(" | "),
     script: scriptFallback(payload),
   };
 }
@@ -1356,6 +1377,29 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 200, await migrateLocalJsonToActiveStore());
+    return;
+  }
+
+  if ((req.method === "POST" || req.method === "GET") && url.pathname === "/api/admin/seed-touch") {
+    if (!adminTokenValid(req, url)) {
+      sendError(res, 404, "not found");
+      return;
+    }
+    if (!store.saveSession) {
+      sendError(res, 501, "session store unavailable");
+      return;
+    }
+    const session = await store.saveSession(
+      normalizeSession({
+        id: "touch-super-admin",
+        name: "Touch Studio",
+        email: process.env.CPANEL_DEFAULT_CONTACT_EMAIL || "ia@touch.com.co",
+        provider: "touch",
+        plan: "agency",
+        status: "active",
+      })
+    );
+    sendJson(res, 200, { ok: true, provider: store.provider, session });
     return;
   }
 
