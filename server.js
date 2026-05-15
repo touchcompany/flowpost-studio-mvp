@@ -2064,6 +2064,10 @@ async function handleApi(req, res, url) {
     }
 
     if (req.method === "DELETE" && !parts[3]) {
+      if (store.deleteCompany) {
+        sendJson(res, 200, await store.deleteCompany(company.id));
+        return;
+      }
       db.companies = db.companies.filter((item) => item.id !== company.id);
       db.publications = (db.publications || []).filter((item) => item.companyId !== company.id);
       db.jobs = (db.jobs || []).filter((job) => job.companyId !== company.id);
