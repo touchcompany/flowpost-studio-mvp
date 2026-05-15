@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - /bin/echo "Flowpost Studio files are deployed from the repository root."
