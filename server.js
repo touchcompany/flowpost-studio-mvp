@@ -255,15 +255,17 @@ function normalizeSession(payload) {
     pro: "Pro",
     agency: "Agencia",
   };
-  const plan = planLabels[payload.plan] ? payload.plan : "starter";
+  const identity = `${payload.id || ""} ${payload.name || ""} ${payload.email || ""}`.toLowerCase();
+  const isTouch = identity.includes("touch");
+  const plan = isTouch ? "agency" : planLabels[payload.plan] ? payload.plan : "starter";
   return {
-    id: payload.id || "demo-profile",
-    name: payload.name || "Usuario MVP",
+    id: payload.id || (isTouch ? "touch-super-admin" : "demo-profile"),
+    name: payload.name || (isTouch ? "Touch Studio" : "Usuario MVP"),
     email: payload.email || "",
     provider: payload.provider || "demo",
     plan,
-    planLabel: planLabels[plan],
-    status: payload.status || "trial",
+    planLabel: isTouch ? "Touch Super Admin" : planLabels[plan],
+    status: isTouch ? "active" : payload.status || "trial",
     createdAt: payload.createdAt || new Date().toISOString(),
   };
 }
@@ -1118,6 +1120,11 @@ function diagnostics(req) {
     storage: {
       supabaseBucket: process.env.SUPABASE_STORAGE_BUCKET || "",
       configured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
+    },
+    ai: {
+      openai: { ready: Boolean(process.env.OPENAI_API_KEY), model: process.env.OPENAI_MODEL || "gpt-4o-mini" },
+      gemini: { ready: Boolean(process.env.GEMINI_API_KEY), model: process.env.GEMINI_MODEL || "gemini-1.5-flash" },
+      preferred: process.env.OPENAI_API_KEY ? "openai" : process.env.GEMINI_API_KEY ? "gemini" : "mock",
     },
     oauth,
     redirects: {

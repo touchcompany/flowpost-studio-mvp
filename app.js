@@ -202,6 +202,38 @@ const planLimits = {
     description: "Para operar clientes ilimitados con foco comercial.",
   },
 };
+const roleProfiles = {
+  super_admin: {
+    label: "Super admin",
+    description: "Control total de la agencia, servicios, clientes, APIs, pagos y pruebas internas.",
+    icon: "crown",
+  },
+  agency_owner: {
+    label: "Agencia",
+    description: "Gestiona clientes, cobros, servicios y contenido segun su plan.",
+    icon: "building-2",
+  },
+  business_owner: {
+    label: "Empresa",
+    description: "Compra servicios y gestiona su marca, recursos, calendario y cobros.",
+    icon: "briefcase",
+  },
+  creator: {
+    label: "Creador",
+    description: "Crea contenido, guiones y publicaciones para una marca.",
+    icon: "sparkles",
+  },
+};
+const featureCatalog = [
+  { key: "content", label: "Contenido y calendario", icon: "calendar-days", plans: ["starter", "pro", "agency"] },
+  { key: "library", label: "Biblioteca y recursos", icon: "layers", plans: ["starter", "pro", "agency"] },
+  { key: "aiScripts", label: "Guiones con IA", icon: "sparkles", plans: ["starter", "pro", "agency"] },
+  { key: "clients", label: "Clientes de agencia", icon: "users", plans: ["agency"] },
+  { key: "billing", label: "Cobros y facturas", icon: "receipt", plans: ["pro", "agency"] },
+  { key: "store", label: "Venta de servicios", icon: "store", plans: ["pro", "agency"] },
+  { key: "hosting", label: "Hosting y dominios", icon: "server", plans: ["agency"] },
+  { key: "apiAdmin", label: "APIs y automatizaciones", icon: "workflow", plans: ["agency"] },
+];
 const videoTones = ["mint", "sunset", "mocha", "orchid"];
 const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"];
 let backendEnabled = false;
@@ -250,6 +282,7 @@ const fallbackIconPaths = {
   cloud: '<path d="M17.5 19H7a5 5 0 1 1 1.2-9.85A7 7 0 0 1 21 13.5 3.5 3.5 0 0 1 17.5 19Z"/>',
   "folder-open": '<path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 13h18l-2 6H5l-2-6Z"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+  crown: '<path d="m3 8 4 3 5-7 5 7 4-3-2 11H5L3 8Z"/><path d="M5 19h14"/>',
   receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 12h8M8 17h5"/>',
   "server-cog": '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 8h.01M7 17h.01"/><circle cx="16" cy="17" r="2"/><path d="M16 14v1M16 19v1M13 17h1M18 17h1"/>',
   github: '<path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7a5.2 5.2 0 0 0-1.4-3.6 4.8 4.8 0 0 0-.1-3.6s-1.1-.3-3.7 1.4a12.8 12.8 0 0 0-6.8 0C5.6 1.3 4.5 1.6 4.5 1.6a4.8 4.8 0 0 0-.1 3.6A5.2 5.2 0 0 0 3 8.8c0 5.2 3.1 6.4 6.1 6.7a3 3 0 0 0-.9 1.9c-.8.4-2.9 1-4.1-1.2 0 0-.8-1.4-2.2-1.5 0 0-1.4 0-.1.9 0 0 .9.4 1.6 2 0 0 .8 2.5 4.7 1.7V22"/>',
@@ -848,15 +881,42 @@ function updateConnectionStatus() {
 
 function currentSession() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
+    return normalizeClientSession(JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"));
   } catch {
-    return {};
+    return normalizeClientSession({});
   }
+}
+
+function isTouchSuperAdmin(session = currentSession()) {
+  const identity = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase();
+  return session.role === "super_admin" || identity.includes("touch");
+}
+
+function normalizeClientSession(session = {}) {
+  const isTouch = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase().includes("touch");
+  const plan = isTouch ? "agency" : planLimits[session.plan] ? session.plan : "starter";
+  const role = isTouch ? "super_admin" : session.role || (plan === "agency" ? "agency_owner" : "business_owner");
+  return {
+    ...session,
+    id: session.id || (isTouch ? "touch-super-admin" : ""),
+    name: session.name || (isTouch ? "Touch Studio" : "Invitado MVP"),
+    plan,
+    planLabel: isTouch ? "Touch Super Admin" : session.planLabel || planLimits[plan].label,
+    role,
+    roleLabel: roleProfiles[role]?.label || "Empresa",
+    status: isTouch ? "active" : session.status || "trial",
+  };
 }
 
 function currentPlan() {
   const session = currentSession();
-  return planLimits[session.plan] ? session.plan : "starter";
+  return isTouchSuperAdmin(session) ? "agency" : planLimits[session.plan] ? session.plan : "starter";
+}
+
+function featureEnabled(feature, session = currentSession()) {
+  if (isTouchSuperAdmin(session)) return true;
+  const plan = currentPlan();
+  return feature.plans.includes(plan);
 }
 
 function formatLimit(value) {
@@ -884,7 +944,7 @@ function renderAccount() {
   const session = currentSession();
   const name = session.name || "Invitado MVP";
   const planLabel = session.planLabel || "Starter";
-  const providerLabel = session.provider ? `Cuenta ${session.provider}` : "Sin login";
+  const providerLabel = `${session.roleLabel || "Empresa"} · ${session.provider ? `Cuenta ${session.provider}` : "Sin login"}`;
 
   accountName.textContent = name;
   accountPlan.textContent = `${planLabel} · ${providerLabel}`;
@@ -913,6 +973,9 @@ function renderPlanPanel() {
   if (!planPanel) return;
   const session = currentSession();
   const usage = planUsage();
+  const role = roleProfiles[session.role] || roleProfiles.business_owner;
+  const enabledFeatures = featureCatalog.filter((feature) => featureEnabled(feature, session));
+  const lockedFeatures = featureCatalog.filter((feature) => !featureEnabled(feature, session));
   const companyPercent =
     usage.limit.companies === Infinity ? 22 : Math.min(100, Math.round((usage.companies / usage.limit.companies) * 100));
   const publicationPercent =
@@ -929,6 +992,14 @@ function renderPlanPanel() {
       </div>
       <strong>${escapeHtml(usage.limit.label)}</strong>
     </div>
+    <section class="role-overview">
+      <span class="dashboard-icon"><i data-lucide="${role.icon}"></i></span>
+      <div>
+        <span class="plan-mini-label">Perfil operativo</span>
+        <strong>${escapeHtml(role.label)}</strong>
+        <p>${escapeHtml(role.description)}</p>
+      </div>
+    </section>
     <div class="usage-grid">
       <article>
         <header>
@@ -944,6 +1015,29 @@ function renderPlanPanel() {
         </header>
         <div class="usage-meter"><span style="width: ${publicationPercent}%"></span></div>
       </article>
+    </div>
+    <div class="entitlement-grid">
+      ${enabledFeatures
+        .map(
+          (feature) => `
+            <article class="entitlement-card enabled">
+              <i data-lucide="${feature.icon}"></i>
+              <span>${escapeHtml(feature.label)}</span>
+            </article>
+          `
+        )
+        .join("")}
+      ${lockedFeatures
+        .slice(0, 4)
+        .map(
+          (feature) => `
+            <article class="entitlement-card locked">
+              <i data-lucide="lock"></i>
+              <span>${escapeHtml(feature.label)}</span>
+            </article>
+          `
+        )
+        .join("")}
     </div>
     <div class="plan-actions">
       <button class="secondary-button icon-text-button" type="button" data-plan-change="starter">
@@ -4901,6 +4995,7 @@ async function renderDiagnostics() {
       ...baseCards,
       diagnosticCard("Backend/API", "ok", `Backend activo con proveedor ${result.dataProvider}.`),
       diagnosticCard("Supabase", result.storage.configured ? "ok" : "pending", result.storage.configured ? "Credenciales presentes." : "Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY."),
+      diagnosticCard("IA guiones", result.ai?.preferred !== "mock" ? "ok" : "mock", result.ai?.preferred === "openai" ? `ChatGPT listo (${result.ai.openai.model}).` : result.ai?.preferred === "gemini" ? `Gemini listo (${result.ai.gemini.model}).` : "Sin API key; usa guiones mock editables."),
       diagnosticCard("Meta", result.oauth.meta.ready ? "ok" : "pending", result.oauth.meta.ready ? "Credenciales Meta listas." : `Faltan: ${result.oauth.meta.missing.join(", ") || "ninguna"}.`),
       diagnosticCard("TikTok", result.oauth.tiktok.ready ? "ok" : "pending", result.oauth.tiktok.ready ? "Credenciales TikTok listas." : `Faltan: ${result.oauth.tiktok.missing.join(", ") || "ninguna"}.`),
       diagnosticCard("Google Drive", result.oauth.google.ready ? "ok" : "mock", result.oauth.google.ready ? "Credenciales Google listas." : "Usando modo mock hasta configurar Google OAuth."),
