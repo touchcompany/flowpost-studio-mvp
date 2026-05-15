@@ -10,6 +10,9 @@ create table if not exists public.app_profiles (
   name text not null default '',
   email text not null default '',
   provider text not null default 'demo',
+  deleted_at timestamptz,
+  deletion_expires_at timestamptz,
+  deleted_by text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -55,6 +58,9 @@ create table if not exists public.companies (
   voice text not null default '',
   primary_color text not null default '#0095f6',
   social_networks text[] not null default array['Instagram'],
+  deleted_at timestamptz,
+  deletion_expires_at timestamptz,
+  deleted_by text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -149,7 +155,9 @@ create table if not exists public.post_jobs (
 );
 
 create index if not exists companies_name_idx on public.companies (name);
+create index if not exists companies_deleted_idx on public.companies (deleted_at, deletion_expires_at);
 create index if not exists app_profiles_email_idx on public.app_profiles (email);
+create index if not exists app_profiles_deleted_idx on public.app_profiles (deleted_at, deletion_expires_at);
 create index if not exists subscriptions_profile_idx on public.subscriptions (profile_id);
 create index if not exists oauth_connections_provider_idx on public.oauth_connections (provider);
 create index if not exists billing_events_type_idx on public.billing_events (type, created_at desc);

@@ -14,6 +14,12 @@ Esta app puede seguir funcionando en modo local mientras se prepara Supabase. La
 3. Ejecutar `supabase/schema.sql`.
 4. Crear un bucket privado llamado `media-assets` si vas a guardar portadas o archivos importados.
 
+Si ya habias ejecutado el esquema antes de agregar papelera/recuperacion, ejecuta tambien:
+
+```sql
+-- contenido de supabase/soft-delete.sql
+```
+
 ## Variables de entorno
 
 En cPanel Node.js App Manager o en `.env` local:
@@ -61,6 +67,7 @@ npm run production:check
 - `SUPABASE_SERVICE_ROLE_KEY` solo debe vivir en backend/cPanel.
 - Los tokens de Instagram, Facebook, TikTok, YouTube o LinkedIn no deben guardarse sin cifrado.
 - El frontend no debe publicar directamente en redes sociales.
+- Las empresas y perfiles se envian primero a papelera por 30 dias antes de borrarse definitivamente.
 
 ## Migracion recomendada
 

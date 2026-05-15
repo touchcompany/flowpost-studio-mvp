@@ -1935,6 +1935,42 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/trash/companies") {
+    if (!store.listDeletedCompanies) {
+      sendJson(res, 200, []);
+      return;
+    }
+    sendJson(res, 200, await store.listDeletedCompanies());
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/trash/purge-expired") {
+    if (!store.purgeExpiredDeletedCompanies) {
+      sendJson(res, 200, { purged: 0, ids: [] });
+      return;
+    }
+    sendJson(res, 200, await store.purgeExpiredDeletedCompanies());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/trash/users") {
+    if (!store.listDeletedProfiles) {
+      sendJson(res, 200, []);
+      return;
+    }
+    sendJson(res, 200, await store.listDeletedProfiles());
+    return;
+  }
+
+  if (req.method === "POST" && parts[0] === "api" && parts[1] === "trash" && parts[2] === "users" && parts[3] && parts[4] === "restore") {
+    if (!store.restoreProfile) {
+      sendError(res, 501, "restore unavailable");
+      return;
+    }
+    sendJson(res, 200, await store.restoreProfile(parts[3]));
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/publications") {
     const db = await store.getState();
     const companyId = url.searchParams.get("companyId");
@@ -2041,6 +2077,15 @@ async function handleApi(req, res, url) {
   }
 
   if (parts[0] === "api" && parts[1] === "companies" && parts[2]) {
+    if (req.method === "POST" && parts[3] === "restore") {
+      if (!store.restoreCompany) {
+        sendError(res, 501, "restore unavailable");
+        return;
+      }
+      sendJson(res, 200, await store.restoreCompany(parts[2]));
+      return;
+    }
+
     const db = await store.getState();
     const companyIndex = db.companies.findIndex((item) => item.id === parts[2]);
     const company = db.companies[companyIndex];
