@@ -1500,6 +1500,10 @@ button {
   margin-bottom: 24px;
 }
 
+.topbar > div:first-child {
+  padding-left: 12px;
+}
+
 .topbar h1,
 .workspace-label,
 .section-heading h2,
@@ -7566,6 +7570,7 @@ input[type="file"] {
 
   .topbar > div:first-child {
     min-width: 0;
+    padding-left: 6px;
   }
 
   .workspace-label {
