@@ -12,6 +12,7 @@
     "smoke": "node scripts/smoke.js",
     "production:check": "node scripts/check-production.js",
     "live:check": "node scripts/check-live.js",
+    "supabase:check": "node scripts/check-supabase.js",
     "supabase:migrate": "node scripts/migrate-supabase.js",
     "deploy:package": "node scripts/package-deploy.js"
   },

@@ -136,6 +136,7 @@ npm run deploy:package
 - `production:check` valida variables esperadas para `https://app.touch.com.co`.
 - `live:check` consulta endpoints reales de `https://app.touch.com.co`.
 - `supabase:migrate` migra `data/db.json` a Supabase cuando ya existan `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.
+- `supabase:check` valida que `supabase/schema.sql` ya fue ejecutado antes de migrar o activar `DATA_PROVIDER=supabase`.
 - `deploy:package` crea una carpeta limpia para subir a cPanel.
 - Endpoint de readiness: `/api/production-readiness`.
 

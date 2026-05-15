@@ -43,10 +43,11 @@ El adaptador ya esta preparado en `lib/supabase-store.js`. Antes de activar `DAT
 Cuando el esquema ya exista en Supabase:
 
 ```bash
+npm run supabase:check
 npm run supabase:migrate
 ```
 
-El comando lee `data/db.json` y guarda empresas, fuentes, cuentas, biblioteca, publicaciones, trabajos y sesion MVP en Supabase.
+`supabase:check` confirma que las tablas existen. `supabase:migrate` lee `data/db.json` y guarda empresas, fuentes, cuentas, biblioteca, publicaciones, trabajos y sesion MVP en Supabase.
 
 Para revisar si el entorno de `app.touch.com.co` esta listo:
 
