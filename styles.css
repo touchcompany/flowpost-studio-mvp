@@ -6525,6 +6525,65 @@ input[type="file"] {
   opacity: 0.72;
 }
 
+.client-members-panel {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.client-members-panel header,
+.client-member-list article,
+.client-member-invite {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.client-members-panel h3,
+.client-members-panel p,
+.client-member-list strong,
+.client-member-list p {
+  margin: 0;
+}
+
+.client-members-panel p,
+.client-member-list p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.client-member-list {
+  display: grid;
+  gap: 8px;
+}
+
+.client-member-list article {
+  grid-template-columns: auto minmax(0, 1fr) minmax(150px, auto) auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.client-member-list select,
+.client-member-invite input,
+.client-member-invite select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.client-member-invite {
+  grid-template-columns: minmax(0, 1.2fr) minmax(130px, 0.8fr) auto;
+}
+
 .automation-steps {
   display: grid;
   gap: 7px;
@@ -8070,6 +8129,11 @@ input[type="file"] {
   }
 
   .client-profile-body {
+    grid-template-columns: 1fr;
+  }
+
+  .client-member-list article,
+  .client-member-invite {
     grid-template-columns: 1fr;
   }
 

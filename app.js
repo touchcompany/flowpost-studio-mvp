@@ -234,6 +234,44 @@ const featureCatalog = [
   { key: "hosting", label: "Hosting y dominios", icon: "server", plans: ["agency"] },
   { key: "apiAdmin", label: "APIs y automatizaciones", icon: "workflow", plans: ["agency"] },
 ];
+const memberRoles = {
+  owner: {
+    label: "Propietario",
+    description: "Control total de la empresa, usuarios, servicios y aprobaciones.",
+    icon: "crown",
+    permissions: ["Todo"],
+  },
+  admin: {
+    label: "Administrador",
+    description: "Gestiona contenido, biblioteca, cuentas, cobros y miembros.",
+    icon: "shield-check",
+    permissions: ["Contenido", "Biblioteca", "Cobros", "Usuarios"],
+  },
+  editor: {
+    label: "Editor",
+    description: "Crea publicaciones, guiones, recursos y borradores.",
+    icon: "pencil",
+    permissions: ["Crear", "Guiones", "Biblioteca"],
+  },
+  approver: {
+    label: "Aprobador",
+    description: "Revisa calendarios, guiones y piezas antes de publicar.",
+    icon: "badge-check",
+    permissions: ["Ver", "Comentar", "Aprobar"],
+  },
+  client_viewer: {
+    label: "Cliente invitado",
+    description: "Ve solo lo compartido: guiones, calendario, recursos y avances.",
+    icon: "eye",
+    permissions: ["Ver compartido", "Comentar"],
+  },
+  billing: {
+    label: "Facturacion",
+    description: "Ve cuentas de cobro, facturas, pagos y servicios contratados.",
+    icon: "receipt",
+    permissions: ["Cobros", "Servicios"],
+  },
+};
 const videoTones = ["mint", "sunset", "mocha", "orchid"];
 const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"];
 let backendEnabled = false;
@@ -320,6 +358,7 @@ const fallbackIconPaths = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><rect x="4" y="4" width="11" height="11" rx="2"/>',
   "check-circle-2": '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
   "circle-alert": '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   "refresh-cw": '<path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8"/><path d="M21 3v5h-5"/>',
@@ -549,6 +588,24 @@ let clients = [
     nextInvoiceDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 12).toISOString().slice(0, 10),
   },
 ];
+let accessMembers = [
+  {
+    id: "member-touch-owner",
+    companyId: "casa-norte",
+    email: "admin@touch.com.co",
+    role: "owner",
+    status: "Activo",
+    invitedAt: new Date().toISOString(),
+  },
+  {
+    id: "member-casa-approver",
+    companyId: "casa-norte",
+    email: "admin@casanortecafe.com",
+    role: "client_viewer",
+    status: "Invitado",
+    invitedAt: new Date().toISOString(),
+  },
+];
 let agencies = [
   {
     id: "agency-touch",
@@ -614,6 +671,9 @@ function restoreState() {
     }
     if (Array.isArray(stored.clients)) {
       clients = stored.clients;
+    }
+    if (Array.isArray(stored.accessMembers)) {
+      accessMembers = stored.accessMembers;
     }
     if (Array.isArray(stored.agencies) && stored.agencies.length) {
       agencies = stored.agencies;
@@ -711,6 +771,9 @@ async function hydrateStateFromBackend() {
     if (Array.isArray(state.clients)) {
       clients = state.clients;
     }
+    if (Array.isArray(state.accessMembers)) {
+      accessMembers = state.accessMembers;
+    }
     if (Array.isArray(state.agencies) && state.agencies.length) {
       agencies = state.agencies;
     }
@@ -754,6 +817,7 @@ function persistState() {
         publications,
         jobs,
         clients,
+        accessMembers,
         invoices,
         billingDraft,
         agencyServices,
@@ -769,7 +833,7 @@ function persistState() {
     fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
+      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
     }).catch(() => {
       backendEnabled = false;
       updateConnectionStatus();
@@ -786,6 +850,7 @@ function currentState() {
     publications,
     jobs,
     clients,
+    accessMembers,
     invoices,
     billingDraft,
     agencyServices,
@@ -1397,6 +1462,19 @@ function ensureAgencyClients() {
       nextInvoiceDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15).toISOString().slice(0, 10),
     });
   });
+  companies.forEach((company) => {
+    const hasOwner = accessMembers.some((member) => member.companyId === company.id && member.role === "owner");
+    if (!hasOwner) {
+      accessMembers.push({
+        id: `member-${company.id}-owner`,
+        companyId: company.id,
+        email: activeAgency().billingEmail || "admin@touch.com.co",
+        role: "owner",
+        status: "Activo",
+        invitedAt: new Date().toISOString(),
+      });
+    }
+  });
 }
 
 function activeAgency() {
@@ -1437,6 +1515,71 @@ function serviceAccessModules(client) {
       service,
       enabled: purchased.has(service.id),
     }));
+}
+
+function companyMembers(companyId) {
+  return accessMembers.filter((member) => member.companyId === companyId);
+}
+
+function memberRoleMeta(role) {
+  return memberRoles[role] || memberRoles.client_viewer;
+}
+
+function roleOptions(selectedRole) {
+  return Object.entries(memberRoles)
+    .map(([key, role]) => `<option value="${key}" ${key === selectedRole ? "selected" : ""}>${escapeHtml(role.label)}</option>`)
+    .join("");
+}
+
+function renderClientMembersPanel(client) {
+  const members = companyMembers(client.companyId);
+  return `
+    <section class="client-members-panel">
+      <header>
+        <div>
+          <h3>Usuarios y permisos</h3>
+          <p>Invita equipo interno o clientes y define que pueden administrar, aprobar o solo ver.</p>
+        </div>
+        <span class="pill ${members.length ? "done" : "muted"}">${members.length} acceso${members.length === 1 ? "" : "s"}</span>
+      </header>
+      <div class="client-member-list">
+        ${
+          members.length
+            ? members
+                .map((member) => {
+                  const role = memberRoleMeta(member.role);
+                  return `
+                    <article>
+                      <span class="status-icon small"><i data-lucide="${role.icon}"></i></span>
+                      <div>
+                        <strong>${escapeHtml(member.email || "Sin email")}</strong>
+                        <p>${escapeHtml(role.label)} · ${escapeHtml(role.permissions.join(", "))}</p>
+                      </div>
+                      <select data-member-role="${escapeHtml(member.id)}" aria-label="Rol de ${escapeHtml(member.email || "usuario")}">
+                        ${roleOptions(member.role)}
+                      </select>
+                      <button class="secondary-button icon-button compact" type="button" data-member-remove="${escapeHtml(member.id)}" aria-label="Quitar acceso">
+                        <i data-lucide="trash-2"></i>
+                      </button>
+                    </article>
+                  `;
+                })
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin usuarios invitados</strong><p>Agrega un aprobador, editor o cliente para compartir avances.</p></div>`
+        }
+      </div>
+      <div class="client-member-invite" data-member-invite="${escapeHtml(client.companyId)}">
+        <input data-member-email type="email" placeholder="correo@cliente.com" />
+        <select data-member-new-role>
+          ${roleOptions("client_viewer")}
+        </select>
+        <button class="primary-button icon-text-button" type="button" data-member-add="${escapeHtml(client.companyId)}">
+          <i data-lucide="plus"></i>
+          Invitar
+        </button>
+      </div>
+    </section>
+  `;
 }
 
 function renderClientAccessPanel(client) {
@@ -1985,6 +2128,7 @@ function renderClientBillingPanel() {
                     }
                   </section>
                   ${renderClientAccessPanel(client)}
+                  ${renderClientMembersPanel(client)}
                   <details class="client-edit-panel">
                     <summary>
                       <span><i data-lucide="pencil"></i> Editar perfil</span>
@@ -3047,6 +3191,48 @@ function generateClientAiProfile(clientId) {
   showToast("Perfil IA generado para el cliente.");
 }
 
+function addCompanyMember(companyId) {
+  const form = clientWorkspacePanel.querySelector(`[data-member-invite="${CSS.escape(companyId)}"]`);
+  const email = form?.querySelector("[data-member-email]")?.value.trim().toLowerCase();
+  const role = form?.querySelector("[data-member-new-role]")?.value || "client_viewer";
+  if (!email || !email.includes("@")) {
+    showToast("Escribe un email valido para invitar.");
+    return;
+  }
+  if (accessMembers.some((member) => member.companyId === companyId && member.email.toLowerCase() === email)) {
+    showToast("Ese usuario ya tiene acceso a esta empresa.");
+    return;
+  }
+  accessMembers = [
+    ...accessMembers,
+    {
+      id: `member-${companyId}-${Date.now()}`,
+      companyId,
+      email,
+      role,
+      status: "Invitado",
+      invitedAt: new Date().toISOString(),
+    },
+  ];
+  persistState();
+  renderClientBillingPanel();
+  showToast("Invitacion registrada. Luego la conectamos con Supabase Auth para envio real.");
+}
+
+function updateCompanyMemberRole(memberId, role) {
+  accessMembers = accessMembers.map((member) => (member.id === memberId ? { ...member, role } : member));
+  persistState();
+  renderClientBillingPanel();
+  showToast("Permiso actualizado.");
+}
+
+function removeCompanyMember(memberId) {
+  accessMembers = accessMembers.filter((member) => member.id !== memberId);
+  persistState();
+  renderClientBillingPanel();
+  showToast("Acceso retirado.");
+}
+
 function markClientInvoicePaid(clientId) {
   let changed = false;
   invoices = invoices.map((invoice) => {
@@ -3102,6 +3288,7 @@ function applyImportedState(state) {
   publications = state.publications;
   jobs = state.jobs;
   clients = Array.isArray(state.clients) ? state.clients : clients;
+  accessMembers = Array.isArray(state.accessMembers) ? state.accessMembers : accessMembers;
   agencies = Array.isArray(state.agencies) && state.agencies.length ? state.agencies : agencies;
   activeAgencyId = state.activeAgencyId || activeAgencyId;
   invoices = Array.isArray(state.invoices) ? state.invoices : invoices;
@@ -5993,6 +6180,18 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     return;
   }
 
+  const addMemberButton = event.target.closest("[data-member-add]");
+  if (addMemberButton) {
+    addCompanyMember(addMemberButton.dataset.memberAdd);
+    return;
+  }
+
+  const removeMemberButton = event.target.closest("[data-member-remove]");
+  if (removeMemberButton) {
+    removeCompanyMember(removeMemberButton.dataset.memberRemove);
+    return;
+  }
+
   const orderStatusButton = event.target.closest("[data-order-status]");
   if (orderStatusButton) {
     markServiceOrderStatus(orderStatusButton.dataset.orderStatus, orderStatusButton.dataset.nextStatus);
@@ -6118,6 +6317,12 @@ clientWorkspacePanel.addEventListener("input", (event) => {
 });
 
 clientWorkspacePanel.addEventListener("change", (event) => {
+  const memberRole = event.target.closest("[data-member-role]");
+  if (memberRole) {
+    updateCompanyMemberRole(memberRole.dataset.memberRole, memberRole.value);
+    return;
+  }
+
   const billingField = event.target.closest("[data-billing-field]");
   if (billingField) {
     billingDraft[billingField.dataset.billingField] = billingField.value;
