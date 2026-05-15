@@ -1166,6 +1166,61 @@ function diagnostics(req) {
   };
 }
 
+async function supabaseConnectionCheck() {
+  const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || "";
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      ok: false,
+      dataProvider: store.provider,
+      bucket,
+      missing: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((key) => !process.env[key]),
+      message: "Faltan variables de Supabase en el backend.",
+    };
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/companies?select=id&limit=1`, {
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    });
+    const body = await response.text();
+
+    if (!response.ok) {
+      const invalidKey = response.status === 401 || body.toLowerCase().includes("invalid api key");
+      return {
+        ok: false,
+        dataProvider: store.provider,
+        status: response.status,
+        bucket,
+        message: invalidKey
+          ? "La key de Supabase no es valida para este proyecto. Usa service_role secret, no anon public."
+          : "Supabase respondio con error. Revisa si ejecutaste supabase/schema.sql.",
+        detail: body.slice(0, 300),
+      };
+    }
+
+    return {
+      ok: true,
+      dataProvider: store.provider,
+      bucket,
+      message: "Supabase conectado y tablas disponibles.",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      dataProvider: store.provider,
+      bucket,
+      message: "No se pudo conectar con Supabase desde el servidor.",
+      detail: error.message,
+    };
+  }
+}
+
 function productionReadiness(req) {
   const expectedUrl = "https://app.touch.com.co";
   const currentPublicUrl = process.env.APP_PUBLIC_URL || publicUrl(req);
@@ -1215,6 +1270,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/diagnostics") {
     sendJson(res, 200, diagnostics(req));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/supabase/check") {
+    sendJson(res, 200, await supabaseConnectionCheck());
     return;
   }
 
