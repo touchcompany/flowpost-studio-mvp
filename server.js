@@ -1030,6 +1030,7 @@ function aiPromptForScript(payload = {}) {
   const company = payload.company || {};
   const publication = payload.publication || payload;
   const profile = payload.profile || {};
+  const promptTemplate = payload.promptTemplate || "";
   const role = profile.role || profile.roleLabel || "pyme, marca personal o agencia";
   const objective = company.objective || publication.objective || "atraer clientes reales y explicar la oferta con claridad";
   return [
@@ -1046,6 +1047,7 @@ function aiPromptForScript(payload = {}) {
     `Hook base: ${publication.hook || publication.copy || "crear una apertura fuerte"}.`,
     `CTA: ${publication.cta || "invitar a escribir o comprar"}.`,
     `Notas: ${publication.notes || "sin notas"}.`,
+    promptTemplate ? `Prompt guardado por el usuario: ${promptTemplate}.` : "Prompt guardado por el usuario: no hay prompt adicional.",
     "Formato exacto: Hook, Escena 1, Escena 2, Escena 3, Cierre, Caption sugerido.",
     "Cada escena debe incluir accion visual, texto en pantalla y frase de voz.",
     "Evita frases genericas, promesas exageradas y lenguaje dificil de grabar.",
@@ -1055,7 +1057,7 @@ function aiPromptForScript(payload = {}) {
 
 async function generateAiScript(payload) {
   const prompt = aiPromptForScript(payload);
-  const preferred = (process.env.AI_PROVIDER || "").toLowerCase();
+  const preferred = (payload.provider || process.env.AI_PROVIDER || "").toLowerCase();
   const providers = preferred === "gemini" ? ["gemini", "openai"] : ["openai", "gemini"];
   const errors = [];
 

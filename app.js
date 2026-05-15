@@ -272,6 +272,11 @@ const memberRoles = {
     permissions: ["Cobros", "Servicios"],
   },
 };
+const promptTypes = {
+  script: { label: "Guion", icon: "notebook-pen" },
+  image: { label: "Imagen", icon: "image" },
+  video: { label: "Video", icon: "clapperboard" },
+};
 const videoTones = ["mint", "sunset", "mocha", "orchid"];
 const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"];
 let backendEnabled = false;
@@ -282,6 +287,34 @@ let apiProbeResults = {};
 let deletedCompanies = [];
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
+let selectedAiProvider = "auto";
+let selectedPromptId = "";
+let promptLibrary = [
+  {
+    id: "prompt-casa-script",
+    companyId: "casa-norte",
+    type: "script",
+    title: "Guion viral con oferta clara",
+    body: "Crea un guion con hook fuerte, prueba visual del producto, objecion resuelta y CTA a reserva por mensaje directo.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "prompt-casa-image",
+    companyId: "casa-norte",
+    type: "image",
+    title: "Imagen editorial de menu",
+    body: "Fotografia vertical luminosa, producto protagonista, fondo limpio, textura natural, estilo Instagram premium para restaurante.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "prompt-casa-video",
+    companyId: "casa-norte",
+    type: "video",
+    title: "Reel de proceso",
+    body: "Video vertical con cortes rapidos, manos preparando producto, close-ups apetitosos, texto corto en pantalla y cierre con CTA.",
+    createdAt: new Date().toISOString(),
+  },
+];
 let serviceProvisionDraft = {
   domain: "",
   contactEmail: "",
@@ -675,6 +708,12 @@ function restoreState() {
     if (Array.isArray(stored.accessMembers)) {
       accessMembers = stored.accessMembers;
     }
+    if (Array.isArray(stored.promptLibrary)) {
+      promptLibrary = stored.promptLibrary;
+    }
+    if (stored.selectedAiProvider) {
+      selectedAiProvider = stored.selectedAiProvider;
+    }
     if (Array.isArray(stored.agencies) && stored.agencies.length) {
       agencies = stored.agencies;
     }
@@ -774,6 +813,12 @@ async function hydrateStateFromBackend() {
     if (Array.isArray(state.accessMembers)) {
       accessMembers = state.accessMembers;
     }
+    if (Array.isArray(state.promptLibrary)) {
+      promptLibrary = state.promptLibrary;
+    }
+    if (state.selectedAiProvider) {
+      selectedAiProvider = state.selectedAiProvider;
+    }
     if (Array.isArray(state.agencies) && state.agencies.length) {
       agencies = state.agencies;
     }
@@ -818,6 +863,8 @@ function persistState() {
         jobs,
         clients,
         accessMembers,
+        promptLibrary,
+        selectedAiProvider,
         invoices,
         billingDraft,
         agencyServices,
@@ -833,7 +880,7 @@ function persistState() {
     fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
+      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, promptLibrary, selectedAiProvider, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
     }).catch(() => {
       backendEnabled = false;
       updateConnectionStatus();
@@ -851,6 +898,8 @@ function currentState() {
     jobs,
     clients,
     accessMembers,
+    promptLibrary,
+    selectedAiProvider,
     invoices,
     billingDraft,
     agencyServices,
@@ -4790,6 +4839,80 @@ function scriptQuality(publication) {
   return Math.min(100, blocks.length * 25);
 }
 
+function activeCompanyPrompts(type = "") {
+  return promptLibrary.filter((prompt) => prompt.companyId === activeCompanyId && (!type || prompt.type === type));
+}
+
+function selectedPrompt() {
+  return promptLibrary.find((prompt) => prompt.id === selectedPromptId) || null;
+}
+
+function renderPromptLibraryPanel() {
+  const prompts = activeCompanyPrompts();
+  const selected = selectedPrompt();
+  return `
+    <article class="prompt-library-panel">
+      <header>
+        <span class="status-icon"><i data-lucide="sparkles"></i></span>
+        <div>
+          <h3>Prompts guardados</h3>
+          <p>Guarda prompts por empresa para guiones, imagenes o videos y elige con que IA generar.</p>
+        </div>
+        <label>
+          <span>IA</span>
+          <select data-ai-provider>
+            ${[
+              ["auto", "Auto"],
+              ["openai", "ChatGPT"],
+              ["gemini", "Gemini"],
+            ]
+              .map(([value, label]) => `<option value="${value}" ${selectedAiProvider === value ? "selected" : ""}>${label}</option>`)
+              .join("")}
+          </select>
+        </label>
+      </header>
+      <div class="prompt-list">
+        ${
+          prompts.length
+            ? prompts
+                .map((prompt) => {
+                  const type = promptTypes[prompt.type] || promptTypes.script;
+                  const isSelected = selected?.id === prompt.id;
+                  return `
+                    <article class="${isSelected ? "selected" : ""}">
+                      <span class="status-icon small"><i data-lucide="${type.icon}"></i></span>
+                      <div>
+                        <strong>${escapeHtml(prompt.title)}</strong>
+                        <p>${escapeHtml(type.label)} · ${escapeHtml(prompt.body)}</p>
+                      </div>
+                      <button class="secondary-button icon-button compact" type="button" data-prompt-use="${escapeHtml(prompt.id)}" aria-label="Usar prompt">
+                        <i data-lucide="${isSelected ? "check" : "mouse-pointer-click"}"></i>
+                      </button>
+                      <button class="secondary-button icon-button compact" type="button" data-prompt-delete="${escapeHtml(prompt.id)}" aria-label="Eliminar prompt">
+                        <i data-lucide="trash-2"></i>
+                      </button>
+                    </article>
+                  `;
+                })
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin prompts guardados</strong><p>Crea prompts base para que la IA mantenga el estilo de esta empresa.</p></div>`
+        }
+      </div>
+      <div class="prompt-form">
+        <select data-prompt-field="type">
+          ${Object.entries(promptTypes).map(([key, type]) => `<option value="${key}">${escapeHtml(type.label)}</option>`).join("")}
+        </select>
+        <input data-prompt-field="title" type="text" placeholder="Nombre del prompt" />
+        <textarea data-prompt-field="body" rows="3" placeholder="Escribe el prompt que quieres reutilizar para esta empresa"></textarea>
+        <button class="primary-button icon-text-button" type="button" data-prompt-save>
+          <i data-lucide="save"></i>
+          Guardar prompt
+        </button>
+      </div>
+    </article>
+  `;
+}
+
 function renderCalendarPlanner(companyPublications) {
   if (!calendarPlannerPanel) return;
   const publication = selectedCalendarPublication(companyPublications);
@@ -4822,7 +4945,7 @@ function renderCalendarPlanner(companyPublications) {
       <aside class="planner-summary">
         <div class="section-heading small">
           <h2>Planner de ${escapeHtml(company.name)}</h2>
-          <p>Guiones y control editorial por empresa.</p>
+          <p>Guiones, prompts y control editorial aislados para esta empresa.</p>
         </div>
         <div class="planner-stats">
           <article><strong>${companyPublications.length}</strong><span>Piezas</span></article>
@@ -4835,6 +4958,7 @@ function renderCalendarPlanner(companyPublications) {
           <strong>${quality}%</strong>
           <div><i style="width: ${quality}%"></i></div>
         </div>
+        ${renderPromptLibraryPanel()}
       </aside>
 
       <article class="script-editor-card" data-calendar-script="${publication.id}">
@@ -5578,6 +5702,7 @@ async function generateCalendarScript(publicationId) {
   const publication = publications.find((item) => item.id === publicationId);
   if (!publication) return;
   const company = companies.find((item) => item.id === publication.companyId) || activeCompany();
+  const prompt = selectedPrompt();
   const hook = publication.hook || `Esto es lo nuevo de ${company.name}`;
   const cta = publication.cta || "Escríbenos para recibir más información.";
   let script = [
@@ -5593,7 +5718,13 @@ async function generateCalendarScript(publicationId) {
     const response = await fetch("/api/ai/script", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company, publication: { ...publication, hook, cta }, profile: currentSession() }),
+      body: JSON.stringify({
+        company,
+        publication: { ...publication, hook, cta },
+        profile: currentSession(),
+        provider: selectedAiProvider === "auto" ? "" : selectedAiProvider,
+        promptTemplate: prompt?.body || "",
+      }),
     });
     if (!response.ok) throw new Error("script ai unavailable");
     const result = await response.json();
@@ -5761,6 +5892,49 @@ calendarPlannerPanel.addEventListener("click", (event) => {
     return;
   }
 
+  const savePromptButton = event.target.closest("[data-prompt-save]");
+  if (savePromptButton) {
+    const type = calendarPlannerPanel.querySelector('[data-prompt-field="type"]')?.value || "script";
+    const title = calendarPlannerPanel.querySelector('[data-prompt-field="title"]')?.value.trim();
+    const body = calendarPlannerPanel.querySelector('[data-prompt-field="body"]')?.value.trim();
+    if (!title || !body) {
+      showToast("Agrega nombre y contenido del prompt.");
+      return;
+    }
+    const prompt = {
+      id: `prompt-${activeCompanyId}-${Date.now()}`,
+      companyId: activeCompanyId,
+      type,
+      title,
+      body,
+      createdAt: new Date().toISOString(),
+    };
+    promptLibrary = [prompt, ...promptLibrary];
+    selectedPromptId = prompt.id;
+    persistState();
+    renderCalendar();
+    showToast("Prompt guardado para esta empresa.");
+    return;
+  }
+
+  const usePromptButton = event.target.closest("[data-prompt-use]");
+  if (usePromptButton) {
+    selectedPromptId = usePromptButton.dataset.promptUse;
+    renderCalendar();
+    showToast("Prompt seleccionado para la proxima generacion.");
+    return;
+  }
+
+  const deletePromptButton = event.target.closest("[data-prompt-delete]");
+  if (deletePromptButton) {
+    promptLibrary = promptLibrary.filter((prompt) => prompt.id !== deletePromptButton.dataset.promptDelete);
+    if (selectedPromptId === deletePromptButton.dataset.promptDelete) selectedPromptId = "";
+    persistState();
+    renderCalendar();
+    showToast("Prompt eliminado.");
+    return;
+  }
+
   const editButton = event.target.closest("[data-calendar-edit-publication]");
   if (editButton) {
     loadPublication(editButton.dataset.calendarEditPublication);
@@ -5788,6 +5962,15 @@ calendarPlannerPanel.addEventListener("input", (event) => {
   if (!wrapper) return;
   const shouldRender = ["status", "date", "time"].includes(field.dataset.calendarScriptField);
   updateCalendarScript(wrapper.dataset.calendarScript, field.dataset.calendarScriptField, field.value, shouldRender);
+});
+
+calendarPlannerPanel.addEventListener("change", (event) => {
+  const providerSelect = event.target.closest("[data-ai-provider]");
+  if (providerSelect) {
+    selectedAiProvider = providerSelect.value;
+    persistState();
+    showToast(`IA seleccionada: ${providerSelect.options[providerSelect.selectedIndex]?.text || "Auto"}.`);
+  }
 });
 
 queueList.addEventListener("click", async (event) => {
