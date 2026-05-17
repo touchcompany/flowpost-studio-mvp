@@ -6628,6 +6628,70 @@ input[type="file"] {
   opacity: 0.72;
 }
 
+.client-portal-access {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.client-portal-access.compact {
+  margin-bottom: 18px;
+}
+
+.client-portal-access header,
+.client-portal-grid article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.client-portal-access h3,
+.client-portal-access p,
+.client-portal-grid strong,
+.client-portal-grid p {
+  margin: 0;
+}
+
+.client-portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.client-portal-grid article {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.client-portal-grid article.enabled {
+  border-color: rgba(0, 149, 246, 0.22);
+  background: linear-gradient(135deg, #fff, #f5fbff);
+}
+
+.client-portal-grid article.locked {
+  opacity: 0.72;
+}
+
+.client-portal-grid strong,
+.client-portal-grid p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-portal-grid p {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .client-members-panel {
   display: grid;
   gap: 12px;

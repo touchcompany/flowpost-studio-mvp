@@ -1079,7 +1079,7 @@ const viewFeatureMap = {
 
 function canAccessView(viewName, session = currentSession()) {
   if (isClientPortalSession(session)) {
-    return ["dashboard", "library", "calendar", "accounts"].includes(viewName);
+    return ["dashboard", "library", "calendar", "accounts", "store"].includes(viewName);
   }
   const featureKey = viewFeatureMap[viewName];
   if (!featureKey) return true;
@@ -1585,6 +1585,11 @@ function clientServiceOrders(clientId) {
   return serviceOrders.filter((order) => order.agencyId === activeAgencyId && order.clientId === clientId);
 }
 
+function clientForCompany(companyId = activeCompanyId) {
+  ensureAgencyClients();
+  return clients.find((client) => client.companyId === companyId && client.agencyId === activeAgencyId) || clients.find((client) => client.companyId === companyId);
+}
+
 function purchasedServiceIdsForClient(client) {
   const ids = new Set();
   if (client?.serviceId) ids.add(client.serviceId);
@@ -1602,6 +1607,59 @@ function serviceAccessModules(client) {
       service,
       enabled: purchased.has(service.id),
     }));
+}
+
+function serviceModuleMeta(service = {}) {
+  const group = String(service.group || "").toLowerCase();
+  if (group.includes("contenido")) return { icon: "calendar-days", view: "calendar", action: "Ver calendario" };
+  if (group.includes("produccion")) return { icon: "clapperboard", view: "library", action: "Ver recursos" };
+  if (group.includes("publicidad")) return { icon: "megaphone", view: "calendar", action: "Ver campanas" };
+  if (group.includes("web")) return { icon: "globe-2", view: "accounts", action: "Ver proyecto" };
+  if (group.includes("automatizacion")) return { icon: "bot", view: "accounts", action: "Ver soporte" };
+  if (group.includes("ia")) return { icon: "sparkles", view: "calendar", action: "Ver guiones" };
+  return { icon: serviceIcon(service), view: "dashboard", action: "Ver detalle" };
+}
+
+function clientPortalModules(client = clientForCompany()) {
+  return serviceAccessModules(client).map((module) => ({
+    ...module,
+    meta: serviceModuleMeta(module.service),
+  }));
+}
+
+function renderClientPortalAccess(client = clientForCompany(), options = {}) {
+  const modules = clientPortalModules(client);
+  const active = modules.filter((module) => module.enabled);
+  const visibleModules = options.compact ? [...active, ...modules.filter((module) => !module.enabled)].slice(0, 6) : modules;
+  return `
+    <section class="client-portal-access ${options.compact ? "compact" : ""}">
+      <header>
+        <div>
+          <span class="workspace-label">Acceso del cliente</span>
+          <h3>${active.length}/${modules.length} servicios activos</h3>
+        </div>
+        <span class="pill ${active.length ? "done" : "muted"}">${active.length ? "Panel listo" : "Sin compras"}</span>
+      </header>
+      <div class="client-portal-grid">
+        ${visibleModules
+          .map(
+            ({ service, enabled: isEnabled, meta }) => `
+              <article class="${isEnabled ? "enabled" : "locked"}">
+                <span class="status-icon small"><i data-lucide="${isEnabled ? meta.icon : "lock"}"></i></span>
+                <div>
+                  <strong>${escapeHtml(service.name)}</strong>
+                  <p>${isEnabled ? `Disponible · ${escapeHtml(service.group || "Servicio")}` : "Bloqueado hasta comprar este servicio."}</p>
+                </div>
+                <button class="secondary-button icon-button compact" type="button" data-portal-module="${isEnabled ? meta.view : "store"}" aria-label="${escapeHtml(isEnabled ? meta.action : "Comprar servicio")}">
+                  <i data-lucide="${isEnabled ? "arrow-up-right" : "shopping-bag"}"></i>
+                </button>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function companyMembers(companyId) {
@@ -1713,7 +1771,7 @@ function renderClientMembersPanel(client) {
 }
 
 function renderClientAccessPanel(client) {
-  const modules = serviceAccessModules(client);
+  const modules = clientPortalModules(client);
   const enabled = modules.filter((module) => module.enabled);
   return `
     <section class="client-access-panel">
@@ -1727,9 +1785,9 @@ function renderClientAccessPanel(client) {
       <div class="client-access-grid">
         ${modules
           .map(
-            ({ service, enabled: isEnabled }) => `
+            ({ service, enabled: isEnabled, meta }) => `
               <article class="${isEnabled ? "enabled" : "locked"}">
-                <span class="status-icon small"><i data-lucide="${isEnabled ? serviceIcon(service) : "lock"}"></i></span>
+                <span class="status-icon small"><i data-lucide="${isEnabled ? meta.icon : "lock"}"></i></span>
                 <div>
                   <strong>${escapeHtml(service.name)}</strong>
                   <p>${isEnabled ? "Disponible en el panel del cliente." : "Bloqueado hasta comprar este servicio."}</p>
@@ -2599,8 +2657,10 @@ function renderStorePanel() {
   if (!storePanel) return;
   ensureAgencyClients();
   ensureServiceOrderAutomations();
-  const clientsForStore = activeAgencyClients();
-  const selectedClient = clients.find((client) => client.id === billingDraft.clientId) || clientsForStore[0];
+  const portalMode = isClientPortalSession();
+  const portalClient = clientForCompany();
+  const clientsForStore = portalMode && portalClient ? [portalClient] : activeAgencyClients();
+  const selectedClient = portalMode ? portalClient : clients.find((client) => client.id === billingDraft.clientId) || clientsForStore[0];
   const activeOrders = serviceOrders.filter((order) => order.agencyId === activeAgencyId);
   const selectedOrders = selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const revenue = activeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
@@ -2614,18 +2674,57 @@ function renderStorePanel() {
         <span class="status-icon large"><i data-lucide="shopping-bag"></i></span>
         <div>
           <h2>Servicios vendibles de ${escapeHtml(activeAgency().name)}</h2>
-          <p>Elige cliente, compra un servicio y Flowpost crea la orden interna con cuenta de cobro.</p>
+          <p>${portalMode ? "Compra servicios disponibles y activa nuevos modulos dentro de tu panel." : "Elige cliente, compra un servicio y Flowpost crea la orden interna con cuenta de cobro."}</p>
         </div>
       </div>
-      <label class="field compact store-client-picker">
-        <span>Comprar para</span>
-        <select data-store-client>
-          ${clientsForStore.map((client) => `<option value="${client.id}" ${client.id === selectedClient?.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`).join("")}
-        </select>
-      </label>
+      ${
+        portalMode
+          ? `<span class="pill ready">${escapeHtml(selectedClient?.name || activeCompany().name)}</span>`
+          : `<label class="field compact store-client-picker">
+              <span>Comprar para</span>
+              <select data-store-client>
+                ${clientsForStore.map((client) => `<option value="${client.id}" ${client.id === selectedClient?.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`).join("")}
+              </select>
+            </label>`
+      }
     </section>
 
-    <section class="store-provision-box">
+    ${
+      portalMode
+        ? `<section class="store-provision-box">
+            <div>
+              <span class="status-icon"><i data-lucide="globe-2"></i></span>
+              <div>
+                <strong>Datos para web, hosting o dominio</strong>
+                <p>Si vas a solicitar hosting, pagina web o dominio, completa estos datos antes de comprar.</p>
+              </div>
+            </div>
+            <label class="field compact">
+              <span>Dominio</span>
+              <input data-provision-field="domain" type="text" placeholder="cliente.com" value="${escapeHtml(serviceProvisionDraft.domain)}" />
+            </label>
+            <button class="secondary-button icon-text-button" type="button" data-check-domain>
+              <i data-lucide="globe-2"></i>
+              Verificar dominio
+            </button>
+            <label class="field compact">
+              <span>Email tecnico</span>
+              <input data-provision-field="contactEmail" type="email" placeholder="admin@cliente.com" value="${escapeHtml(serviceProvisionDraft.contactEmail || selectedClient?.email || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Años dominio</span>
+              <input data-provision-field="years" type="number" min="1" max="10" inputmode="numeric" value="${escapeHtml(serviceProvisionDraft.years || "1")}" />
+            </label>
+            ${
+              serviceProvisionDraft.domainCheck
+                ? `<article class="domain-check-result ${serviceProvisionDraft.domainCheck.available ? "available" : "blocked"}">
+                    <strong>${escapeHtml(serviceProvisionDraft.domainCheck.domain || serviceProvisionDraft.domain || "Dominio")}</strong>
+                    <p>${escapeHtml(serviceProvisionDraft.domainCheck.message || "Consulta realizada.")}</p>
+                  </article>`
+                : ""
+            }
+          </section>`
+        : `<section class="store-provision-box">
       <div>
         <span class="status-icon"><i data-lucide="plug-zap"></i></span>
         <div>
@@ -2668,13 +2767,14 @@ function renderStorePanel() {
             </article>`
           : ""
       }
-    </section>
+    </section>`
+    }
 
     <section class="store-summary">
       <article><span>Servicios</span><strong>${activeAgencyServices().length}</strong></article>
-      <article><span>Compras agencia</span><strong>${activeOrders.length}</strong></article>
+      <article><span>${portalMode ? "Tus compras" : "Compras agencia"}</span><strong>${portalMode ? selectedOrders.length : activeOrders.length}</strong></article>
       <article><span>Cliente actual</span><strong>${selectedOrders.length}</strong></article>
-      <article><span>Valor vendido</span><strong>${formatMoney(revenue, "COP")}</strong></article>
+      <article><span>${portalMode ? "Invertido" : "Valor vendido"}</span><strong>${formatMoney(portalMode ? selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0) : revenue, "COP")}</strong></article>
     </section>
 
     <section class="store-layout">
@@ -2701,7 +2801,7 @@ function renderStorePanel() {
                           <strong>${formatMoney(service.price, "COP")}</strong>
                           <button class="primary-button icon-text-button" type="button" data-store-buy="${service.id}" ${selectedClient ? "" : "disabled"}>
                             <i data-lucide="shopping-bag"></i>
-                            Comprar
+                            ${portalMode ? "Solicitar" : "Comprar"}
                           </button>
                         </article>
                       `
@@ -2740,10 +2840,17 @@ function renderStorePanel() {
               : `<div class="empty-state compact"><strong>Sin compras</strong><p>Compra un servicio para activar la operación de este cliente.</p></div>`
           }
         </div>
-        <button class="secondary-button icon-text-button" type="button" data-store-open-clients>
-          <i data-lucide="users"></i>
-          Administrar en Clientes
-        </button>
+        ${
+          portalMode
+            ? `<button class="secondary-button icon-text-button" type="button" data-store-open-accounts>
+                <i data-lucide="layout-dashboard"></i>
+                Ver mi acceso
+              </button>`
+            : `<button class="secondary-button icon-text-button" type="button" data-store-open-clients>
+                <i data-lucide="users"></i>
+                Administrar en Clientes
+              </button>`
+        }
       </aside>
     </section>
   `;
@@ -3051,7 +3158,7 @@ function generateClientInvoice(clientId) {
 
 function purchaseServiceForClient(serviceId) {
   const service = serviceById(serviceId);
-  const client = clients.find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
+  const client = isClientPortalSession() ? clientForCompany() : clients.find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
   if (!service || !client) {
     showToast("Selecciona cliente y servicio.");
     return;
@@ -3729,6 +3836,8 @@ function renderDashboard() {
           </section>`
         : ""
     }
+
+    ${isClientPortalSession() ? renderClientPortalAccess(client, { compact: true }) : ""}
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
@@ -5222,6 +5331,7 @@ function renderSummary() {
 function renderAccounts() {
   const networks = ["Instagram", "Facebook", "TikTok", "Google Drive", "LinkedIn", "YouTube"];
   if (isClientPortalSession()) {
+    const client = clientForCompany();
     accountsGrid.innerHTML = `
       <article class="account-card">
         <header>
@@ -5231,6 +5341,7 @@ function renderAccounts() {
         <p>Tu acceso esta limitado a las empresas asignadas por la agencia.</p>
         <p>Las conexiones API, proveedores, cobros internos y automatizaciones quedan ocultas para este rol.</p>
       </article>
+      ${renderClientPortalAccess(client)}
     `;
     renderIcons();
     return;
@@ -5983,8 +6094,14 @@ document.querySelectorAll('input[name="platform"]').forEach((input) => {
 
 dashboardPanel.addEventListener("click", (event) => {
   const button = event.target.closest("[data-dashboard-action]");
-  if (!button) return;
-  setView(button.dataset.dashboardAction);
+  if (button) {
+    setView(button.dataset.dashboardAction);
+    return;
+  }
+  const portalButton = event.target.closest("[data-portal-module]");
+  if (portalButton) {
+    setView(portalButton.dataset.portalModule);
+  }
 });
 
 [captionInput, contentTypeInput, scheduleToggle, scheduledAtInput, videoSourceInput, coverFitInput, coverZoomInput, coverPositionInput].forEach((input) => {
@@ -6275,6 +6392,12 @@ queueSummary.addEventListener("click", (event) => {
 });
 
 accountsGrid.addEventListener("click", async (event) => {
+  const portalButton = event.target.closest("[data-portal-module]");
+  if (portalButton) {
+    setView(portalButton.dataset.portalModule);
+    return;
+  }
+
   const refreshTrashButton = event.target.closest("[data-refresh-trash]");
   if (refreshTrashButton) {
     await refreshTrash(true);
@@ -6747,6 +6870,12 @@ storePanel.addEventListener("click", (event) => {
   if (openClientsButton) {
     renderClientBillingPanel();
     setView("clients");
+    return;
+  }
+
+  const openAccountsButton = event.target.closest("[data-store-open-accounts]");
+  if (openAccountsButton) {
+    setView("accounts");
   }
 });
 
