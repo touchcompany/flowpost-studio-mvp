@@ -384,6 +384,61 @@ async function lookupInvitation(token) {
   };
 }
 
+async function currentStoredSession() {
+  if (!store.getSession) return null;
+  try {
+    return await store.getSession();
+  } catch {
+    return null;
+  }
+}
+
+function isClientSession(session) {
+  return session?.role === "client_user";
+}
+
+function sessionCompanyAccess(session = {}) {
+  return new Set(Array.isArray(session.companyAccess) ? session.companyAccess.filter(Boolean) : []);
+}
+
+function filterStateForSession(state, session) {
+  if (!isClientSession(session)) return state;
+  const allowedCompanyIds = sessionCompanyAccess(session);
+  if (!allowedCompanyIds.size) return { ...state, companies: [], publications: [], jobs: [], clients: [], invoices: [], serviceOrders: [], activityLog: [] };
+  const companyAllowed = (item) => allowedCompanyIds.has(item.companyId || item.id);
+  const companies = (state.companies || []).filter(companyAllowed);
+  return {
+    ...state,
+    activeCompanyId: allowedCompanyIds.has(state.activeCompanyId) ? state.activeCompanyId : companies[0]?.id || "",
+    companies,
+    publications: (state.publications || []).filter(companyAllowed),
+    jobs: (state.jobs || []).filter(companyAllowed),
+    clients: (state.clients || []).filter(companyAllowed),
+    invoices: (state.invoices || []).filter(companyAllowed),
+    serviceOrders: (state.serviceOrders || []).filter(companyAllowed),
+    activityLog: (state.activityLog || []).filter(companyAllowed),
+    accessMembers: [],
+    accessInvites: [],
+  };
+}
+
+function mergeClientScopedRecords(currentState, incomingState, session) {
+  const allowedCompanyIds = sessionCompanyAccess(session);
+  const canWrite = (item) => item?.id && allowedCompanyIds.has(item.companyId);
+  const mergeById = (current = [], incoming = []) => {
+    const currentIds = new Set(current.map((item) => item.id));
+    const additions = incoming.filter((item) => canWrite(item) && !currentIds.has(item.id));
+    return [...additions, ...current];
+  };
+  return {
+    ...currentState,
+    activeCompanyId: allowedCompanyIds.has(incomingState.activeCompanyId) ? incomingState.activeCompanyId : currentState.activeCompanyId,
+    serviceOrders: mergeById(currentState.serviceOrders || [], incomingState.serviceOrders || []),
+    invoices: mergeById(currentState.invoices || [], incomingState.invoices || []),
+    activityLog: mergeById(currentState.activityLog || [], incomingState.activityLog || []),
+  };
+}
+
 function providerSetup(name, keys) {
   return {
     provider: name,
@@ -2112,7 +2167,8 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/state") {
-    sendJson(res, 200, await store.getState());
+    const state = await store.getState();
+    sendJson(res, 200, filterStateForSession(state, await currentStoredSession()));
     return;
   }
 
@@ -2121,6 +2177,13 @@ async function handleApi(req, res, url) {
     const validationError = validateState(payload);
     if (validationError) {
       sendError(res, 400, validationError);
+      return;
+    }
+    const session = await currentStoredSession();
+    if (isClientSession(session)) {
+      const currentState = await store.getState();
+      const nextState = mergeClientScopedRecords(currentState, payload, session);
+      sendJson(res, 200, filterStateForSession(await store.saveState(nextState), session));
       return;
     }
     sendJson(res, 200, await store.saveState(payload));

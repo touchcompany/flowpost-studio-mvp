@@ -138,17 +138,19 @@ async function run() {
     });
     assert.equal(clientSessionPut.session.role, "client_user", "session PUT should preserve client role");
     assert.deepEqual(clientSessionPut.session.companyAccess, ["casa-norte"], "session PUT should preserve scoped company access");
+    const scopedState = await getJson("/api/state");
+    assert.ok((scopedState.companies || []).every((company) => company.id === "casa-norte"), "client state should be scoped to allowed company");
 
     const inviteLookup = await getJson("/api/invitations/lookup?token=smoke-invite-token");
     assert.equal(inviteLookup.invite.companyId, inviteTestCompanyId, "invite lookup should return scoped company");
     assert.ok(inviteLookup.invite.companyName, "invite lookup should include company name");
-    await putJson("/api/state", state);
 
     if (previousSession) {
       await putJson("/api/session", previousSession);
     } else {
       await deleteJson("/api/session");
     }
+    await putJson("/api/state", state);
 
     const oauth = await getJson("/api/oauth/status");
     assert.ok(oauth.meta, "oauth status should include meta");
