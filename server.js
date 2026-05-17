@@ -356,6 +356,34 @@ async function acceptInvitation(payload) {
   return { ok: true, status: 200, session, invite: { companyId: invite.companyId, email, role: invite.role, status: "Aceptada" } };
 }
 
+async function lookupInvitation(token) {
+  if (!store.getState) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta invitaciones." };
+  }
+  const cleanToken = String(token || "").trim();
+  if (!cleanToken) return { ok: false, status: 400, message: "Falta el token de invitacion." };
+  const state = await store.getState();
+  const invite = (state.accessInvites || []).find((item) => item.token === cleanToken);
+  if (!invite || invite.status === "Cancelada") {
+    return { ok: false, status: 404, message: "Invitacion no encontrada o cancelada." };
+  }
+  const expired = inviteIsExpired(invite);
+  const company = (state.companies || []).find((item) => item.id === invite.companyId);
+  return {
+    ok: !expired,
+    status: expired ? 410 : 200,
+    message: expired ? "Esta invitacion ya vencio. Pide una nueva a la agencia." : "Invitacion disponible.",
+    invite: {
+      companyId: invite.companyId,
+      companyName: company?.name || "Empresa invitada",
+      email: invite.email || "",
+      role: invite.role || "client_viewer",
+      status: expired ? "Vencida" : invite.status || "Pendiente",
+      expiresAt: invite.expiresAt || "",
+    },
+  };
+}
+
 function providerSetup(name, keys) {
   return {
     provider: name,
@@ -1521,6 +1549,12 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 200, { session: await store.getSession(), provider: store.provider });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/invitations/lookup") {
+    const result = await lookupInvitation(url.searchParams.get("token"));
+    sendJson(res, result.status, result);
     return;
   }
 

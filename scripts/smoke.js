@@ -90,6 +90,25 @@ async function run() {
     const state = await getJson("/api/state");
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");
     assert.ok(Array.isArray(state.jobs), "state.jobs should be an array");
+    const inviteTestCompanyId = state.companies[0]?.id || "casa-norte";
+    const inviteTestState = await putJson("/api/state", {
+      ...state,
+      activeCompanyId: state.activeCompanyId || inviteTestCompanyId,
+      accessInvites: [
+        {
+          id: "smoke-invite",
+          companyId: inviteTestCompanyId,
+          email: "client@example.com",
+          role: "client_viewer",
+          token: "smoke-invite-token",
+          status: "Pendiente",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        },
+        ...(state.accessInvites || []).filter((invite) => invite.id !== "smoke-invite" && invite.token !== "smoke-invite-token"),
+      ],
+    });
+    assert.ok(Array.isArray(inviteTestState.accessInvites), "state PUT should keep accessInvites array");
 
     const sessionGet = await getJson("/api/session");
     const previousSession = sessionGet.session;
@@ -119,6 +138,12 @@ async function run() {
     });
     assert.equal(clientSessionPut.session.role, "client_user", "session PUT should preserve client role");
     assert.deepEqual(clientSessionPut.session.companyAccess, ["casa-norte"], "session PUT should preserve scoped company access");
+
+    const inviteLookup = await getJson("/api/invitations/lookup?token=smoke-invite-token");
+    assert.equal(inviteLookup.invite.companyId, inviteTestCompanyId, "invite lookup should return scoped company");
+    assert.ok(inviteLookup.invite.companyName, "invite lookup should include company name");
+    await putJson("/api/state", state);
+
     if (previousSession) {
       await putJson("/api/session", previousSession);
     } else {

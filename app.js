@@ -1609,7 +1609,7 @@ function companyMembers(companyId) {
 }
 
 function companyInvites(companyId) {
-  return accessInvites.filter((invite) => invite.companyId === companyId && invite.status !== "Cancelada");
+  return accessInvites.filter((invite) => invite.companyId === companyId);
 }
 
 function memberRoleMeta(role) {
@@ -1625,6 +1625,12 @@ function roleOptions(selectedRole) {
 function inviteLink(invite) {
   const base = window.location.protocol === "file:" ? "https://app.touch.com.co" : window.location.origin;
   return `${base}/login.html?invite=${encodeURIComponent(invite.token)}`;
+}
+
+function inviteStatusClass(status) {
+  if (status === "Aceptada") return "done";
+  if (status === "Cancelada") return "muted";
+  return "warning";
 }
 
 function renderClientMembersPanel(client) {
@@ -1678,10 +1684,11 @@ function renderClientMembersPanel(client) {
                         <strong>${escapeHtml(invite.email)}</strong>
                         <p>${escapeHtml(role.label)} · vence ${escapeHtml(shortDateLabel((invite.expiresAt || "").slice(0, 10)))}</p>
                       </div>
+                      <span class="pill ${inviteStatusClass(invite.status)}">${escapeHtml(invite.status || "Pendiente")}</span>
                       <button class="secondary-button icon-button compact" type="button" data-invite-copy="${escapeHtml(invite.id)}" aria-label="Copiar invitacion">
                         <i data-lucide="copy"></i>
                       </button>
-                      <button class="secondary-button icon-button compact" type="button" data-invite-cancel="${escapeHtml(invite.id)}" aria-label="Cancelar invitacion">
+                      <button class="secondary-button icon-button compact" type="button" data-invite-cancel="${escapeHtml(invite.id)}" aria-label="Cancelar invitacion" ${invite.status === "Cancelada" ? "disabled" : ""}>
                         <i data-lucide="x"></i>
                       </button>
                     </article>

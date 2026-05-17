@@ -30,6 +30,26 @@ function setStatus(message) {
   if (statusText) statusText.textContent = message;
 }
 
+async function hydrateInviteDetails() {
+  if (!inviteToken || window.location.protocol === "file:") return;
+  try {
+    const response = await fetch(`/api/invitations/lookup?token=${encodeURIComponent(inviteToken)}`, {
+      headers: { Accept: "application/json" },
+    });
+    const result = await response.json();
+    if (!response.ok || !result.invite) {
+      setStatus(result.message || "Esta invitacion no esta disponible.");
+      return;
+    }
+    const invite = result.invite;
+    if (planBadge) planBadge.textContent = `Invitacion a ${invite.companyName}`;
+    if (emailInput && invite.email) emailInput.value = invite.email;
+    setStatus(`Acceso limitado para ${invite.companyName}. Confirma tu nombre y correo para entrar.`);
+  } catch {
+    setStatus("No se pudo validar la invitacion. Intenta nuevamente.");
+  }
+}
+
 function ensurePendingServiceFromUrl() {
   const service = landingServices[selectedService];
   if (!service) return;
@@ -189,6 +209,7 @@ if (planBadge) {
 if (inviteToken) {
   setStatus("Escribe el correo invitado para entrar al panel compartido.");
   if (emailInput) emailInput.placeholder = "correo invitado";
+  hydrateInviteDetails();
 }
 
 ensurePendingServiceFromUrl();
