@@ -29,9 +29,20 @@ async function run() {
   const store = createSupabaseStore();
   await store.saveState({
     activeCompanyId: state.activeCompanyId || state.companies[0]?.id || "",
+    activeAgencyId: state.activeAgencyId || "agency-touch",
+    agencies: state.agencies || [],
     companies: state.companies || [],
     publications: state.publications || [],
     jobs: state.jobs || [],
+    clients: state.clients || [],
+    accessMembers: state.accessMembers || [],
+    accessInvites: state.accessInvites || [],
+    promptLibrary: state.promptLibrary || [],
+    invoices: state.invoices || [],
+    billingDraft: state.billingDraft || null,
+    agencyServices: state.agencyServices || [],
+    serviceOrders: state.serviceOrders || [],
+    activityLog: state.activityLog || [],
   });
 
   if (state.session && store.saveSession) {
@@ -42,6 +53,8 @@ async function run() {
   console.log(`Empresas: ${state.companies?.length || 0}`);
   console.log(`Publicaciones: ${state.publications?.length || 0}`);
   console.log(`Trabajos: ${state.jobs?.length || 0}`);
+  console.log(`Clientes: ${state.clients?.length || 0}`);
+  console.log(`Ordenes: ${state.serviceOrders?.length || 0}`);
 }
 
 run().catch((error) => {

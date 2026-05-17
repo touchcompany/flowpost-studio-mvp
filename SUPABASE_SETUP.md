@@ -20,6 +20,14 @@ Si ya habias ejecutado el esquema antes de agregar papelera/recuperacion, ejecut
 -- contenido de supabase/soft-delete.sql
 ```
 
+Si tu base ya existia antes de agregar prompts, invitaciones o operacion de agencia, ejecuta tambien en este orden:
+
+```sql
+-- contenido de supabase/prompt-templates.sql
+-- contenido de supabase/company-invitations.sql
+-- contenido de supabase/agency-records.sql
+```
+
 ## Variables de entorno
 
 En cPanel Node.js App Manager o en `.env` local:
@@ -53,7 +61,7 @@ npm run supabase:check
 npm run supabase:migrate
 ```
 
-`supabase:check` confirma que las tablas existen. `supabase:migrate` lee `data/db.json` y guarda empresas, fuentes, cuentas, biblioteca, publicaciones, trabajos y sesion MVP en Supabase.
+`supabase:check` confirma que las tablas existen. `supabase:migrate` lee `data/db.json` y guarda empresas, fuentes, cuentas, biblioteca, publicaciones, trabajos y sesion MVP en Supabase. La operacion comercial de agencia queda en `app_records`: clientes, servicios, ordenes, facturas, actividad y borrador de cobro.
 
 Para revisar si el entorno de `app.touch.com.co` esta listo:
 

@@ -10,6 +10,10 @@ create table if not exists public.app_profiles (
   name text not null default '',
   email text not null default '',
   provider text not null default 'demo',
+  role text not null default 'business_owner',
+  role_label text not null default '',
+  company_access text[] not null default array[]::text[],
+  metadata jsonb not null default '{}'::jsonb,
   deleted_at timestamptz,
   deletion_expires_at timestamptz,
   deleted_by text,
@@ -48,6 +52,17 @@ create table if not exists public.billing_events (
   payload jsonb not null default '{}'::jsonb,
   processed_at timestamptz not null default now(),
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.app_records (
+  id text primary key,
+  record_type text not null,
+  company_id text,
+  agency_id text,
+  payload jsonb not null default '{}'::jsonb,
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists public.companies (
@@ -186,6 +201,9 @@ create index if not exists app_profiles_deleted_idx on public.app_profiles (dele
 create index if not exists subscriptions_profile_idx on public.subscriptions (profile_id);
 create index if not exists oauth_connections_provider_idx on public.oauth_connections (provider);
 create index if not exists billing_events_type_idx on public.billing_events (type, created_at desc);
+create index if not exists app_records_type_idx on public.app_records (record_type, updated_at desc);
+create index if not exists app_records_company_idx on public.app_records (company_id, record_type);
+create index if not exists app_records_agency_idx on public.app_records (agency_id, record_type);
 create index if not exists company_members_company_idx on public.company_members (company_id, email);
 create index if not exists prompt_templates_company_idx on public.prompt_templates (company_id, type, created_at desc);
 create index if not exists company_invitations_company_idx on public.company_invitations (company_id, status, created_at desc);
@@ -199,6 +217,7 @@ alter table public.app_profiles enable row level security;
 alter table public.subscriptions enable row level security;
 alter table public.oauth_connections enable row level security;
 alter table public.billing_events enable row level security;
+alter table public.app_records enable row level security;
 alter table public.companies enable row level security;
 alter table public.company_members enable row level security;
 alter table public.prompt_templates enable row level security;

@@ -202,6 +202,8 @@ La base multiusuario ya esta preparada con `company_members`: cada empresa puede
 
 La biblioteca de prompts guarda plantillas por empresa y por tipo (`guion`, `imagen`, `video`) en `prompt_templates`. Si tu base fue creada antes de esta funcion, ejecuta [supabase/prompt-templates.sql](./supabase/prompt-templates.sql) en Supabase SQL Editor.
 
+La operacion de agencia guarda clientes, servicios vendibles, ordenes, facturas, actividad y borrador de cobro en `app_records`. Si tu base fue creada antes de esta funcion, ejecuta [supabase/agency-records.sql](./supabase/agency-records.sql) en Supabase SQL Editor. Ese archivo tambien agrega `role`, `role_label` y `company_access` a `app_profiles` para que los clientes invitados conserven su acceso limitado.
+
 ## APIs de redes y Drive
 
 El paso a paso principal esta en [API_STEP_BY_STEP.md](./API_STEP_BY_STEP.md).
