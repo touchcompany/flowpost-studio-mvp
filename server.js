@@ -1098,17 +1098,22 @@ async function oauthStatusEntry(req, key, platform, required, redirectUri, scope
 function scriptFallback(payload = {}) {
   const company = payload.company || {};
   const publication = payload.publication || payload;
+  const profile = payload.profile || {};
   const brand = company.name || "la marca";
   const voice = company.voice || "claro, cercano y comercial";
+  const description = company.description || "una oferta para clientes reales";
   const hook = publication.hook || publication.title || `Una idea potente de ${brand}`;
   const cta = publication.cta || "Escríbenos para recibir más información.";
+  const role = profile.roleLabel || profile.role || "negocio";
   return [
     `Hook: ${hook}.`,
-    `Escena 1: abre con el resultado final y una frase corta que conecte con el problema del cliente.`,
-    `Escena 2: muestra el producto, servicio o proceso con una toma cercana y ritmo ágil.`,
-    `Escena 3: agrega prueba social, beneficio concreto o comparación antes/después con tono ${voice}.`,
-    `Escena 4: refuerza por qué ${brand} es una opción confiable sin sonar agresivo.`,
+    `Intencion: contenido para ${role} con tono ${voice}, enfocado en ${description}.`,
+    "Escena 1: muestra el resultado final en los primeros 2 segundos. Texto en pantalla: el beneficio principal.",
+    "Escena 2: enseña una prueba concreta del proceso, producto o servicio. Voz: explica por que importa ahora.",
+    "Escena 3: resuelve una objecion real con evidencia simple: ejemplo, antes/despues, dato, testimonio o detalle visual.",
+    `Escena 4: conecta la solucion con ${brand} sin sonar agresivo. Mantén la frase corta y grabable.`,
     `Cierre: ${cta}`,
+    "Caption sugerido: resume el beneficio, agrega una pregunta de respuesta facil y repite el CTA.",
   ].join("\n");
 }
 
@@ -1118,26 +1123,40 @@ function aiPromptForScript(payload = {}) {
   const profile = payload.profile || {};
   const promptTemplate = payload.promptTemplate || "";
   const role = profile.role || profile.roleLabel || "pyme, marca personal o agencia";
+  const channels = Array.isArray(publication.platforms) && publication.platforms.length ? publication.platforms.join(", ") : "Instagram, Facebook y TikTok";
+  const networks = Array.isArray(company.socialNetworks) && company.socialNetworks.length ? company.socialNetworks.join(", ") : channels;
+  const resources = Array.isArray(company.videos) && company.videos.length
+    ? company.videos.slice(0, 4).map((video) => `${video.name || "video"} (${video.duration || "sin duracion"})`).join("; ")
+    : "sin recursos cargados";
   const objective = company.objective || publication.objective || "atraer clientes reales y explicar la oferta con claridad";
   return [
     "Actua como estratega senior de contenido para Instagram, Facebook y TikTok.",
-    "Escribe en español natural, directo y facil de grabar.",
+    "Escribe en español natural, directo, actual y facil de grabar.",
     "Crea un guion premium para video vertical que una persona real pueda producir sin equipo complejo.",
+    "Piensa como una agencia que necesita que el cliente apruebe rapido y que el contenido tenga intencion comercial.",
     `Tipo de usuario: ${role}.`,
     `Marca: ${company.name || "marca"}.`,
     `Tono de voz: ${company.voice || "claro, cercano y comercial"}.`,
     `Descripcion: ${company.description || "sin descripcion"}.`,
+    `Redes de la marca: ${networks}.`,
+    `Canales objetivo de esta pieza: ${channels}.`,
+    `Recursos disponibles: ${resources}.`,
     `Objetivo comercial: ${objective}.`,
     `Titulo de la pieza: ${publication.title || "pieza de contenido"}.`,
     `Tipo: ${publication.type || "Video / Reel"}.`,
+    `Estado editorial: ${publication.status || "Idea"}.`,
     `Hook base: ${publication.hook || publication.copy || "crear una apertura fuerte"}.`,
     `CTA: ${publication.cta || "invitar a escribir o comprar"}.`,
     `Notas: ${publication.notes || "sin notas"}.`,
     promptTemplate ? `Prompt guardado por el usuario: ${promptTemplate}.` : "Prompt guardado por el usuario: no hay prompt adicional.",
-    "Formato exacto: Hook, Escena 1, Escena 2, Escena 3, Cierre, Caption sugerido.",
-    "Cada escena debe incluir accion visual, texto en pantalla y frase de voz.",
-    "Evita frases genericas, promesas exageradas y lenguaje dificil de grabar.",
-    "Incluye una promesa clara, especifica y creible para pymes, marcas personales o agencias.",
+    "Entrega exactamente estas secciones: Hook, Insight, Escena 1, Escena 2, Escena 3, Cierre, Caption sugerido, Checklist de produccion.",
+    "Cada escena debe incluir: accion visual, texto en pantalla, frase de voz y duracion sugerida.",
+    "El Hook debe tener maximo 12 palabras y no debe ser generico.",
+    "El Insight debe explicar por que esta pieza puede funcionar para la audiencia.",
+    "El Caption debe tener 2 versiones: corta para Instagram/TikTok y una un poco mas informativa para Facebook.",
+    "El Checklist debe listar recursos necesarios, toma principal, toma de apoyo y detalle que no se debe olvidar.",
+    "Evita promesas exageradas, frases infladas, lenguaje dificil de grabar y claims que no se puedan probar.",
+    "Incluye una promesa clara, especifica y creible para pymes, marcas personales, agencias o negocios locales.",
   ].join("\n");
 }
 

@@ -3465,7 +3465,7 @@ function visibleCompaniesForSession(session = currentSession()) {
   const explicitAccess = new Set(Array.isArray(session.companyAccess) ? session.companyAccess : []);
   const allowedCompanyIds = new Set(
     accessMembers
-      .filter((member) => ["client_viewer", "client_approver", "billing_contact", "content_editor"].includes(member.role))
+      .filter((member) => ["client_viewer", "approver", "billing", "editor", "client_approver", "billing_contact", "content_editor"].includes(member.role))
       .filter((member) => (email ? String(member.email || "").toLowerCase() === email : member.companyId === activeCompanyId))
       .map((member) => member.companyId)
   );

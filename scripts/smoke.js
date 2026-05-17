@@ -106,6 +106,19 @@ async function run() {
     });
     assert.equal(sessionPut.session.plan, "pro", "session PUT should save pro plan");
     assert.equal(sessionPut.session.planLabel, "Pro", "session PUT should normalize plan label");
+    const clientSessionPut = await putJson("/api/session", {
+      id: "smoke-client",
+      name: "Smoke Client",
+      email: "client@example.com",
+      provider: "invite",
+      plan: "starter",
+      role: "client_user",
+      roleLabel: "Cliente invitado",
+      companyAccess: ["casa-norte"],
+      status: "active",
+    });
+    assert.equal(clientSessionPut.session.role, "client_user", "session PUT should preserve client role");
+    assert.deepEqual(clientSessionPut.session.companyAccess, ["casa-norte"], "session PUT should preserve scoped company access");
     if (previousSession) {
       await putJson("/api/session", previousSession);
     } else {
