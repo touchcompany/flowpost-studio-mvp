@@ -644,6 +644,18 @@ let accessMembers = [
     invitedAt: new Date().toISOString(),
   },
 ];
+let accessInvites = [
+  {
+    id: "invite-casa-approver",
+    companyId: "casa-norte",
+    email: "admin@casanortecafe.com",
+    role: "client_viewer",
+    token: "demo-casa-norte-client",
+    status: "Pendiente",
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+  },
+];
 let agencies = [
   {
     id: "agency-touch",
@@ -712,6 +724,9 @@ function restoreState() {
     }
     if (Array.isArray(stored.accessMembers)) {
       accessMembers = stored.accessMembers;
+    }
+    if (Array.isArray(stored.accessInvites)) {
+      accessInvites = stored.accessInvites;
     }
     if (Array.isArray(stored.promptLibrary)) {
       promptLibrary = stored.promptLibrary;
@@ -818,6 +833,9 @@ async function hydrateStateFromBackend() {
     if (Array.isArray(state.accessMembers)) {
       accessMembers = state.accessMembers;
     }
+    if (Array.isArray(state.accessInvites)) {
+      accessInvites = state.accessInvites;
+    }
     if (Array.isArray(state.promptLibrary)) {
       promptLibrary = state.promptLibrary;
     }
@@ -868,6 +886,7 @@ function persistState() {
         jobs,
         clients,
         accessMembers,
+        accessInvites,
         promptLibrary,
         selectedAiProvider,
         invoices,
@@ -885,7 +904,7 @@ function persistState() {
     fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, promptLibrary, selectedAiProvider, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
+      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, accessInvites, promptLibrary, selectedAiProvider, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
     }).catch(() => {
       backendEnabled = false;
       updateConnectionStatus();
@@ -903,6 +922,7 @@ function currentState() {
     jobs,
     clients,
     accessMembers,
+    accessInvites,
     promptLibrary,
     selectedAiProvider,
     invoices,
@@ -1588,6 +1608,10 @@ function companyMembers(companyId) {
   return accessMembers.filter((member) => member.companyId === companyId);
 }
 
+function companyInvites(companyId) {
+  return accessInvites.filter((invite) => invite.companyId === companyId && invite.status !== "Cancelada");
+}
+
 function memberRoleMeta(role) {
   return memberRoles[role] || memberRoles.client_viewer;
 }
@@ -1598,8 +1622,14 @@ function roleOptions(selectedRole) {
     .join("");
 }
 
+function inviteLink(invite) {
+  const base = window.location.protocol === "file:" ? "https://app.touch.com.co" : window.location.origin;
+  return `${base}/login.html?invite=${encodeURIComponent(invite.token)}`;
+}
+
 function renderClientMembersPanel(client) {
   const members = companyMembers(client.companyId);
+  const invites = companyInvites(client.companyId);
   return `
     <section class="client-members-panel">
       <header>
@@ -1635,6 +1665,32 @@ function renderClientMembersPanel(client) {
             : `<div class="empty-state compact"><strong>Sin usuarios invitados</strong><p>Agrega un aprobador, editor o cliente para compartir avances.</p></div>`
         }
       </div>
+      ${
+        invites.length
+          ? `<div class="client-invite-list">
+              ${invites
+                .map((invite) => {
+                  const role = memberRoleMeta(invite.role);
+                  return `
+                    <article>
+                      <span class="status-icon small"><i data-lucide="send"></i></span>
+                      <div>
+                        <strong>${escapeHtml(invite.email)}</strong>
+                        <p>${escapeHtml(role.label)} · vence ${escapeHtml(shortDateLabel((invite.expiresAt || "").slice(0, 10)))}</p>
+                      </div>
+                      <button class="secondary-button icon-button compact" type="button" data-invite-copy="${escapeHtml(invite.id)}" aria-label="Copiar invitacion">
+                        <i data-lucide="copy"></i>
+                      </button>
+                      <button class="secondary-button icon-button compact" type="button" data-invite-cancel="${escapeHtml(invite.id)}" aria-label="Cancelar invitacion">
+                        <i data-lucide="x"></i>
+                      </button>
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>`
+          : ""
+      }
       <div class="client-member-invite" data-member-invite="${escapeHtml(client.companyId)}">
         <input data-member-email type="email" placeholder="correo@cliente.com" />
         <select data-member-new-role>
@@ -3270,6 +3326,7 @@ function addCompanyMember(companyId) {
     showToast("Ese usuario ya tiene acceso a esta empresa.");
     return;
   }
+  const token = (window.crypto?.randomUUID?.() || `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, "");
   accessMembers = [
     ...accessMembers,
     {
@@ -3280,6 +3337,19 @@ function addCompanyMember(companyId) {
       status: "Invitado",
       invitedAt: new Date().toISOString(),
     },
+  ];
+  accessInvites = [
+    {
+      id: `invite-${companyId}-${Date.now()}`,
+      companyId,
+      email,
+      role,
+      token,
+      status: "Pendiente",
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    },
+    ...accessInvites,
   ];
   persistState();
   renderClientBillingPanel();
@@ -3298,6 +3368,25 @@ function removeCompanyMember(memberId) {
   persistState();
   renderClientBillingPanel();
   showToast("Acceso retirado.");
+}
+
+async function copyInviteLink(inviteId) {
+  const invite = accessInvites.find((item) => item.id === inviteId);
+  if (!invite) return;
+  const link = inviteLink(invite);
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast("Link de invitacion copiado.");
+  } catch {
+    showToast(link);
+  }
+}
+
+function cancelInvite(inviteId) {
+  accessInvites = accessInvites.map((invite) => (invite.id === inviteId ? { ...invite, status: "Cancelada", cancelledAt: new Date().toISOString() } : invite));
+  persistState();
+  renderClientBillingPanel();
+  showToast("Invitacion cancelada.");
 }
 
 function markClientInvoicePaid(clientId) {
@@ -3373,12 +3462,14 @@ function applyImportedState(state) {
 function visibleCompaniesForSession(session = currentSession()) {
   if (!isClientPortalSession(session) || isTouchSuperAdmin(session)) return companies;
   const email = String(session.email || "").trim().toLowerCase();
+  const explicitAccess = new Set(Array.isArray(session.companyAccess) ? session.companyAccess : []);
   const allowedCompanyIds = new Set(
     accessMembers
-      .filter((member) => member.role === "client_viewer" || member.role === "approver" || member.role === "billing")
+      .filter((member) => ["client_viewer", "client_approver", "billing_contact", "content_editor"].includes(member.role))
       .filter((member) => (email ? String(member.email || "").toLowerCase() === email : member.companyId === activeCompanyId))
       .map((member) => member.companyId)
   );
+  explicitAccess.forEach((companyId) => allowedCompanyIds.add(companyId));
   const scoped = companies.filter((company) => allowedCompanyIds.has(company.id));
   return scoped.length ? scoped : companies.slice(0, 1);
 }
@@ -6470,6 +6561,18 @@ clientWorkspacePanel.addEventListener("click", (event) => {
   const removeMemberButton = event.target.closest("[data-member-remove]");
   if (removeMemberButton) {
     removeCompanyMember(removeMemberButton.dataset.memberRemove);
+    return;
+  }
+
+  const copyInviteButton = event.target.closest("[data-invite-copy]");
+  if (copyInviteButton) {
+    copyInviteLink(copyInviteButton.dataset.inviteCopy);
+    return;
+  }
+
+  const cancelInviteButton = event.target.closest("[data-invite-cancel]");
+  if (cancelInviteButton) {
+    cancelInvite(cancelInviteButton.dataset.inviteCancel);
     return;
   }
 

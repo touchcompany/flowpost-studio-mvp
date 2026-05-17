@@ -6660,17 +6660,24 @@ input[type="file"] {
   line-height: 1.35;
 }
 
-.client-member-list {
+.client-member-list,
+.client-invite-list {
   display: grid;
   gap: 8px;
 }
 
-.client-member-list article {
+.client-member-list article,
+.client-invite-list article {
   grid-template-columns: auto minmax(0, 1fr) minmax(150px, auto) auto;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fafafa;
+}
+
+.client-invite-list article {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  background: #fffdf5;
 }
 
 .client-member-list select,
@@ -8237,6 +8244,7 @@ input[type="file"] {
   }
 
   .client-member-list article,
+  .client-invite-list article,
   .client-member-invite {
     grid-template-columns: 1fr;
   }

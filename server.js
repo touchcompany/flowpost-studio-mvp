@@ -265,9 +265,95 @@ function normalizeSession(payload) {
     provider: payload.provider || "demo",
     plan,
     planLabel: isTouch ? "Touch Super Admin" : planLabels[plan],
+    role: isTouch ? "super_admin" : payload.role || (plan === "agency" ? "agency_owner" : "business_owner"),
+    roleLabel: payload.roleLabel || "",
+    companyAccess: Array.isArray(payload.companyAccess) ? payload.companyAccess : [],
+    inviteToken: payload.inviteToken || "",
     status: isTouch ? "active" : payload.status || "trial",
     createdAt: payload.createdAt || new Date().toISOString(),
   };
+}
+
+function inviteIsExpired(invite) {
+  return Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now());
+}
+
+function invitationSession(invite, payload, company) {
+  const roleLabels = {
+    client_viewer: "Cliente invitado",
+    client_approver: "Aprobador",
+    billing_contact: "Facturacion",
+    content_editor: "Editor de contenido",
+  };
+  return normalizeSession({
+    id: `client-${invite.companyId}-${slugify(payload.email || invite.email || "invite")}`,
+    name: payload.name || invite.email || "Cliente invitado",
+    email: payload.email || invite.email || "",
+    provider: payload.provider || "invite",
+    plan: "starter",
+    status: "active",
+    role: "client_user",
+    roleLabel: roleLabels[invite.role] || "Cliente invitado",
+    companyAccess: [invite.companyId],
+    inviteToken: invite.token,
+    companyName: company?.name || "",
+  });
+}
+
+async function acceptInvitation(payload) {
+  if (!store.getState || !store.saveState || !store.saveSession) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta invitaciones." };
+  }
+  const token = String(payload.token || "").trim();
+  if (!token) return { ok: false, status: 400, message: "Falta el token de invitacion." };
+
+  const state = await store.getState();
+  const invites = Array.isArray(state.accessInvites) ? state.accessInvites : [];
+  const invite = invites.find((item) => item.token === token);
+  if (!invite || invite.status === "Cancelada") {
+    return { ok: false, status: 404, message: "Invitacion no encontrada o cancelada." };
+  }
+  if (inviteIsExpired(invite)) {
+    return { ok: false, status: 410, message: "Esta invitacion ya vencio. Pide una nueva a la agencia." };
+  }
+
+  const email = String(payload.email || invite.email || "").trim();
+  const expectedEmail = String(invite.email || "").trim().toLowerCase();
+  if (expectedEmail && email && expectedEmail !== email.toLowerCase()) {
+    return { ok: false, status: 403, message: "Este link fue emitido para otro correo." };
+  }
+
+  const company = (state.companies || []).find((item) => item.id === invite.companyId);
+  const now = new Date().toISOString();
+  const accessMembers = Array.isArray(state.accessMembers) ? state.accessMembers : [];
+  const hasMember = accessMembers.some((member) => member.companyId === invite.companyId && String(member.email || "").toLowerCase() === expectedEmail);
+  const nextMembers = hasMember
+    ? accessMembers.map((member) =>
+        member.companyId === invite.companyId && String(member.email || "").toLowerCase() === expectedEmail
+          ? { ...member, status: "Activo", role: invite.role || member.role }
+          : member
+      )
+    : [
+        ...accessMembers,
+        {
+          id: `member-${invite.companyId}-${Date.now()}`,
+          companyId: invite.companyId,
+          email,
+          role: invite.role || "client_viewer",
+          status: "Activo",
+          invitedAt: invite.createdAt || now,
+        },
+      ];
+  const nextInvites = invites.map((item) => (item.id === invite.id ? { ...item, status: "Aceptada", acceptedAt: now } : item));
+  const nextState = {
+    ...state,
+    activeCompanyId: invite.companyId,
+    accessMembers: nextMembers,
+    accessInvites: nextInvites,
+  };
+  await store.saveState(nextState);
+  const session = await store.saveSession(invitationSession({ ...invite, status: "Aceptada" }, { ...payload, email }, company));
+  return { ok: true, status: 200, session, invite: { companyId: invite.companyId, email, role: invite.role, status: "Aceptada" } };
 }
 
 function providerSetup(name, keys) {
@@ -1416,6 +1502,12 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 200, { session: await store.getSession(), provider: store.provider });
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/invitations/accept") {
+    const result = await acceptInvitation(await readBody(req));
+    sendJson(res, result.status, result);
     return;
   }
 

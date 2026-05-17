@@ -86,6 +86,19 @@ create table if not exists public.prompt_templates (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.company_invitations (
+  id text primary key default gen_random_uuid()::text,
+  company_id text not null references public.companies(id) on delete cascade,
+  email text not null default '',
+  role text not null default 'client_viewer',
+  token text not null unique,
+  status text not null default 'Pendiente',
+  expires_at timestamptz,
+  accepted_at timestamptz,
+  cancelled_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.social_accounts (
   id text primary key default gen_random_uuid()::text,
   company_id text not null references public.companies(id) on delete cascade,
@@ -175,6 +188,8 @@ create index if not exists oauth_connections_provider_idx on public.oauth_connec
 create index if not exists billing_events_type_idx on public.billing_events (type, created_at desc);
 create index if not exists company_members_company_idx on public.company_members (company_id, email);
 create index if not exists prompt_templates_company_idx on public.prompt_templates (company_id, type, created_at desc);
+create index if not exists company_invitations_company_idx on public.company_invitations (company_id, status, created_at desc);
+create index if not exists company_invitations_token_idx on public.company_invitations (token);
 create index if not exists media_assets_company_idx on public.media_assets (company_id, created_at desc);
 create index if not exists posts_company_schedule_idx on public.posts (company_id, scheduled_date, scheduled_time);
 create index if not exists posts_status_idx on public.posts (status);
@@ -187,6 +202,7 @@ alter table public.billing_events enable row level security;
 alter table public.companies enable row level security;
 alter table public.company_members enable row level security;
 alter table public.prompt_templates enable row level security;
+alter table public.company_invitations enable row level security;
 alter table public.social_accounts enable row level security;
 alter table public.media_sources enable row level security;
 alter table public.media_assets enable row level security;

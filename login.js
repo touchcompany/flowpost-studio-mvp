@@ -9,6 +9,7 @@ const planLabels = {
 const params = new URLSearchParams(window.location.search);
 const selectedPlan = params.get("plan") || "starter";
 const selectedService = params.get("service") || "";
+const inviteToken = params.get("invite") || "";
 const checkoutRequested = params.get("checkout") === "1";
 const plan = planLabels[selectedPlan] ? selectedPlan : "starter";
 const planBadge = document.querySelector("#loginPlanBadge");
@@ -67,8 +68,28 @@ function sessionPayload({ provider, name, email }) {
     plan,
     planLabel: planLabels[plan],
     status: "trial",
+    inviteToken,
     createdAt: new Date().toISOString(),
   };
+}
+
+async function acceptInviteSession(payload) {
+  if (!inviteToken || window.location.protocol === "file:") return null;
+  const response = await fetch("/api/invitations/accept", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      token: inviteToken,
+      name: payload.name,
+      email: payload.email,
+      provider: payload.provider,
+    }),
+  });
+  const result = await response.json();
+  if (!response.ok || !result.session) {
+    throw new Error(result.message || "No se pudo aceptar la invitacion.");
+  }
+  return result.session;
 }
 
 async function startCheckout(payload) {
@@ -98,6 +119,20 @@ async function startCheckout(payload) {
 
 async function saveSession(payload) {
   let nextPayload = payload;
+  if (inviteToken) {
+    try {
+      setStatus("Validando invitacion segura...");
+      const invitedSession = await acceptInviteSession(payload);
+      if (invitedSession) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(invitedSession));
+        window.location.href = "index.html#dashboard";
+        return;
+      }
+    } catch (error) {
+      setStatus(error.message || "No se pudo validar la invitacion.");
+      return;
+    }
+  }
   if (window.location.protocol !== "file:") {
     try {
       const response = await fetch("/api/session", {
@@ -142,11 +177,18 @@ async function tryProviderLogin(provider) {
 }
 
 if (planBadge) {
-  planBadge.textContent = checkoutRequested && plan !== "starter"
+  planBadge.textContent = inviteToken
+    ? "Invitacion de cliente"
+    : checkoutRequested && plan !== "starter"
     ? `Plan ${planLabels[plan]} listo para pago`
     : selectedService && landingServices[selectedService]
       ? `${landingServices[selectedService].name} listo para agregar`
       : `Plan ${planLabels[plan]} seleccionado`;
+}
+
+if (inviteToken) {
+  setStatus("Escribe el correo invitado para entrar al panel compartido.");
+  if (emailInput) emailInput.placeholder = "correo invitado";
 }
 
 ensurePendingServiceFromUrl();
