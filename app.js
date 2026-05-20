@@ -292,6 +292,7 @@ let authStatus = null;
 let systemStatusData = null;
 let apiProbeResults = {};
 let deletedCompanies = [];
+let deletedUsers = [];
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let selectedAiProvider = "auto";
@@ -5587,7 +5588,8 @@ function renderAuthLoginPanel() {
 }
 
 function renderTrashPanel() {
-  const rows = deletedCompanies.slice(0, 5);
+  const companyRows = deletedCompanies.slice(0, 5);
+  const userRows = deletedUsers.slice(0, 5);
   return `
     <section class="trash-panel">
       <header>
@@ -5601,9 +5603,9 @@ function renderTrashPanel() {
         </button>
       </header>
       ${
-        rows.length
+        companyRows.length || userRows.length
           ? `<div class="trash-list">
-              ${rows
+              ${companyRows
                 .map(
                   (company) => `
                     <article>
@@ -5612,6 +5614,22 @@ function renderTrashPanel() {
                         <p>Eliminada ${escapeHtml(shortDateLabel((company.deletedAt || "").slice(0, 10)))} · recuperable hasta ${escapeHtml(shortDateLabel((company.deletionExpiresAt || "").slice(0, 10)))}</p>
                       </div>
                       <button class="secondary-button icon-text-button" type="button" data-restore-company="${escapeHtml(company.id)}">
+                        <i data-lucide="rotate-ccw"></i>
+                        Restaurar
+                      </button>
+                    </article>
+                  `
+                )
+                .join("")}
+              ${userRows
+                .map(
+                  (user) => `
+                    <article>
+                      <div>
+                        <strong>${escapeHtml(user.name || user.email || "Usuario sin nombre")}</strong>
+                        <p>Cuenta ${escapeHtml(user.provider || "sin proveedor")} · eliminada ${escapeHtml(shortDateLabel((user.deleted_at || user.deletedAt || "").slice(0, 10)))} · recuperable hasta ${escapeHtml(shortDateLabel((user.deletion_expires_at || user.deletionExpiresAt || "").slice(0, 10)))}</p>
+                      </div>
+                      <button class="secondary-button icon-text-button" type="button" data-restore-user="${escapeHtml(user.id)}">
                         <i data-lucide="rotate-ccw"></i>
                         Restaurar
                       </button>
@@ -5635,9 +5653,13 @@ function renderTrashPanel() {
 async function refreshTrash(showFeedback = false) {
   if (window.location.protocol === "file:") return;
   try {
-    const response = await fetch("/api/trash/companies", { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error("trash unavailable");
-    deletedCompanies = await response.json();
+    const [companiesResponse, usersResponse] = await Promise.all([
+      fetch("/api/trash/companies", { headers: { Accept: "application/json" } }),
+      fetch("/api/trash/users", { headers: { Accept: "application/json" } }),
+    ]);
+    if (!companiesResponse.ok || !usersResponse.ok) throw new Error("trash unavailable");
+    deletedCompanies = await companiesResponse.json();
+    deletedUsers = await usersResponse.json();
     renderAccounts();
     if (showFeedback) showToast("Papelera actualizada.");
   } catch {
@@ -6760,6 +6782,25 @@ accountsGrid.addEventListener("click", async (event) => {
       showToast("Empresa restaurada.");
     } catch {
       showToast("No se pudo restaurar la empresa.");
+      renderAccounts();
+    }
+    return;
+  }
+
+  const restoreUserButton = event.target.closest("[data-restore-user]");
+  if (restoreUserButton) {
+    restoreUserButton.disabled = true;
+    try {
+      const response = await fetch(`/api/trash/users/${encodeURIComponent(restoreUserButton.dataset.restoreUser)}/restore`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("restore user failed");
+      await refreshTrash(false);
+      renderAccounts();
+      showToast("Usuario restaurado.");
+    } catch {
+      showToast("No se pudo restaurar el usuario.");
       renderAccounts();
     }
     return;
