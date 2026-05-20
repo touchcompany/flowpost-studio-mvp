@@ -1,15 +1,15 @@
-# Flowpost Studio MVP
+# Flowpost Studio
 
-Primer prototipo para una app sencilla tipo Metricool enfocada en publicar o programar contenido en Instagram, Facebook y TikTok.
+Aplicacion online para operar contenido, clientes, servicios, cobros y conexiones de una agencia o marca.
 
 ## Framework detectado
 
-No usa Vite, React ni Next.js. Es una app HTML/CSS/JavaScript con backend local en Node puro.
+No usa Vite, React ni Next.js. Es una app HTML/CSS/JavaScript con backend Node puro, preparada para correr online en cPanel con Supabase.
 
 ## Pantallas
 
 - Landing comercial: pagina publica con propuesta, funciones, publicos y planes.
-- Login: creacion de cuenta MVP local con Google/Facebook/email simulados y plan seleccionado.
+- Login: Google/Facebook/email desde backend con sesion por cookie `HttpOnly`.
 - Onboarding: configuracion de primera empresa, redes y carpeta de contenido antes del dashboard.
 - Crear publicacion: composer unico con selector de formato, plataformas y programacion.
 - Empresas: crear marcas y cambiar la empresa activa.
@@ -23,7 +23,7 @@ No usa Vite, React ni Next.js. Es una app HTML/CSS/JavaScript con backend local 
 
 ## Siguiente capa tecnica
 
-1. Reemplazar `data/db.json` por Postgres.
+1. Mantener `DATA_PROVIDER=supabase` en produccion.
 2. Formalizar tablas `companies`, `social_accounts`, `media_sources`, `media_assets`, `posts` y `post_jobs`.
 3. Integrar Google Picker + Drive API para seleccionar carpetas y videos de Google Drive.
 4. En iOS/macOS, usar Document Picker/iCloud Drive; en web, usar enlaces compartidos o un flujo propio de importacion.
@@ -122,7 +122,7 @@ El build estatico queda en `dist/`.
 npm run smoke
 ```
 
-Valida que el backend local responda y que las rutas criticas existan.
+Valida que el backend responda y que las rutas criticas existan.
 
 ## Produccion y Supabase
 
@@ -148,13 +148,13 @@ Si el dominio abre pero `/api/health` da 404, revisa [CPANEL_NODE_SETUP.md](./CP
 
 Para conectar APIs reales, usar el staging publico con HTTPS `https://app.touch.com.co`. Ver [DEPLOYMENT_SERVER.md](./DEPLOYMENT_SERVER.md).
 
-El modo local sigue siendo util para desarrollar rapido, pero los OAuth de Google, Meta, TikTok y Stripe deben apuntar a un dominio publico usando `APP_PUBLIC_URL`.
+Para pruebas reales usa siempre el dominio publico con HTTPS `https://app.touch.com.co`; los OAuth de Google, Meta, TikTok y Stripe deben apuntar a ese dominio usando `APP_PUBLIC_URL`.
 
 ### Namecheap Nebula como sitio estatico
 
 1. Ejecutar `npm run build`.
 2. Subir el contenido de `dist/`.
-3. Usar esta opcion solo para demo estatica: el backend JSON local y `/api/*` no viven en `dist/`.
+3. Usar esta opcion solo para landing o previsualizacion estatica: el backend y `/api/*` no viven en `dist/`.
 4. Para comercializar, conviene mover datos/API a un backend real o Supabase antes de vender.
 
 ### Vercel
@@ -183,11 +183,11 @@ Para guiones con IA desde backend:
 
 Supabase queda como la base de datos recomendada para produccion. Ver [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) y ejecutar [supabase/schema.sql](./supabase/schema.sql) cuando ya tengas creado el proyecto en Supabase.
 
-Para esta etapa el MVP sigue usando `localStorage` al abrir `index.html` directo y `data/db.json` al correr `npm run dev`. La migracion a Supabase debe hacerse desde el backend para no exponer `SUPABASE_SERVICE_ROLE_KEY` ni tokens de redes sociales en el navegador.
+En produccion la app debe correr con `DATA_PROVIDER=supabase`. `localStorage` queda limitado a preferencias visuales y cache de sesion de UI; los datos operativos se guardan por API en el backend para no exponer `SUPABASE_SERVICE_ROLE_KEY` ni tokens de redes sociales en el navegador.
 
 El backend ya tiene adaptadores de datos:
 
-- `DATA_PROVIDER=local`: usa `data/db.json`.
+- `DATA_PROVIDER=local`: solo para desarrollo controlado, usa `data/db.json`.
 - `DATA_PROVIDER=supabase`: usa Supabase REST desde backend con `SUPABASE_SERVICE_ROLE_KEY`.
 
 Archivos clave:
@@ -247,21 +247,21 @@ Google Login y Facebook Login ya funcionan desde backend cuando existen las vari
 Stripe Checkout ya crea sesiones reales desde backend si existen `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO` y `STRIPE_PRICE_AGENCY`.
 El webhook de Stripe esta en `/api/billing/webhook` y requiere `STRIPE_WEBHOOK_SECRET`.
 
-Mientras no haya credenciales, `login.js` crea una sesion MVP en `localStorage` para probar el recorrido comercial completo: landing, seleccion de plan, login y dashboard.
+Si faltan credenciales de Google/Facebook, el login social se bloquea y muestra las variables pendientes. No crea cuentas sociales simuladas en produccion.
 
-El dashboard ya muestra `Cuenta y plan` dentro de Cuentas. En modo demo puedes alternar Starter, Pro y Agencia para validar limites:
+El dashboard ya muestra `Cuenta y plan` dentro de Cuentas. El super admin puede activar Starter, Pro o Agencia para validar limites y permisos:
 
 - Starter: 1 empresa y 20 publicaciones.
 - Pro: 5 empresas y 160 publicaciones.
 - Agencia: empresas y publicaciones ilimitadas.
 
-Con `npm run dev`, la cuenta MVP tambien puede sincronizarse por backend en:
+La cuenta se sincroniza por backend en:
 
 - `GET /api/session`
 - `PUT /api/session`
 - `DELETE /api/session`
 
-En modo `DATA_PROVIDER=local` se guarda dentro de `data/db.json`. En modo `DATA_PROVIDER=supabase` usa las tablas `app_profiles` y `subscriptions`.
+En produccion `DATA_PROVIDER=supabase` usa las tablas `app_profiles` y `subscriptions`.
 
 ## API local
 

@@ -139,6 +139,7 @@ async function startCheckout(payload) {
 
 async function saveSession(payload) {
   let nextPayload = payload;
+  let savedOnline = false;
   if (inviteToken) {
     try {
       setStatus("Validando invitacion segura...");
@@ -164,10 +165,16 @@ async function saveSession(payload) {
         const result = await response.json();
         if (result.session) {
           nextPayload = result.session;
+          savedOnline = true;
         }
       }
     } catch {
-      // Keep local MVP session if backend is unavailable.
+      setStatus("No se pudo guardar la cuenta en el servidor. Intenta nuevamente.");
+      return;
+    }
+    if (!savedOnline) {
+      setStatus("El servidor no confirmo la sesion. Revisa la configuracion antes de continuar.");
+      return;
     }
   }
   localStorage.setItem(SESSION_KEY, JSON.stringify(nextPayload));
@@ -187,9 +194,11 @@ async function tryProviderLogin(provider) {
         window.location.href = result.authUrl;
         return;
       }
-      setStatus(result.message || "Credenciales pendientes. Entrando en modo prueba MVP.");
+      setStatus(result.message || "Credenciales pendientes. Configura este proveedor para continuar.");
+      return;
     } catch {
-      setStatus("No se pudo consultar el backend. Entrando en modo prueba MVP.");
+      setStatus("No se pudo consultar el backend. Revisa el servidor antes de continuar.");
+      return;
     }
   }
 
@@ -225,7 +234,7 @@ emailForm?.addEventListener("submit", (event) => {
   const name = nameInput.value.trim();
   const email = emailInput.value.trim();
   if (!name || !email) {
-    setStatus("Escribe tu nombre y email para crear la cuenta MVP.");
+    setStatus("Escribe tu nombre y email para crear la cuenta.");
     return;
   }
   saveSession(sessionPayload({ provider: "email", name, email }));

@@ -709,6 +709,7 @@ let billingDraft = {
 };
 
 function restoreState() {
+  if (window.location.protocol !== "file:") return;
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     if (Array.isArray(stored.companies) && stored.companies.length) {
@@ -760,7 +761,7 @@ function restoreState() {
       activeCompanyId = stored.activeCompanyId;
     }
   } catch {
-    // Keep seeded demo data.
+    // Keep initial data when there is no browser cache.
   }
 }
 
@@ -875,32 +876,6 @@ async function hydrateStateFromBackend() {
 }
 
 function persistState() {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        activeCompanyId,
-        activeAgencyId,
-        agencies,
-        companies,
-        publications,
-        jobs,
-        clients,
-        accessMembers,
-        accessInvites,
-        promptLibrary,
-        selectedAiProvider,
-        invoices,
-        billingDraft,
-        agencyServices,
-        serviceOrders,
-        activityLog,
-      })
-    );
-  } catch {
-    // The UI can still work without local persistence.
-  }
-
   if (backendEnabled) {
     fetch("/api/state", {
       method: "PUT",
@@ -909,7 +884,37 @@ function persistState() {
     }).catch(() => {
       backendEnabled = false;
       updateConnectionStatus();
+      showToast("No se pudo sincronizar con el servidor. Revisa la conexion antes de continuar.");
     });
+    return;
+  }
+
+  if (window.location.protocol === "file:") {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          activeCompanyId,
+          activeAgencyId,
+          agencies,
+          companies,
+          publications,
+          jobs,
+          clients,
+          accessMembers,
+          accessInvites,
+          promptLibrary,
+          selectedAiProvider,
+          invoices,
+          billingDraft,
+          agencyServices,
+          serviceOrders,
+          activityLog,
+        })
+      );
+    } catch {
+      // Visual preview can continue without browser persistence.
+    }
   }
 }
 
@@ -1003,13 +1008,15 @@ function commitReviewedPublication() {
 
 function updateConnectionStatus() {
   const isFile = window.location.protocol === "file:";
-  const providerLabel = backendProvider === "supabase" ? "Supabase" : "JSON local";
-  const modeText = backendEnabled ? `Backend ${providerLabel}` : isFile ? "Modo local" : "Modo local";
+  const providerLabel = backendProvider === "supabase" ? "Supabase" : "Servidor JSON";
+  const modeText = backendEnabled ? `Backend ${providerLabel}` : isFile ? "Vista sin servidor" : "Servidor no disponible";
   const detailText = backendEnabled
     ? backendProvider === "supabase"
       ? "Datos listos para sincronizar con Supabase."
-      : "Datos sincronizados con API JSON local."
-    : "Datos guardados en este navegador.";
+      : "Datos sincronizados con API del servidor."
+    : isFile
+      ? "Solo para previsualizar interfaz; no usar como operacion real."
+      : "No se guardaran cambios hasta recuperar conexion con el backend.";
 
   [
     [connectionMode, connectionDetail, connectionDot],
@@ -1150,7 +1157,6 @@ async function hydrateSessionFromBackend() {
 
 async function saveClientSession(session) {
   const normalized = normalizeClientSession(session);
-  localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
   if (window.location.protocol !== "file:") {
     try {
       const response = await fetch("/api/session", {
@@ -1160,12 +1166,17 @@ async function saveClientSession(session) {
       });
       if (response.ok) {
         const result = await response.json();
-        if (result.session?.id) localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+        if (result.session?.id) {
+          localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+          return currentSession();
+        }
       }
     } catch {
-      // Keep local session if the backend is not reachable.
+      showToast("No se pudo guardar la sesion en el servidor.");
     }
+    return currentSession();
   }
+  localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
   return currentSession();
 }
 
@@ -1254,13 +1265,13 @@ function renderPlanPanel() {
     </div>
     <div class="plan-actions">
       <button class="secondary-button icon-text-button" type="button" data-plan-change="starter">
-        Starter demo
+        Activar Starter
       </button>
       <button class="secondary-button icon-text-button" type="button" data-plan-change="pro">
-        Pro demo
+        Activar Pro
       </button>
       <button class="primary-button icon-text-button" type="button" data-plan-change="agency">
-        Agencia demo
+        Activar Agencia
       </button>
     </div>
   `;
@@ -1286,7 +1297,7 @@ function renderBillingPanel(result = null) {
   const checkout = billingReadiness(result);
   const isFile = window.location.protocol === "file:";
   const webhookReady = Boolean(result?.billingWebhook?.ready);
-  const statusLabel = session.status === "active" ? "Activa" : session.status === "trial" ? "Prueba" : "Demo";
+  const statusLabel = session.status === "active" ? "Activa" : session.status === "trial" ? "Prueba" : "Pendiente";
 
   billingPanel.innerHTML = `
     <div class="billing-head">
@@ -5678,7 +5689,7 @@ function realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights
   const steps = [
     {
       title: "Dominio y backend",
-      detail: backendEnabled ? `API activa con ${backendProvider}.` : "Servidor local activo; falta validar app.touch.com.co online.",
+      detail: backendEnabled ? `API activa con ${backendProvider}.` : "Falta validar app.touch.com.co con backend online.",
       status: backendEnabled ? "ok" : "mock",
       icon: "server",
     },
@@ -5719,7 +5730,7 @@ function realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights
       <header>
         <div>
           <span>Ruta de pruebas reales</span>
-          <h3>De demo a operacion controlada</h3>
+          <h3>De pruebas a operacion real</h3>
           <p>Avanza estos puntos antes de activar publicacion o provisionamiento real.</p>
         </div>
         <strong>${steps.filter((step) => step.status === "ok").length}/${steps.length}</strong>
@@ -5837,18 +5848,18 @@ async function renderDiagnostics() {
   const isFile = window.location.protocol === "file:";
   const baseCards = [
     diagnosticCard("Interfaz", "ok", "Pantallas, empresas, calendario, biblioteca y cuentas funcionan en el navegador."),
-    diagnosticCard("Persistencia local", "ok", "localStorage guarda empresas, publicaciones, cola y preferencias."),
+    diagnosticCard("Persistencia online", backendEnabled ? "ok" : "pending", backendEnabled ? `Datos operativos guardados por API en ${backendProvider}.` : "La app necesita backend activo para guardar datos reales."),
     diagnosticCard("Revision final", "ok", "El modal de confirmacion esta conectado antes de crear trabajos."),
-    diagnosticCard("Cola", "ok", "Filtros, resumen, reintento y error simulado funcionan localmente."),
-    diagnosticCard("Cuenta y plan", backendEnabled ? "ok" : "mock", backendEnabled ? `Plan ${planLimits[currentPlan()].label} sincronizable con backend.` : `Plan ${planLimits[currentPlan()].label} activo en localStorage.`),
-    diagnosticCard("Google Drive", "mock", "Picker real pendiente de credenciales; flujo mock agrega videos demo."),
+    diagnosticCard("Cola", "ok", "Filtros, resumen, reintento y preflight funcionan desde la app."),
+    diagnosticCard("Cuenta y plan", backendEnabled ? "ok" : "pending", backendEnabled ? `Plan ${planLimits[currentPlan()].label} sincronizado con backend.` : "Pendiente de backend online."),
+    diagnosticCard("Google Drive", "mock", "Picker real pendiente de credenciales; la biblioteca muestra recursos de preparacion."),
     diagnosticCard("Publicacion real", "pending", "Todavia no envia a redes sociales hasta conectar OAuth y APIs."),
   ];
 
   if (isFile) {
     diagnosticsGrid.innerHTML = [
       ...baseCards,
-      diagnosticCard("Backend/API", "pending", "Estas viendo file://. Para probar API real usa npm run dev y abre http://127.0.0.1:4176."),
+      diagnosticCard("Backend/API", "pending", "Estas viendo file://. Para pruebas reales usa el dominio online con backend activo."),
       diagnosticCard("Supabase", "pending", "Adaptador listo, falta configurar variables y activar DATA_PROVIDER=supabase."),
       diagnosticCard("Legales", "ok", "privacy.html y terms.html existen en el proyecto y dist."),
     ].join("");
@@ -6801,7 +6812,7 @@ planPanel.addEventListener("click", async (event) => {
   renderAccounts();
   renderDashboard();
   renderDiagnostics();
-  showToast(`Plan ${planLimits[plan].label} activado en modo demo.`);
+  showToast(`Plan ${planLimits[plan].label} actualizado.`);
 });
 
 billingPanel.addEventListener("click", (event) => {
@@ -7373,7 +7384,7 @@ companyForm.addEventListener("submit", (event) => {
   if (!editingCompanyId && usage.companiesFull) {
     setView("accounts");
     renderPlanPanel();
-    showToast(`Tu plan ${usage.limit.label} permite ${formatLimit(usage.limit.companies)} empresa. Activa Pro o Agencia demo para seguir probando.`);
+    showToast(`Tu plan ${usage.limit.label} permite ${formatLimit(usage.limit.companies)} empresa. Actualiza a Pro o Agencia para continuar.`);
     return;
   }
 
