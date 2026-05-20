@@ -24,6 +24,43 @@ const contentTypes = {
   ".webmanifest": "application/manifest+json; charset=utf-8",
 };
 
+function readPackageInfo() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function readGitCommit() {
+  const explicit = process.env.APP_VERSION || process.env.GIT_COMMIT || process.env.SOURCE_VERSION || "";
+  if (explicit) return explicit.slice(0, 12);
+  try {
+    const headPath = path.join(ROOT, ".git", "HEAD");
+    const head = fs.readFileSync(headPath, "utf8").trim();
+    if (head.startsWith("ref:")) {
+      const refPath = path.join(ROOT, ".git", head.replace("ref:", "").trim());
+      return fs.readFileSync(refPath, "utf8").trim().slice(0, 12);
+    }
+    return head.slice(0, 12);
+  } catch {
+    return "unknown";
+  }
+}
+
+function buildInfo() {
+  const pkg = readPackageInfo();
+  return {
+    name: pkg.name || "flowpost-studio-mvp",
+    version: pkg.version || "0.0.0",
+    commit: readGitCommit(),
+    dataProvider: store.provider,
+    appUrl: process.env.APP_PUBLIC_URL || "",
+    node: process.version,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
@@ -1778,6 +1815,7 @@ async function systemStatus(req) {
     ok: checks.every((check) => check.status === "ok"),
     appUrl: publicUrl(req),
     dataProvider: store.provider,
+    build: buildInfo(),
     checkedAt: new Date().toISOString(),
     checks,
   };
@@ -1880,6 +1918,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/health") {
     sendJson(res, 200, { ok: true, dataProvider: store.provider });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/version") {
+    sendJson(res, 200, { ok: true, ...buildInfo() });
     return;
   }
 

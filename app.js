@@ -5907,6 +5907,7 @@ function realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights
 
 function renderSystemStatusPanel() {
   const checks = systemStatusData?.checks || [];
+  const buildLabel = systemStatusData?.build?.commit ? ` · commit ${systemStatusData.build.commit}` : "";
   if (!checks.length) {
     return `
       <section class="system-status-panel">
@@ -5928,7 +5929,7 @@ function renderSystemStatusPanel() {
         <span class="status-icon"><i data-lucide="radar"></i></span>
         <div>
           <h3>Estado real del sistema</h3>
-          <p>${escapeHtml(systemStatusData.dataProvider)} · ${escapeHtml(systemStatusData.appUrl)} · ${readyCount}/${checks.length} listos</p>
+          <p>${escapeHtml(systemStatusData.dataProvider)} · ${escapeHtml(systemStatusData.appUrl)} · ${readyCount}/${checks.length} listos${escapeHtml(buildLabel)}</p>
         </div>
         <span class="pill ${systemStatusData.ok ? "done" : "warning"}">${systemStatusData.ok ? "Listo" : "En progreso"}</span>
       </header>
