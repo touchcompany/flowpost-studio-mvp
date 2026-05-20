@@ -1216,6 +1216,39 @@ function authFacebookRedirectUri(req) {
   return process.env.AUTH_FACEBOOK_REDIRECT_URI || `${publicUrl(req)}/api/auth/facebook/callback`;
 }
 
+function envFirst(names) {
+  return names.map((name) => process.env[name]).find(Boolean) || "";
+}
+
+function missingEnvAny(groups) {
+  return groups.filter((group) => !envFirst(group)).map((group) => group.join(" o "));
+}
+
+function oauthSetupAny(platform, groups) {
+  const missing = missingEnvAny(groups);
+  return {
+    ready: missing.length === 0,
+    platform,
+    missing,
+  };
+}
+
+function authGoogleClientId() {
+  return envFirst(["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"]);
+}
+
+function authGoogleClientSecret() {
+  return envFirst(["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"]);
+}
+
+function authFacebookAppId() {
+  return envFirst(["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"]);
+}
+
+function authFacebookAppSecret() {
+  return envFirst(["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"]);
+}
+
 function authSuccessUrl() {
   return "/index.html#dashboard";
 }
@@ -1240,8 +1273,8 @@ async function exchangeAuthGoogleCode(req, code) {
     headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
     body: new URLSearchParams({
       code,
-      client_id: process.env.AUTH_GOOGLE_CLIENT_ID,
-      client_secret: process.env.AUTH_GOOGLE_CLIENT_SECRET,
+      client_id: authGoogleClientId(),
+      client_secret: authGoogleClientSecret(),
       redirect_uri: authGoogleRedirectUri(req),
       grant_type: "authorization_code",
     }),
@@ -1258,9 +1291,9 @@ async function fetchGoogleAuthProfile(accessToken) {
 
 async function exchangeAuthFacebookCode(req, code) {
   const tokenUrl = new URL("https://graph.facebook.com/v20.0/oauth/access_token");
-  tokenUrl.searchParams.set("client_id", process.env.AUTH_FACEBOOK_APP_ID);
+  tokenUrl.searchParams.set("client_id", authFacebookAppId());
   tokenUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
-  tokenUrl.searchParams.set("client_secret", process.env.AUTH_FACEBOOK_APP_SECRET);
+  tokenUrl.searchParams.set("client_secret", authFacebookAppSecret());
   tokenUrl.searchParams.set("code", code);
 
   const response = await fetch(tokenUrl, { headers: { Accept: "application/json" } });
@@ -1513,8 +1546,14 @@ function diagnostics(req) {
       enom: ["ENOM_UID", "ENOM_TOKEN", "ENOM_ENV"],
     },
     auth: {
-      google: oauthSetup("Google Login", ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET"]),
-      facebook: oauthSetup("Facebook Login", ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"]),
+      google: oauthSetupAny("Google Login", [
+        ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
+        ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
+      ]),
+      facebook: oauthSetupAny("Facebook Login", [
+        ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
+        ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
+      ]),
     },
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
@@ -1597,8 +1636,14 @@ async function supabaseConnectionCheck() {
 async function systemStatus(req) {
   const supabase = await supabaseConnectionCheck();
   const auth = {
-    google: oauthSetup("Google Login", ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET"]),
-    facebook: oauthSetup("Facebook Login", ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"]),
+    google: oauthSetupAny("Google Login", [
+      ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
+      ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
+    ]),
+    facebook: oauthSetupAny("Facebook Login", [
+      ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
+      ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
+    ]),
   };
   const oauth = {
     googleDrive: oauthSetup("Google Drive", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
@@ -1961,13 +2006,19 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/auth/status") {
     sendJson(res, 200, {
       google: {
-        ...oauthSetup("Google Login", ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET"]),
+        ...oauthSetupAny("Google Login", [
+          ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
+          ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
+        ]),
         redirectUri: authGoogleRedirectUri(req),
         scopes: "openid email profile",
         startUrl: "/api/auth/google/start",
       },
       facebook: {
-        ...oauthSetup("Facebook Login", ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"]),
+        ...oauthSetupAny("Facebook Login", [
+          ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
+          ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
+        ]),
         redirectUri: authFacebookRedirectUri(req),
         scopes: "email,public_profile",
         startUrl: "/api/auth/facebook/start",
@@ -2016,13 +2067,16 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/auth/google/start") {
-    const setup = oauthSetup("Google Login", ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET"]);
+    const setup = oauthSetupAny("Google Login", [
+      ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
+      ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
+    ]);
     if (!setup.ready) {
       sendJson(res, 200, {
         ...setup,
         redirectUri: authGoogleRedirectUri(req),
         scopes: "openid email profile",
-        message: "Configura AUTH_GOOGLE_CLIENT_ID y AUTH_GOOGLE_CLIENT_SECRET para activar login real con Google.",
+        message: "Configura AUTH_GOOGLE_CLIENT_ID/AUTH_GOOGLE_CLIENT_SECRET o GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET para activar login real con Google.",
         demoNext: "/index.html",
       });
       return;
@@ -2031,7 +2085,7 @@ async function handleApi(req, res, url) {
     const state = randomState("auth-google");
     oauthStates.add(state);
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    authUrl.searchParams.set("client_id", process.env.AUTH_GOOGLE_CLIENT_ID);
+    authUrl.searchParams.set("client_id", authGoogleClientId());
     authUrl.searchParams.set("redirect_uri", authGoogleRedirectUri(req));
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("scope", "openid email profile");
@@ -2084,13 +2138,16 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/auth/facebook/start") {
-    const setup = oauthSetup("Facebook Login", ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"]);
+    const setup = oauthSetupAny("Facebook Login", [
+      ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
+      ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
+    ]);
     if (!setup.ready) {
       sendJson(res, 200, {
         ...setup,
         redirectUri: authFacebookRedirectUri(req),
         scopes: "email,public_profile",
-        message: "Configura AUTH_FACEBOOK_APP_ID y AUTH_FACEBOOK_APP_SECRET para activar login real con Facebook.",
+        message: "Configura AUTH_FACEBOOK_APP_ID/AUTH_FACEBOOK_APP_SECRET o META_APP_ID/META_APP_SECRET para activar login real con Facebook.",
         demoNext: "/index.html",
       });
       return;
@@ -2099,7 +2156,7 @@ async function handleApi(req, res, url) {
     const state = randomState("auth-facebook");
     oauthStates.add(state);
     const authUrl = new URL("https://www.facebook.com/v20.0/dialog/oauth");
-    authUrl.searchParams.set("client_id", process.env.AUTH_FACEBOOK_APP_ID);
+    authUrl.searchParams.set("client_id", authFacebookAppId());
     authUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("scope", "email,public_profile");
