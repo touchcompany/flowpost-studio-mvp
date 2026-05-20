@@ -196,7 +196,12 @@ Archivos clave:
 - `lib/local-store.js`
 - `lib/supabase-store.js`
 
-Para pruebas internas puedes activar el perfil `Touch Studio` como super admin con `GET /api/admin/seed-touch?token=TU_ADMIN_MIGRATION_TOKEN`. Ese endpoint solo responde si existe `ADMIN_MIGRATION_TOKEN` en variables de entorno y desbloquea todos los modulos para validar la plataforma completa.
+Para pruebas internas puedes activar acceso total de dos formas:
+
+- Configura `SUPER_ADMIN_EMAILS=ia@touch.com.co,otro@correo.com` en cPanel Node.js. Cualquier login real con uno de esos correos entra como super admin, plan Agencia y todos los modulos activos.
+- Activa el perfil `Touch Studio` con `GET /api/admin/seed-touch?token=TU_ADMIN_MIGRATION_TOKEN`. Ese endpoint solo responde si existe `ADMIN_MIGRATION_TOKEN` en variables de entorno.
+
+El estado se puede revisar en `/api/auth/status`, en la tarjeta `Super admin`, sin exponer las credenciales.
 
 La base multiusuario ya esta preparada con `company_members`: cada empresa puede tener propietario, administrador, editor, aprobador, cliente invitado o facturacion. En esta fase se registran permisos y accesos; el siguiente paso es conectar Supabase Auth para enviar invitaciones reales por email y aplicar RLS por usuario autenticado.
 
