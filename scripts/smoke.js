@@ -87,6 +87,22 @@ async function run() {
     assert.equal(readiness.expectedUrl, "https://app.touch.com.co", "readiness should target app.touch.com.co");
     assert.ok(readiness.groups.supabase, "readiness should include supabase group");
 
+    const sessionGet = await getJson("/api/session");
+    const previousSession = sessionGet.session;
+    assert.equal(sessionGet.provider, "local", "session should report local provider");
+    assert.ok("session" in sessionGet, "session response should include session");
+
+    const sessionPut = await putJson("/api/session", {
+      id: "smoke-profile",
+      name: "Smoke Test",
+      email: "smoke@example.com",
+      provider: "email",
+      plan: "pro",
+      status: "trial",
+    });
+    assert.equal(sessionPut.session.plan, "pro", "session PUT should save pro plan");
+    assert.equal(sessionPut.session.planLabel, "Pro", "session PUT should normalize plan label");
+
     const state = await getJson("/api/state");
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");
     assert.ok(Array.isArray(state.jobs), "state.jobs should be an array");
@@ -110,21 +126,6 @@ async function run() {
     });
     assert.ok(Array.isArray(inviteTestState.accessInvites), "state PUT should keep accessInvites array");
 
-    const sessionGet = await getJson("/api/session");
-    const previousSession = sessionGet.session;
-    assert.equal(sessionGet.provider, "local", "session should report local provider");
-    assert.ok("session" in sessionGet, "session response should include session");
-
-    const sessionPut = await putJson("/api/session", {
-      id: "smoke-profile",
-      name: "Smoke Test",
-      email: "smoke@example.com",
-      provider: "email",
-      plan: "pro",
-      status: "trial",
-    });
-    assert.equal(sessionPut.session.plan, "pro", "session PUT should save pro plan");
-    assert.equal(sessionPut.session.planLabel, "Pro", "session PUT should normalize plan label");
     const clientSessionPut = await putJson("/api/session", {
       id: "smoke-client",
       name: "Smoke Client",

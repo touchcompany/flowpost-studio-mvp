@@ -5098,6 +5098,46 @@ function scriptQuality(publication) {
   return Math.min(100, blocks.length * 25);
 }
 
+function publicationReview(publication = {}) {
+  return publication.review || publication.cover?.review || null;
+}
+
+function renderPublicationReviewPanel(publication) {
+  const review = publicationReview(publication);
+  const isClient = isClientPortalSession();
+  return `
+    <section class="publication-review-panel ${review ? "has-review" : ""}">
+      <header>
+        <span class="status-icon"><i data-lucide="${review?.decision === "approved" ? "badge-check" : review?.decision === "changes" ? "message-square-warning" : "message-square"}"></i></span>
+        <div>
+          <h3>Revision del cliente</h3>
+          <p>${review ? `${review.label} · ${shortDateLabel((review.reviewedAt || "").slice(0, 10))}` : "Pendiente de aprobacion o ajustes."}</p>
+        </div>
+        <span class="pill ${review?.decision === "approved" ? "done" : review?.decision === "changes" ? "warning" : "muted"}">${escapeHtml(review?.label || "Pendiente")}</span>
+      </header>
+      ${review?.note ? `<blockquote>${escapeHtml(review.note)}</blockquote>` : ""}
+      ${
+        isClient
+          ? `<label class="field compact">
+              <span>Comentario para la agencia</span>
+              <textarea data-calendar-review-note rows="3" placeholder="Escribe un ajuste o deja una nota antes de aprobar."></textarea>
+            </label>
+            <div class="review-actions">
+              <button class="secondary-button icon-text-button" type="button" data-calendar-review="changes" data-publication-id="${escapeHtml(publication.id)}">
+                <i data-lucide="message-square-warning"></i>
+                Pedir ajustes
+              </button>
+              <button class="primary-button icon-text-button" type="button" data-calendar-review="approved" data-publication-id="${escapeHtml(publication.id)}">
+                <i data-lucide="badge-check"></i>
+                Aprobar guion
+              </button>
+            </div>`
+          : `<p class="review-helper">Cuando el cliente apruebe o pida ajustes, la decision quedara registrada aqui.</p>`
+      }
+    </section>
+  `;
+}
+
 function activeCompanyPrompts(type = "") {
   return promptLibrary.filter((prompt) => prompt.companyId === activeCompanyId && (!type || prompt.type === type));
 }
@@ -5215,6 +5255,8 @@ function renderCalendarPlanner(companyPublications) {
   }
 
   const quality = scriptQuality(publication);
+  const clientReadOnly = isClientPortalSession();
+  const lockedAttr = clientReadOnly ? "disabled" : "";
   selectedCalendarPublicationId = publication.id;
   calendarPlannerPanel.innerHTML = `
     <section class="calendar-planner">
@@ -5250,49 +5292,55 @@ function renderCalendarPlanner(companyPublications) {
         <div class="script-editor-grid">
           <label class="field compact">
             <span>Estado</span>
-            <select data-calendar-script-field="status">
+            <select data-calendar-script-field="status" ${lockedAttr}>
               ${editorialStatuses.map((status) => `<option value="${status}" ${publication.status === status ? "selected" : ""}>${status}</option>`).join("")}
             </select>
           </label>
           <label class="field compact">
             <span>Fecha</span>
-            <input data-calendar-script-field="date" type="date" value="${escapeHtml(publication.date || todayISO())}" />
+            <input data-calendar-script-field="date" type="date" value="${escapeHtml(publication.date || todayISO())}" ${lockedAttr} />
           </label>
           <label class="field compact">
             <span>Hora</span>
-            <input data-calendar-script-field="time" type="time" value="${escapeHtml(publication.time || "09:00")}" />
+            <input data-calendar-script-field="time" type="time" value="${escapeHtml(publication.time || "09:00")}" ${lockedAttr} />
           </label>
           <label class="field compact">
             <span>CTA</span>
-            <input data-calendar-script-field="cta" type="text" value="${escapeHtml(publication.cta || "")}" placeholder="Escríbenos para reservar" />
+            <input data-calendar-script-field="cta" type="text" value="${escapeHtml(publication.cta || "")}" placeholder="Escríbenos para reservar" ${lockedAttr} />
           </label>
           <label class="field compact wide">
             <span>Hook</span>
-            <input data-calendar-script-field="hook" type="text" value="${escapeHtml(publication.hook || "")}" placeholder="La primera frase o escena que abre el video" />
+            <input data-calendar-script-field="hook" type="text" value="${escapeHtml(publication.hook || "")}" placeholder="La primera frase o escena que abre el video" ${lockedAttr} />
           </label>
           <label class="field compact wide">
             <span>Guion</span>
-            <textarea data-calendar-script-field="script" rows="7" placeholder="Escena 1...\nEscena 2...\nCierre...">${escapeHtml(publication.script || "")}</textarea>
+            <textarea data-calendar-script-field="script" rows="7" placeholder="Escena 1...\nEscena 2...\nCierre..." ${lockedAttr}>${escapeHtml(publication.script || "")}</textarea>
           </label>
           <label class="field compact wide">
             <span>Notas de produccion</span>
-            <textarea data-calendar-script-field="notes" rows="4" placeholder="Pendientes, recursos, tomas, aprobaciones">${escapeHtml(publication.notes || "")}</textarea>
+            <textarea data-calendar-script-field="notes" rows="4" placeholder="Pendientes, recursos, tomas, aprobaciones" ${lockedAttr}>${escapeHtml(publication.notes || "")}</textarea>
           </label>
         </div>
 
+        ${renderPublicationReviewPanel(publication)}
+
         <footer>
-          <button class="secondary-button icon-text-button" type="button" data-calendar-generate-script="${publication.id}">
-            <i data-lucide="sparkles"></i>
-            Sugerir guion
-          </button>
-          <button class="secondary-button icon-text-button" type="button" data-calendar-edit-publication="${publication.id}">
-            <i data-lucide="pencil"></i>
-            Editar publicacion
-          </button>
-          <button class="primary-button icon-text-button" type="button" data-calendar-save-script>
-            <i data-lucide="save"></i>
-            Guardar guion
-          </button>
+          ${
+            clientReadOnly
+              ? `<span class="review-helper">Modo lectura: puedes aprobar o pedir ajustes, no editar el guion interno.</span>`
+              : `<button class="secondary-button icon-text-button" type="button" data-calendar-generate-script="${publication.id}">
+                  <i data-lucide="sparkles"></i>
+                  Sugerir guion
+                </button>
+                <button class="secondary-button icon-text-button" type="button" data-calendar-edit-publication="${publication.id}">
+                  <i data-lucide="pencil"></i>
+                  Editar publicacion
+                </button>
+                <button class="primary-button icon-text-button" type="button" data-calendar-save-script>
+                  <i data-lucide="save"></i>
+                  Guardar guion
+                </button>`
+          }
         </footer>
       </article>
     </section>
@@ -5999,6 +6047,36 @@ function updateCalendarScript(publicationId, field, value, shouldRender = false)
   }
 }
 
+function reviewCalendarPublication(publicationId, decision) {
+  const note = calendarPlannerPanel.querySelector("[data-calendar-review-note]")?.value.trim() || "";
+  const session = currentSession();
+  const approved = decision === "approved";
+  publications = publications.map((publication) => {
+    if (publication.id !== publicationId) return publication;
+    return {
+      ...publication,
+      status: approved ? "Aprobado" : "En revisión",
+      review: {
+        decision,
+        label: approved ? "Aprobado por cliente" : "Ajustes solicitados",
+        note,
+        reviewedBy: session.email || session.name || "Cliente invitado",
+        reviewedAt: new Date().toISOString(),
+      },
+    };
+  });
+  jobs = jobs.map((job) => (job.publicationId === publicationId ? { ...job, status: approved ? "Aprobado" : "En revisión" } : job));
+  addActivity("review", approved ? "Guion aprobado" : "Ajustes solicitados", note || "Revision registrada desde el portal del cliente.", {
+    companyId: activeCompanyId,
+    publicationId,
+  });
+  persistState();
+  renderQueue();
+  renderCalendar();
+  renderDashboard();
+  showToast(approved ? "Guion aprobado y registrado." : "Ajustes enviados a la agencia.");
+}
+
 async function generateCalendarScript(publicationId) {
   const publication = publications.find((item) => item.id === publicationId);
   if (!publication) return;
@@ -6257,6 +6335,12 @@ calendarPlannerPanel.addEventListener("click", (event) => {
   const generateButton = event.target.closest("[data-calendar-generate-script]");
   if (generateButton) {
     generateCalendarScript(generateButton.dataset.calendarGenerateScript);
+    return;
+  }
+
+  const reviewButton = event.target.closest("[data-calendar-review]");
+  if (reviewButton) {
+    reviewCalendarPublication(reviewButton.dataset.publicationId, reviewButton.dataset.calendarReview);
     return;
   }
 

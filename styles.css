@@ -3165,6 +3165,55 @@ input[type="file"]:focus {
   flex-wrap: wrap;
 }
 
+.publication-review-panel {
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.publication-review-panel.has-review {
+  border-color: rgba(0, 149, 246, 0.22);
+  background: #f5fbff;
+}
+
+.publication-review-panel header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.publication-review-panel h3,
+.publication-review-panel p,
+.publication-review-panel blockquote {
+  margin: 0;
+}
+
+.publication-review-panel p,
+.review-helper {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.publication-review-panel blockquote {
+  padding: 10px;
+  border-left: 3px solid var(--brand);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .kanban-column > header span:last-child {
   display: grid;
   min-width: 26px;

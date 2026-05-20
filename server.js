@@ -430,9 +430,26 @@ function mergeClientScopedRecords(currentState, incomingState, session) {
     const additions = incoming.filter((item) => canWrite(item) && !currentIds.has(item.id));
     return [...additions, ...current];
   };
+  const incomingPublications = new Map((incomingState.publications || []).filter(canWrite).map((item) => [item.id, item]));
+  const publications = (currentState.publications || []).map((publication) => {
+    const incoming = incomingPublications.get(publication.id);
+    if (!incoming) return publication;
+    return {
+      ...publication,
+      status: ["Aprobado", "En revisión"].includes(incoming.status) ? incoming.status : publication.status,
+      review: incoming.review || publication.review || null,
+    };
+  });
+  const statusByPublication = new Map(publications.map((publication) => [publication.id, publication.status]));
   return {
     ...currentState,
     activeCompanyId: allowedCompanyIds.has(incomingState.activeCompanyId) ? incomingState.activeCompanyId : currentState.activeCompanyId,
+    publications,
+    jobs: (currentState.jobs || []).map((job) =>
+      allowedCompanyIds.has(job.companyId) && statusByPublication.has(job.publicationId)
+        ? { ...job, status: statusByPublication.get(job.publicationId) }
+        : job
+    ),
     serviceOrders: mergeById(currentState.serviceOrders || [], incomingState.serviceOrders || []),
     invoices: mergeById(currentState.invoices || [], incomingState.invoices || []),
     activityLog: mergeById(currentState.activityLog || [], incomingState.activityLog || []),
