@@ -5195,6 +5195,109 @@ function promptProviderLabel(value = "auto") {
   }[value] || "Auto";
 }
 
+function authProviderConfig(providerKey) {
+  return {
+    google: {
+      label: "Google",
+      icon: "Google",
+      variables: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_REDIRECT_URI"],
+      fallbackVariables: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+      consoleUrl: "https://console.cloud.google.com/apis/credentials",
+    },
+    facebook: {
+      label: "Facebook",
+      icon: "Facebook",
+      variables: ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET", "AUTH_FACEBOOK_REDIRECT_URI"],
+      fallbackVariables: ["META_APP_ID", "META_APP_SECRET", "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"],
+      consoleUrl: "https://developers.facebook.com/apps/",
+    },
+  }[providerKey];
+}
+
+function authEnvSnippet(providerKey, setup = {}) {
+  const config = authProviderConfig(providerKey);
+  if (!config) return "";
+  const redirect = setup.redirectUri || `https://app.touch.com.co/api/auth/${providerKey}/callback`;
+  const values = providerKey === "google"
+    ? [
+        "AUTH_GOOGLE_CLIENT_ID=pega-tu-client-id",
+        "AUTH_GOOGLE_CLIENT_SECRET=pega-tu-client-secret",
+        `AUTH_GOOGLE_REDIRECT_URI=${redirect}`,
+      ]
+    : [
+        "AUTH_FACEBOOK_APP_ID=pega-tu-app-id",
+        "AUTH_FACEBOOK_APP_SECRET=pega-tu-app-secret",
+        `AUTH_FACEBOOK_REDIRECT_URI=${redirect}`,
+      ];
+  return values.join("\n");
+}
+
+function renderAuthSetupChecklist() {
+  const providers = ["google", "facebook"];
+  const readyCount = providers.filter((provider) => authStatus?.[provider]?.ready).length;
+  return `
+    <section class="auth-setup-checklist">
+      <header>
+        <span class="status-icon"><i data-lucide="shield-check"></i></span>
+        <div>
+          <h3>Estado del login real</h3>
+          <p>${readyCount}/2 proveedores listos. Usa esto para configurar cPanel, Google Cloud y Meta sin perderte.</p>
+        </div>
+        <button class="secondary-button icon-button compact" type="button" data-refresh-api-status aria-label="Actualizar login">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+      </header>
+      <div>
+        ${providers
+          .map((provider) => {
+            const config = authProviderConfig(provider);
+            const setup = authStatus?.[provider] || {};
+            const missing = setup.missing || [];
+            const ready = Boolean(setup.ready);
+            return `
+              <article class="${ready ? "ready" : "pending"}">
+                <div class="auth-provider-title">
+                  ${socialIcon(config.icon)}
+                  <div>
+                    <strong>${escapeHtml(config.label)}</strong>
+                    <p>${ready ? "Listo para iniciar sesion real." : `Faltan ${missing.length || config.variables.length} datos en cPanel.`}</p>
+                  </div>
+                </div>
+                <span class="pill ${ready ? "done" : "muted"}">${ready ? "Listo" : "Pendiente"}</span>
+                <div class="auth-setup-details">
+                  <small>Redirect autorizado</small>
+                  <code>${escapeHtml(setup.redirectUri || `https://app.touch.com.co/api/auth/${provider}/callback`)}</code>
+                  <small>Variables cPanel</small>
+                  <code>${escapeHtml(authEnvSnippet(provider, setup))}</code>
+                  ${
+                    missing.length
+                      ? `<small>Falta detectar: ${escapeHtml(missing.join(", "))}</small>`
+                      : `<small>Credenciales detectadas desde el backend.</small>`
+                  }
+                </div>
+                <div class="auth-provider-actions">
+                  <button class="secondary-button icon-button compact" type="button" data-copy-auth-env="${provider}" aria-label="Copiar variables ${config.label}">
+                    <i data-lucide="copy"></i>
+                  </button>
+                  <button class="secondary-button icon-button compact" type="button" data-copy-auth-redirect="${provider}" aria-label="Copiar redirect ${config.label}">
+                    <i data-lucide="link"></i>
+                  </button>
+                  <a class="secondary-button icon-button compact" href="${escapeHtml(config.consoleUrl)}" target="_blank" rel="noreferrer" aria-label="Abrir consola ${config.label}">
+                    <i data-lucide="external-link"></i>
+                  </a>
+                  <button class="connect-button icon-button compact" type="button" data-auth-login="${provider}" aria-label="Probar ${config.label}">
+                    <i data-lucide="play"></i>
+                  </button>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderScriptAiMeta(publication) {
   const meta = publication.cover?.ai || {};
   if (!meta.mode && !meta.generatedAt) return "";
@@ -5455,6 +5558,7 @@ function renderAccounts() {
     return;
   }
   accountsGrid.innerHTML = [
+    renderAuthSetupChecklist(),
     renderAuthLoginPanel(),
     renderApiStatusSummary(networks),
     renderTrashPanel(),
@@ -6744,6 +6848,19 @@ accountsGrid.addEventListener("click", async (event) => {
       showToast("Redirect de login copiada.");
     } catch {
       showToast(uri);
+    }
+    return;
+  }
+
+  const copyAuthEnvButton = event.target.closest("[data-copy-auth-env]");
+  if (copyAuthEnvButton) {
+    const provider = copyAuthEnvButton.dataset.copyAuthEnv;
+    const snippet = authEnvSnippet(provider, authStatus?.[provider] || {});
+    try {
+      await navigator.clipboard.writeText(snippet);
+      showToast("Variables de login copiadas.");
+    } catch {
+      showToast(snippet);
     }
     return;
   }

@@ -4078,7 +4078,8 @@ input[type="file"]:focus {
     #fff;
 }
 
-.auth-login-panel {
+.auth-login-panel,
+.auth-setup-checklist {
   grid-column: 1 / -1;
   display: grid;
   gap: 14px;
@@ -4091,7 +4092,14 @@ input[type="file"]:focus {
     #fff;
 }
 
-.auth-login-panel > header {
+.auth-setup-checklist {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(0, 149, 246, 0.1), transparent 34%),
+    #fff;
+}
+
+.auth-login-panel > header,
+.auth-setup-checklist > header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
@@ -4099,24 +4107,29 @@ input[type="file"]:focus {
 }
 
 .auth-login-panel h3,
-.auth-login-panel p {
+.auth-login-panel p,
+.auth-setup-checklist h3,
+.auth-setup-checklist p {
   display: block;
   margin: 0;
 }
 
-.auth-login-panel p {
+.auth-login-panel p,
+.auth-setup-checklist p {
   margin-top: 3px;
   color: var(--muted);
   line-height: 1.35;
 }
 
-.auth-login-grid {
+.auth-login-grid,
+.auth-setup-checklist > div {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.auth-login-grid article {
+.auth-login-grid article,
+.auth-setup-checklist article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -4128,7 +4141,8 @@ input[type="file"]:focus {
   background: rgba(255, 255, 255, 0.86);
 }
 
-.auth-login-grid article.ready {
+.auth-login-grid article.ready,
+.auth-setup-checklist article.ready {
   border-color: rgba(21, 128, 61, 0.18);
   background: rgba(240, 253, 244, 0.72);
 }
@@ -4138,7 +4152,8 @@ input[type="file"]:focus {
   box-shadow: inset 0 0 0 1px rgba(0, 149, 246, 0.16);
 }
 
-.auth-provider-main {
+.auth-provider-main,
+.auth-provider-title {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -4146,19 +4161,23 @@ input[type="file"]:focus {
 }
 
 .auth-provider-main strong,
-.auth-provider-main p {
+.auth-provider-main p,
+.auth-provider-title strong,
+.auth-provider-title p {
   display: block;
   min-width: 0;
   margin: 0;
 }
 
-.auth-provider-main p {
+.auth-provider-main p,
+.auth-provider-title p {
   margin-top: 2px;
   color: var(--muted);
   font-size: 0.78rem;
 }
 
-.auth-provider-meta {
+.auth-provider-meta,
+.auth-setup-details {
   grid-column: 1 / -1;
   display: grid;
   gap: 5px;
@@ -4170,18 +4189,22 @@ input[type="file"]:focus {
 }
 
 .auth-provider-meta small,
-.auth-provider-meta code {
+.auth-provider-meta code,
+.auth-setup-details small,
+.auth-setup-details code {
   display: block;
   min-width: 0;
 }
 
-.auth-provider-meta small {
+.auth-provider-meta small,
+.auth-setup-details small {
   color: var(--muted);
   font-size: 0.68rem;
   font-weight: 820;
 }
 
-.auth-provider-meta code {
+.auth-provider-meta code,
+.auth-setup-details code {
   color: var(--ink);
   font-family: inherit;
   font-size: 0.74rem;
@@ -4193,8 +4216,12 @@ input[type="file"]:focus {
 .auth-provider-actions {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-columns: repeat(4, 42px);
   gap: 8px;
+}
+
+.auth-login-panel .auth-provider-actions {
+  grid-template-columns: 42px minmax(0, 1fr);
 }
 
 .auth-provider-actions .social-icon {
@@ -8628,13 +8655,18 @@ input[type="file"] {
   }
 
   .auth-login-panel > header,
+  .auth-setup-checklist > header,
   .auth-login-grid,
-  .auth-login-grid article {
+  .auth-setup-checklist > div,
+  .auth-login-grid article,
+  .auth-setup-checklist article {
     grid-template-columns: 1fr;
   }
 
   .auth-login-panel > header > .pill,
-  .auth-login-grid article > .pill {
+  .auth-setup-checklist > header > .pill,
+  .auth-login-grid article > .pill,
+  .auth-setup-checklist article > .pill {
     justify-self: start;
   }
 
