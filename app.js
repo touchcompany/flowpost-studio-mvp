@@ -288,6 +288,7 @@ let backendEnabled = false;
 let backendProvider = "local";
 let provisioningStatus = null;
 let oauthStatus = null;
+let authStatus = null;
 let apiProbeResults = {};
 let deletedCompanies = [];
 let calendarView = "week";
@@ -4157,6 +4158,8 @@ const socialIcons = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.8 8.9H3.2V21h3.6V8.9ZM5 3a2.1 2.1 0 1 0 0 4.2A2.1 2.1 0 0 0 5 3Zm16 11.3c0-3.6-1.9-5.6-4.8-5.6-2.1 0-3.1 1.2-3.6 2v-1.8H9V21h3.6v-6.1c0-1.6.8-2.8 2.4-2.8 1.4 0 2.1 1 2.1 2.8V21H21v-6.7Z"/></svg>',
   youtube:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 8.2a3 3 0 0 0-2.1-2.1C18 5.6 12 5.6 12 5.6s-6 0-7.9.5A3 3 0 0 0 2 8.2 31.4 31.4 0 0 0 1.5 12c0 1.3.1 2.6.5 3.8a3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5a3 3 0 0 0 2.1-2.1c.4-1.2.5-2.5.5-3.8s-.1-2.6-.5-3.8ZM10 15.4V8.6l6 3.4-6 3.4Z"/></svg>',
+  google:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-1.99 3.02v2.51h3.23c1.89-1.74 2.98-4.3 2.98-7.52Z"/><path fill="#34a853" d="M12 22c2.7 0 4.96-.9 6.62-2.25l-3.23-2.51c-.9.6-2.04.95-3.39.95-2.6 0-4.8-1.76-5.59-4.12H3.07v2.6A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" d="M6.41 14.07a6 6 0 0 1 0-3.82v-2.6H3.07a10 10 0 0 0 0 8.94l3.34-2.52Z"/><path fill="#ea4335" d="M12 5.81c1.47 0 2.8.51 3.84 1.5l2.86-2.86A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.93 5.65l3.34 2.6C7.2 7.57 9.4 5.81 12 5.81Z"/></svg>',
   "google-drive":
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.8 3h6.4l6.3 10.9-3.2 5.6L12 8.6 5.7 19.5 2.5 13.9 8.8 3Z"/><path d="M5.7 19.5h12.6L21.5 14H8.9l-3.2 5.5Z"/></svg>',
 };
@@ -4660,6 +4663,28 @@ async function startOAuthConnection(providerKey) {
     return result;
   } catch {
     return { ready: false, message: "No se pudo consultar el backend de conexion." };
+  }
+}
+
+async function startAuthLogin(providerKey) {
+  const endpoints = {
+    google: "/api/auth/google/start?mode=json",
+    facebook: "/api/auth/facebook/start?mode=json",
+  };
+  const endpoint = endpoints[providerKey];
+  if (!endpoint || window.location.protocol === "file:") {
+    return { ready: false, message: "Abre la app desde el servidor para probar login real." };
+  }
+  try {
+    const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
+    const result = await response.json();
+    if (result.authUrl) {
+      window.location.href = result.authUrl;
+      return { ...result, opened: true };
+    }
+    return result;
+  } catch {
+    return { ready: false, message: "No se pudo preparar el login social." };
   }
 }
 
@@ -5395,6 +5420,7 @@ function renderAccounts() {
     return;
   }
   accountsGrid.innerHTML = [
+    renderAuthLoginPanel(),
     renderApiStatusSummary(networks),
     renderTrashPanel(),
     renderApiEventPanel(networks),
@@ -5467,6 +5493,65 @@ function renderAccounts() {
   renderIcons();
 }
 
+function renderAuthLoginPanel() {
+  const session = currentSession();
+  const providers = [
+    { key: "google", label: "Google", icon: "Google", endpoint: "/api/auth/google/start?mode=json" },
+    { key: "facebook", label: "Facebook", icon: "Facebook", endpoint: "/api/auth/facebook/start?mode=json" },
+  ];
+  const activeProvider = (session.provider || "").toLowerCase();
+  return `
+    <section class="auth-login-panel">
+      <header>
+        <span class="dashboard-icon"><i data-lucide="user-round-check"></i></span>
+        <div>
+          <h3>Login de usuarios</h3>
+          <p>Entrada real para dueños, agencias, miembros del equipo y clientes invitados.</p>
+        </div>
+        <span class="pill ${session.id ? "done" : "muted"}">${session.id ? "Sesion activa" : "Sin sesion"}</span>
+      </header>
+      <div class="auth-login-grid">
+        ${providers
+          .map((provider) => {
+            const setup = authStatus?.[provider.key];
+            const ready = Boolean(setup?.ready);
+            const connected = activeProvider === provider.key;
+            const missing = setup?.missing || [];
+            return `
+              <article class="${ready ? "ready" : "pending"} ${connected ? "connected" : ""}">
+                <div class="auth-provider-main">
+                  ${socialIcon(provider.icon)}
+                  <div>
+                    <strong>${escapeHtml(provider.label)}</strong>
+                    <p>${connected ? "Conectado a la sesion actual" : ready ? "Listo para probar en servidor" : "Faltan credenciales"}</p>
+                  </div>
+                </div>
+                <span class="pill ${connected || ready ? "done" : "muted"}">${connected ? "Activo" : ready ? "Listo" : "Pendiente"}</span>
+                <div class="auth-provider-meta">
+                  <small>Redirect</small>
+                  <code>${escapeHtml(setup?.redirectUri || `https://app.touch.com.co/api/auth/${provider.key}/callback`)}</code>
+                  <small>Scopes</small>
+                  <code>${escapeHtml(setup?.scopes || (provider.key === "google" ? "openid email profile" : "email,public_profile"))}</code>
+                  ${missing.length ? `<small>Falta: ${escapeHtml(missing.join(", "))}</small>` : ""}
+                </div>
+                <div class="auth-provider-actions">
+                  <button class="secondary-button icon-button compact" type="button" data-copy-auth-redirect="${provider.key}" aria-label="Copiar redirect ${provider.label}">
+                    <i data-lucide="copy"></i>
+                  </button>
+                  <button class="connect-button icon-text-button" type="button" data-auth-login="${provider.key}">
+                    ${socialIcon(provider.icon)}
+                    Probar
+                  </button>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderTrashPanel() {
   const rows = deletedCompanies.slice(0, 5);
   return `
@@ -5529,23 +5614,30 @@ async function refreshTrash(showFeedback = false) {
 async function refreshOAuthStatus(showFeedback = false) {
   if (window.location.protocol === "file:") {
     oauthStatus = null;
+    authStatus = null;
     renderAccounts();
     if (showFeedback) showToast("Abre la app desde http://127.0.0.1:4176 para revisar APIs.");
     return;
   }
 
   try {
-    const response = await fetch("/api/oauth/status", { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error("oauth status unavailable");
-    oauthStatus = await response.json();
+    const [oauthResponse, authResponse] = await Promise.all([
+      fetch("/api/oauth/status", { headers: { Accept: "application/json" } }),
+      fetch("/api/auth/status", { headers: { Accept: "application/json" } }),
+    ]);
+    if (!oauthResponse.ok) throw new Error("oauth status unavailable");
+    oauthStatus = await oauthResponse.json();
+    authStatus = authResponse.ok ? await authResponse.json() : null;
     renderAccounts();
     if (showFeedback) {
       const providers = Object.values(oauthStatus);
       const ready = providers.filter((setup) => setup.ready).length;
-      showToast(`${ready}/${providers.length} APIs con credenciales listas.`);
+      const authReady = authStatus ? Object.values(authStatus).filter((setup) => setup.ready).length : 0;
+      showToast(`${ready}/${providers.length} APIs y ${authReady}/2 logins listos.`);
     }
   } catch {
     oauthStatus = null;
+    authStatus = null;
     renderAccounts();
     if (showFeedback) showToast("No se pudo consultar /api/oauth/status.");
   }
@@ -6476,6 +6568,29 @@ queueSummary.addEventListener("click", (event) => {
 });
 
 accountsGrid.addEventListener("click", async (event) => {
+  const authLoginButton = event.target.closest("[data-auth-login]");
+  if (authLoginButton) {
+    const result = await startAuthLogin(authLoginButton.dataset.authLogin);
+    if (result.opened) return;
+    showToast(result.message || `Faltan credenciales: ${(result.missing || []).join(", ")}`);
+    return;
+  }
+
+  const copyAuthRedirectButton = event.target.closest("[data-copy-auth-redirect]");
+  if (copyAuthRedirectButton) {
+    const provider = copyAuthRedirectButton.dataset.copyAuthRedirect;
+    const uri =
+      authStatus?.[provider]?.redirectUri ||
+      `https://app.touch.com.co/api/auth/${provider === "facebook" ? "facebook" : "google"}/callback`;
+    try {
+      await navigator.clipboard.writeText(uri);
+      showToast("Redirect de login copiada.");
+    } catch {
+      showToast(uri);
+    }
+    return;
+  }
+
   const portalButton = event.target.closest("[data-portal-module]");
   if (portalButton) {
     setView(portalButton.dataset.portalModule);
@@ -6658,6 +6773,8 @@ planPanel.addEventListener("click", async (event) => {
     };
     await saveClientSession(nextSession);
     renderAccount();
+    renderAccounts();
+    renderDashboard();
     renderDiagnostics();
     showToast(`Perfil ${roleProfiles[role]?.label || "operativo"} activado.`);
     return;
@@ -6681,6 +6798,8 @@ planPanel.addEventListener("click", async (event) => {
   };
   await saveClientSession(nextSession);
   renderAccount();
+  renderAccounts();
+  renderDashboard();
   renderDiagnostics();
   showToast(`Plan ${planLimits[plan].label} activado en modo demo.`);
 });

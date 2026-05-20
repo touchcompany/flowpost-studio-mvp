@@ -1781,6 +1781,24 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/auth/status") {
+    sendJson(res, 200, {
+      google: {
+        ...oauthSetup("Google Login", ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET"]),
+        redirectUri: authGoogleRedirectUri(req),
+        scopes: "openid email profile",
+        startUrl: "/api/auth/google/start",
+      },
+      facebook: {
+        ...oauthSetup("Facebook Login", ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"]),
+        redirectUri: authFacebookRedirectUri(req),
+        scopes: "email,public_profile",
+        startUrl: "/api/auth/facebook/start",
+      },
+    });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/services/provisioning/status") {
     sendJson(res, 200, {
       cpanel: { ...cpanelSetup(), plans: cpanelPlanConfig() },
