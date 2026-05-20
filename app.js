@@ -6121,6 +6121,15 @@ function renderTechnicalConfig(result) {
     technicalCard("Meta / Instagram / Facebook", result.oauth.meta, result.redirects.meta, result.env.meta),
     technicalCard("TikTok", result.oauth.tiktok, result.redirects.tiktok, result.env.tiktok),
     technicalCard("Login social", { ready: result.auth.google.ready && result.auth.facebook.ready, missing: [...result.auth.google.missing, ...result.auth.facebook.missing] }, `${result.redirects.authGoogle} / ${result.redirects.authFacebook}`, result.env.auth),
+    technicalCard(
+      "IA guiones",
+      {
+        ready: Boolean(result.ai?.ok),
+        missing: result.ai?.ok ? [] : [...(result.ai?.openai?.missing || []), ...(result.ai?.gemini?.missing || [])],
+      },
+      `Preferido: ${result.ai?.preferred || "mock"}`,
+      ["OPENAI_API_KEY", "OPENAI_MODEL", "GEMINI_API_KEY", "GEMINI_MODEL", "AI_PROVIDER"]
+    ),
     technicalCard("Stripe", result.billing, `${result.appUrl}/api/billing/webhook`, result.env.billing),
     technicalCard("Supabase", { ready: result.storage.configured, missing: result.storage.configured ? [] : ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] }, "No aplica", result.env.supabase),
     technicalCard("cPanel / WHM", result.provisioning.cpanel, "WHM API createacct", result.env.cpanel),
@@ -6161,7 +6170,7 @@ async function renderDiagnostics() {
       ...baseCards,
       diagnosticCard("Backend/API", "ok", `Backend activo con proveedor ${result.dataProvider}.`),
       diagnosticCard("Supabase", result.storage.configured ? "ok" : "pending", result.storage.configured ? "Credenciales presentes." : "Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY."),
-      diagnosticCard("IA guiones", result.ai?.preferred !== "mock" ? "ok" : "mock", result.ai?.preferred === "openai" ? `ChatGPT listo (${result.ai.openai.model}).` : result.ai?.preferred === "gemini" ? `Gemini listo (${result.ai.gemini.model}).` : "Sin API key; usa guiones mock editables."),
+      diagnosticCard("IA guiones", result.ai?.ok ? "ok" : "mock", result.ai?.preferred === "openai" ? `ChatGPT listo (${result.ai.openai.model}).` : result.ai?.preferred === "gemini" ? `Gemini listo (${result.ai.gemini.model}).` : "Sin API key; usa guiones mock editables."),
       diagnosticCard("Meta", result.oauth.meta.ready ? "ok" : "pending", result.oauth.meta.ready ? "Credenciales Meta listas." : `Faltan: ${result.oauth.meta.missing.join(", ") || "ninguna"}.`),
       diagnosticCard("TikTok", result.oauth.tiktok.ready ? "ok" : "pending", result.oauth.tiktok.ready ? "Credenciales TikTok listas." : `Faltan: ${result.oauth.tiktok.missing.join(", ") || "ninguna"}.`),
       diagnosticCard("Google Drive", result.oauth.google.ready ? "ok" : "mock", result.oauth.google.ready ? "Credenciales Google listas." : "Usando modo mock hasta configurar Google OAuth."),

@@ -1501,6 +1501,49 @@ function scriptFallback(payload = {}) {
   ].join("\n");
 }
 
+function aiProviderStatus() {
+  const openaiGroups = [["OPENAI_API_KEY"]];
+  const geminiGroups = [["GEMINI_API_KEY"]];
+  const openai = {
+    ...oauthSetupAny("ChatGPT / OpenAI", openaiGroups),
+    provider: "openai",
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    acceptedVariables: ["OPENAI_API_KEY", "OPENAI_MODEL"],
+    detectedVariables: detectedEnvNames(openaiGroups),
+    nextStep: "Guardar OPENAI_API_KEY solo como variable de entorno del servidor.",
+  };
+  const gemini = {
+    ...oauthSetupAny("Gemini", geminiGroups),
+    provider: "gemini",
+    model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+    acceptedVariables: ["GEMINI_API_KEY", "GEMINI_MODEL"],
+    detectedVariables: detectedEnvNames(geminiGroups),
+    nextStep: "Guardar GEMINI_API_KEY solo como variable de entorno del servidor.",
+  };
+  const configuredPreferred = (process.env.AI_PROVIDER || "").toLowerCase();
+  const preferred =
+    configuredPreferred === "gemini" && gemini.ready
+      ? "gemini"
+      : configuredPreferred === "openai" && openai.ready
+        ? "openai"
+        : openai.ready
+          ? "openai"
+          : gemini.ready
+            ? "gemini"
+            : "mock";
+  return {
+    ok: openai.ready || gemini.ready,
+    preferred,
+    configuredPreferred: configuredPreferred || "auto",
+    fallback: "mock",
+    openai,
+    gemini,
+    message: openai.ready || gemini.ready
+      ? `IA lista. Proveedor preferido: ${preferred}.`
+      : "Sin llaves de IA; la app seguira generando fallback editable para no fallar.",
+  };
+}
+
 function aiPromptForScript(payload = {}) {
   const company = payload.company || {};
   const publication = payload.publication || payload;
@@ -1641,11 +1684,7 @@ function diagnostics(req) {
       supabaseBucket: process.env.SUPABASE_STORAGE_BUCKET || "",
       configured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
     },
-    ai: {
-      openai: { ready: Boolean(process.env.OPENAI_API_KEY), model: process.env.OPENAI_MODEL || "gpt-4o-mini" },
-      gemini: { ready: Boolean(process.env.GEMINI_API_KEY), model: process.env.GEMINI_MODEL || "gemini-1.5-flash" },
-      preferred: process.env.OPENAI_API_KEY ? "openai" : process.env.GEMINI_API_KEY ? "gemini" : "mock",
-    },
+    ai: aiProviderStatus(),
     oauth,
     redirects: {
       googleDrive: googleRedirectUri(req),
@@ -1759,8 +1798,7 @@ async function systemStatus(req) {
     meta: oauthSetup("Meta / Instagram", ["META_APP_ID", "META_APP_SECRET"]),
     tiktok: oauthSetup("TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
   };
-  const aiReady = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
-  const aiProvider = process.env.OPENAI_API_KEY ? "ChatGPT/OpenAI" : process.env.GEMINI_API_KEY ? "Gemini" : "Sin proveedor";
+  const ai = aiProviderStatus();
   const billing = oauthSetup("Stripe", ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]);
   const cpanel = cpanelSetup();
   const enom = enomSetup();
@@ -1799,8 +1837,8 @@ async function systemStatus(req) {
     {
       key: "ai",
       label: "Guiones con IA",
-      status: aiReady ? "ok" : "pending",
-      detail: aiReady ? `${aiProvider} listo para generar guiones desde backend.` : "Falta configurar OPENAI_API_KEY o GEMINI_API_KEY.",
+      status: ai.ok ? "ok" : "pending",
+      detail: ai.ok ? `${ai.preferred === "gemini" ? "Gemini" : "ChatGPT/OpenAI"} listo para generar guiones desde backend.` : "Falta configurar OPENAI_API_KEY o GEMINI_API_KEY.",
       action: "Guardar keys solo en variables de entorno del servidor.",
     },
     {
@@ -1967,6 +2005,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/system/status") {
     sendJson(res, 200, await systemStatus(req));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/ai/status") {
+    sendJson(res, 200, aiProviderStatus());
     return;
   }
 
