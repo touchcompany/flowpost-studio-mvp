@@ -1089,7 +1089,7 @@ const viewFeatureMap = {
 
 function canAccessView(viewName, session = currentSession()) {
   if (isClientPortalSession(session)) {
-    return ["dashboard", "library", "calendar", "accounts", "store"].includes(viewName);
+    return clientPortalViewAccess(viewName, session);
   }
   const featureKey = viewFeatureMap[viewName];
   if (!featureKey) return true;
@@ -1103,6 +1103,7 @@ function syncViewEntitlements() {
     const locked = !canAccessView(link.dataset.viewLink, session);
     link.classList.toggle("locked", locked);
     link.setAttribute("aria-disabled", locked ? "true" : "false");
+    link.setAttribute("title", locked ? "Disponible al comprar o activar este servicio" : "");
   });
 }
 
@@ -1639,6 +1640,17 @@ function clientPortalModules(client = clientForCompany()) {
     ...module,
     meta: serviceModuleMeta(module.service),
   }));
+}
+
+function clientPortalViewAccess(viewName, session = currentSession()) {
+  if (!isClientPortalSession(session)) return true;
+  if (["dashboard", "store"].includes(viewName)) return true;
+  const enabledViews = new Set(
+    clientPortalModules(clientForCompany())
+      .filter((module) => module.enabled)
+      .map((module) => module.meta.view)
+  );
+  return enabledViews.has(viewName);
 }
 
 function renderClientPortalAccess(client = clientForCompany(), options = {}) {
@@ -3667,9 +3679,13 @@ function setView(viewName, options = {}) {
   syncViewEntitlements();
   if (!canAccessView(targetView)) {
     const lockedFeature = featureCatalog.find((item) => item.key === viewFeatureMap[targetView]);
-    targetView = "accounts";
+    targetView = isClientPortalSession() ? "store" : "accounts";
     if (!options.silent) {
-      showToast(`${lockedFeature?.label || "Esta seccion"} se activa al comprar un plan compatible.`);
+      showToast(
+        isClientPortalSession()
+          ? "Este modulo se activa cuando compras el servicio correspondiente."
+          : `${lockedFeature?.label || "Esta seccion"} se activa al comprar un plan compatible.`
+      );
     }
   }
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
@@ -3708,6 +3724,42 @@ function dashboardInsight(icon, title, detail, action, view) {
         ${escapeHtml(action)}
       </button>
     </article>
+  `;
+}
+
+function renderAccessSummary(company, client) {
+  const session = currentSession();
+  const usage = planUsage();
+  const enabledFeatures = featureCatalog.filter((feature) => featureEnabled(feature, session));
+  const lockedFeatures = featureCatalog.filter((feature) => !featureEnabled(feature, session));
+  const orders = client ? clientServiceOrders(client.id) : [];
+  const activeModules = client ? clientPortalModules(client).filter((module) => module.enabled) : [];
+  const role = roleProfiles[session.role] || roleProfiles.business_owner;
+  return `
+    <section class="dashboard-access-summary">
+      <article>
+        <span class="dashboard-icon"><i data-lucide="${role.icon}"></i></span>
+        <div>
+          <span class="workspace-label">Cuenta operativa</span>
+          <strong>${escapeHtml(role.label)} · ${escapeHtml(usage.limit.label)}</strong>
+          <p>${enabledFeatures.length} modulos activos${lockedFeatures.length ? ` · ${lockedFeatures.length} por activar` : " · acceso completo"}</p>
+        </div>
+        <button class="secondary-button icon-button compact" type="button" data-dashboard-action="accounts" aria-label="Ver cuenta y plan">
+          <i data-lucide="settings-2"></i>
+        </button>
+      </article>
+      <article>
+        <span class="dashboard-icon"><i data-lucide="shopping-bag"></i></span>
+        <div>
+          <span class="workspace-label">Servicios del cliente</span>
+          <strong>${escapeHtml(client?.name || company.name)}</strong>
+          <p>${orders.length} compra${orders.length === 1 ? "" : "s"} · ${activeModules.length} modulo${activeModules.length === 1 ? "" : "s"} visible${activeModules.length === 1 ? "" : "s"} en su panel</p>
+        </div>
+        <button class="primary-button icon-button compact" type="button" data-dashboard-action="store" aria-label="Comprar servicios">
+          <i data-lucide="plus"></i>
+        </button>
+      </article>
+    </section>
   `;
 }
 
@@ -3852,6 +3904,7 @@ function renderDashboard() {
     }
 
     ${isClientPortalSession() ? renderClientPortalAccess(client, { compact: true }) : ""}
+    ${!isClientPortalSession() ? renderAccessSummary(company, client) : ""}
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}

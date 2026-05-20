@@ -5625,6 +5625,46 @@ input[type="file"] {
   margin-bottom: 16px;
 }
 
+.dashboard-access-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard-access-summary article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.dashboard-access-summary strong,
+.dashboard-access-summary p {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-access-summary strong {
+  margin-top: 2px;
+  font-size: 0.98rem;
+}
+
+.dashboard-access-summary p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .portal-notice {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -7890,6 +7930,7 @@ input[type="file"] {
   .automation-hero,
   .automation-connectors,
   .automation-layout,
+  .dashboard-access-summary,
   .dashboard-metrics,
   .dashboard-grid,
   .client-command-center {
@@ -7973,6 +8014,7 @@ input[type="file"] {
   .document-grid,
   .document-line,
   .client-order-row,
+  .dashboard-access-summary article,
   .dashboard-insights article,
   .prompt-list article,
   .client-edit-grid {
