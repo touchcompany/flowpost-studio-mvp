@@ -13,6 +13,7 @@ const HOST = process.env.HOST || "127.0.0.1";
 const ROOT = __dirname;
 const store = createDataStore();
 const oauthStates = new Set();
+const SESSION_COOKIE = "flowpost_session_id";
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -51,6 +52,37 @@ function sendHtml(res, status, html) {
     "Content-Length": Buffer.byteLength(html),
   });
   res.end(html);
+}
+
+function parseCookies(req) {
+  return String(req.headers.cookie || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .reduce((cookies, item) => {
+      const index = item.indexOf("=");
+      if (index === -1) return cookies;
+      const key = decodeURIComponent(item.slice(0, index));
+      const value = decodeURIComponent(item.slice(index + 1));
+      return { ...cookies, [key]: value };
+    }, {});
+}
+
+function sessionIdFromRequest(req) {
+  return parseCookies(req)[SESSION_COOKIE] || "";
+}
+
+function setSessionCookie(res, sessionId) {
+  if (!sessionId) return;
+  const secure = process.env.NODE_ENV === "production" || (process.env.APP_PUBLIC_URL || "").startsWith("https://");
+  res.setHeader(
+    "Set-Cookie",
+    `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${secure ? "; Secure" : ""}`
+  );
+}
+
+function clearSessionCookie(res) {
+  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 }
 
 function sendOAuthCallbackPage(res, payload) {
@@ -384,10 +416,10 @@ async function lookupInvitation(token) {
   };
 }
 
-async function currentStoredSession() {
+async function currentStoredSession(req) {
   if (!store.getSession) return null;
   try {
-    return await store.getSession();
+    return await store.getSession(sessionIdFromRequest(req));
   } catch {
     return null;
   }
@@ -1699,7 +1731,7 @@ async function handleApi(req, res, url) {
       sendJson(res, 200, { session: null, provider: store.provider });
       return;
     }
-    sendJson(res, 200, { session: await store.getSession(), provider: store.provider });
+    sendJson(res, 200, { session: await store.getSession(sessionIdFromRequest(req)), provider: store.provider });
     return;
   }
 
@@ -1711,6 +1743,7 @@ async function handleApi(req, res, url) {
 
   if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/invitations/accept") {
     const result = await acceptInvitation(await readBody(req));
+    if (result.session?.id) setSessionCookie(res, result.session.id);
     sendJson(res, result.status, result);
     return;
   }
@@ -1721,7 +1754,9 @@ async function handleApi(req, res, url) {
       return;
     }
     const payload = normalizeSession(await readBody(req));
-    sendJson(res, 200, { session: await store.saveSession(payload), provider: store.provider });
+    const session = await store.saveSession(payload);
+    setSessionCookie(res, session.id);
+    sendJson(res, 200, { session, provider: store.provider });
     return;
   }
 
@@ -1730,7 +1765,8 @@ async function handleApi(req, res, url) {
       sendError(res, 501, "session store unavailable");
       return;
     }
-    await store.deleteSession();
+    await store.deleteSession(sessionIdFromRequest(req));
+    clearSessionCookie(res);
     sendJson(res, 200, { session: null, provider: store.provider });
     return;
   }
@@ -1892,7 +1928,8 @@ async function handleApi(req, res, url) {
     try {
       const tokens = await exchangeAuthGoogleCode(req, code);
       const profile = await fetchGoogleAuthProfile(tokens.access_token);
-      await saveAuthSession("google", profile);
+      const session = await saveAuthSession("google", profile);
+      setSessionCookie(res, session.id);
       redirect(res, authSuccessUrl());
     } catch (error) {
       sendOAuthCallbackPage(res, {
@@ -1956,7 +1993,8 @@ async function handleApi(req, res, url) {
     try {
       const tokens = await exchangeAuthFacebookCode(req, code);
       const profile = await fetchFacebookAuthProfile(tokens.access_token);
-      await saveAuthSession("facebook", profile);
+      const session = await saveAuthSession("facebook", profile);
+      setSessionCookie(res, session.id);
       redirect(res, authSuccessUrl());
     } catch (error) {
       sendOAuthCallbackPage(res, {
@@ -2297,7 +2335,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/state") {
     const state = await store.getState();
-    sendJson(res, 200, filterStateForSession(state, await currentStoredSession()));
+    sendJson(res, 200, filterStateForSession(state, await currentStoredSession(req)));
     return;
   }
 
@@ -2308,7 +2346,7 @@ async function handleApi(req, res, url) {
       sendError(res, 400, validationError);
       return;
     }
-    const session = await currentStoredSession();
+    const session = await currentStoredSession(req);
     if (isClientSession(session)) {
       const currentState = await store.getState();
       const nextState = mergeClientScopedRecords(currentState, payload, session);
