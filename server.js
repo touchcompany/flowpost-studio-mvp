@@ -136,6 +136,19 @@ function stateSecret() {
   );
 }
 
+function oauthStateStatus() {
+  const detected = ["OAUTH_STATE_SECRET", "SESSION_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "CPANEL_WHM_TOKEN"].find((name) => Boolean(process.env[name]));
+  return {
+    ready: Boolean(detected),
+    detectedVariable: detected || "",
+    acceptedVariables: ["OAUTH_STATE_SECRET", "SESSION_SECRET"],
+    fallbackVariables: ["SUPABASE_SERVICE_ROLE_KEY", "CPANEL_WHM_TOKEN"],
+    message: detected
+      ? `Estado OAuth firmado con ${detected}.`
+      : "Usando secreto de desarrollo; configura OAUTH_STATE_SECRET para produccion.",
+  };
+}
+
 function base64UrlJson(payload) {
   return Buffer.from(JSON.stringify(payload)).toString("base64url");
 }
@@ -1708,6 +1721,7 @@ function diagnostics(req) {
     auth: {
       google: authProviderStatus(req, "google"),
       facebook: authProviderStatus(req, "facebook"),
+      state: oauthStateStatus(),
     },
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
@@ -2165,6 +2179,7 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, {
       google: authProviderStatus(req, "google"),
       facebook: authProviderStatus(req, "facebook"),
+      state: oauthStateStatus(),
     });
     return;
   }

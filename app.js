@@ -6121,6 +6121,7 @@ function renderTechnicalConfig(result) {
     technicalCard("Meta / Instagram / Facebook", result.oauth.meta, result.redirects.meta, result.env.meta),
     technicalCard("TikTok", result.oauth.tiktok, result.redirects.tiktok, result.env.tiktok),
     technicalCard("Login social", { ready: result.auth.google.ready && result.auth.facebook.ready, missing: [...result.auth.google.missing, ...result.auth.facebook.missing] }, `${result.redirects.authGoogle} / ${result.redirects.authFacebook}`, result.env.auth),
+    technicalCard("Seguridad OAuth", { ready: result.auth.state?.ready, missing: result.auth.state?.ready ? [] : ["OAUTH_STATE_SECRET"] }, "Firma de state", ["OAUTH_STATE_SECRET", "SESSION_SECRET"]),
     technicalCard(
       "IA guiones",
       {

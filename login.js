@@ -71,11 +71,20 @@ function renderAuthReadiness(status = null) {
   }
   const providers = ["google", "facebook"];
   const ready = providers.filter((provider) => status[provider]?.ready).length;
+  const stateReady = Boolean(status.state?.ready);
   authReadinessPanel.innerHTML = `
     <header>
       <strong>${ready}/2 logins sociales listos</strong>
       <button type="button" data-refresh-auth-status>Actualizar</button>
     </header>
+    <article class="${stateReady ? "ready" : "pending"}">
+      <div>
+        <strong>Seguridad OAuth</strong>
+        <p>${escapeHtml(status.state?.message || "Configura OAUTH_STATE_SECRET para firmar el login.")}</p>
+        <small>${stateReady ? `Detectado: ${escapeHtml(status.state.detectedVariable || "")}` : "Variable recomendada: OAUTH_STATE_SECRET"}</small>
+      </div>
+      <button type="button" data-copy-auth-secret>Copiar variable</button>
+    </article>
     ${providers
       .map((provider) => {
         const setup = status[provider] || {};
@@ -343,6 +352,17 @@ authReadinessPanel?.addEventListener("click", async (event) => {
     try {
       await navigator.clipboard.writeText(snippet);
       setStatus(`Variables de ${providerLabel(provider)} copiadas.`);
+    } catch {
+      setStatus(snippet);
+    }
+  }
+
+  const copySecretButton = event.target.closest("[data-copy-auth-secret]");
+  if (copySecretButton) {
+    const snippet = "OAUTH_STATE_SECRET=pega-una-cadena-larga-segura";
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setStatus("Variable OAUTH_STATE_SECRET copiada.");
     } catch {
       setStatus(snippet);
     }
