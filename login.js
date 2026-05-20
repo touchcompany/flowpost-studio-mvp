@@ -72,11 +72,20 @@ function renderAuthReadiness(status = null) {
   const providers = ["google", "facebook"];
   const ready = providers.filter((provider) => status[provider]?.ready).length;
   const stateReady = Boolean(status.state?.ready);
+  const adminReady = Boolean(status.superAdmin?.ready);
   authReadinessPanel.innerHTML = `
     <header>
       <strong>${ready}/2 logins sociales listos</strong>
       <button type="button" data-refresh-auth-status>Actualizar</button>
     </header>
+    <article class="${adminReady ? "ready" : "pending"}">
+      <div>
+        <strong>Super admin</strong>
+        <p>${escapeHtml(status.superAdmin?.message || "Define SUPER_ADMIN_EMAILS para dar acceso total por correo.")}</p>
+        <small>${adminReady ? "Lista de correos configurada en el servidor." : "Variable recomendada: SUPER_ADMIN_EMAILS"}</small>
+      </div>
+      <button type="button" data-copy-admin-emails>Copiar variable</button>
+    </article>
     <article class="${stateReady ? "ready" : "pending"}">
       <div>
         <strong>Seguridad OAuth</strong>
@@ -363,6 +372,17 @@ authReadinessPanel?.addEventListener("click", async (event) => {
     try {
       await navigator.clipboard.writeText(snippet);
       setStatus("Variable OAUTH_STATE_SECRET copiada.");
+    } catch {
+      setStatus(snippet);
+    }
+  }
+
+  const copyAdminEmailsButton = event.target.closest("[data-copy-admin-emails]");
+  if (copyAdminEmailsButton) {
+    const snippet = "SUPER_ADMIN_EMAILS=ia@touch.com.co";
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setStatus("Variable SUPER_ADMIN_EMAILS copiada.");
     } catch {
       setStatus(snippet);
     }

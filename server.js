@@ -116,14 +116,17 @@ async function sessionFromRequest(req) {
 
 function sessionCanManageProfile(session, profileId) {
   if (!session?.id) return false;
-  const identity = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase();
-  return session.role === "super_admin" || identity.includes("touch") || session.id === profileId;
+  return sessionIsSuperAdmin(session) || session.id === profileId;
 }
 
 function sessionIsSuperAdmin(session) {
   if (!session?.id) return false;
   const identity = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase();
-  return session.role === "super_admin" || identity.includes("touch");
+  const adminEmails = (process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  return session.role === "super_admin" || identity.includes("touch") || adminEmails.includes(String(session.email || "").toLowerCase());
 }
 
 function stateSecret() {
@@ -397,9 +400,17 @@ function normalizeSession(payload) {
     pro: "Pro",
     agency: "Agencia",
   };
+  const roleLabels = {
+    super_admin: "Super admin",
+    agency_owner: "Agencia",
+    business_owner: "Empresa",
+    creator: "Creador",
+    client_user: "Cliente invitado",
+  };
   const identity = `${payload.id || ""} ${payload.name || ""} ${payload.email || ""}`.toLowerCase();
-  const isTouch = identity.includes("touch");
+  const isTouch = identity.includes("touch") || sessionIsSuperAdmin({ ...payload, id: payload.id || "pending-profile" });
   const plan = isTouch ? "agency" : planLabels[payload.plan] ? payload.plan : "starter";
+  const role = isTouch ? "super_admin" : payload.role || (plan === "agency" ? "agency_owner" : "business_owner");
   return {
     id: payload.id || (isTouch ? "touch-super-admin" : "demo-profile"),
     name: payload.name || (isTouch ? "Touch Studio" : "Usuario MVP"),
@@ -407,8 +418,8 @@ function normalizeSession(payload) {
     provider: payload.provider || "demo",
     plan,
     planLabel: isTouch ? "Touch Super Admin" : planLabels[plan],
-    role: isTouch ? "super_admin" : payload.role || (plan === "agency" ? "agency_owner" : "business_owner"),
-    roleLabel: payload.roleLabel || "",
+    role,
+    roleLabel: payload.roleLabel || roleLabels[role] || "",
     companyAccess: Array.isArray(payload.companyAccess) ? payload.companyAccess : [],
     inviteToken: payload.inviteToken || "",
     status: isTouch ? "active" : payload.status || "trial",
@@ -1713,6 +1724,7 @@ function diagnostics(req) {
       meta: ["META_APP_ID", "META_APP_SECRET", "META_REDIRECT_URI"],
       tiktok: ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET", "TIKTOK_REDIRECT_URI", "TIKTOK_SCOPES"],
       auth: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"],
+      superAdmin: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS"],
       billing: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"],
       supabase: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_STORAGE_BUCKET"],
       cpanel: ["CPANEL_WHM_HOST", "CPANEL_WHM_USERNAME", "CPANEL_WHM_TOKEN", "CPANEL_DEFAULT_PLAN", "CPANEL_PLAN_HOSTING", "CPANEL_PLAN_WEBSITE"],
@@ -1722,6 +1734,11 @@ function diagnostics(req) {
       google: authProviderStatus(req, "google"),
       facebook: authProviderStatus(req, "facebook"),
       state: oauthStateStatus(),
+      superAdmin: {
+        ready: Boolean(process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS),
+        acceptedVariables: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS"],
+        message: "Define correos separados por coma para dar acceso total sin tocar codigo.",
+      },
     },
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
@@ -2180,6 +2197,11 @@ async function handleApi(req, res, url) {
       google: authProviderStatus(req, "google"),
       facebook: authProviderStatus(req, "facebook"),
       state: oauthStateStatus(),
+      superAdmin: {
+        ready: Boolean(process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS),
+        acceptedVariables: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS"],
+        message: "Define correos separados por coma para dar acceso total sin tocar codigo.",
+      },
     });
     return;
   }
