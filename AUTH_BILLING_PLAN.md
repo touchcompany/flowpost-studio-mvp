@@ -27,7 +27,7 @@ AUTH_GOOGLE_REDIRECT_URI=https://TU_DOMINIO.com/api/auth/google/callback
 /api/auth/google/start
 ```
 
-El MVP todavia no intercambia el `code` por tokens ni crea sesion real. El siguiente paso recomendado es usar Supabase Auth para manejar usuarios, sesiones y proveedores sociales.
+El backend ya intercambia el `code` por tokens, consulta el perfil `openid email profile`, guarda la sesion en el proveedor de datos activo y redirige a `/index.html#dashboard`. La clave secreta nunca se expone en el frontend.
 
 ## Login con Facebook
 
@@ -53,7 +53,7 @@ AUTH_FACEBOOK_REDIRECT_URI=https://TU_DOMINIO.com/api/auth/facebook/callback
 /api/auth/facebook/start
 ```
 
-Este login es para crear cuenta en Flowpost Studio. Es distinto de Meta OAuth para publicar en Instagram/Facebook, que usa permisos de paginas e Instagram Business.
+El backend ya intercambia el `code` por un token de acceso, consulta `id,name,email`, guarda la sesion y redirige al dashboard. Este login es para crear cuenta en Flowpost Studio. Es distinto de Meta OAuth para publicar en Instagram/Facebook, que usa permisos de paginas e Instagram Business.
 
 ## Pagos con Stripe
 

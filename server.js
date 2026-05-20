@@ -1167,6 +1167,85 @@ function authFacebookRedirectUri(req) {
   return process.env.AUTH_FACEBOOK_REDIRECT_URI || `${publicUrl(req)}/api/auth/facebook/callback`;
 }
 
+function authSuccessUrl() {
+  return "/index.html#dashboard";
+}
+
+async function readJsonResponse(response, fallbackMessage) {
+  const text = await response.text();
+  let payload = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = { message: text };
+  }
+  if (!response.ok) {
+    throw new Error(payload.error_description || payload.error?.message || payload.error || payload.message || fallbackMessage);
+  }
+  return payload;
+}
+
+async function exchangeAuthGoogleCode(req, code) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.AUTH_GOOGLE_CLIENT_ID,
+      client_secret: process.env.AUTH_GOOGLE_CLIENT_SECRET,
+      redirect_uri: authGoogleRedirectUri(req),
+      grant_type: "authorization_code",
+    }),
+  });
+  return readJsonResponse(response, "No se pudo iniciar sesion con Google.");
+}
+
+async function fetchGoogleAuthProfile(accessToken) {
+  const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+  });
+  return readJsonResponse(response, "No se pudo leer el perfil de Google.");
+}
+
+async function exchangeAuthFacebookCode(req, code) {
+  const tokenUrl = new URL("https://graph.facebook.com/v20.0/oauth/access_token");
+  tokenUrl.searchParams.set("client_id", process.env.AUTH_FACEBOOK_APP_ID);
+  tokenUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
+  tokenUrl.searchParams.set("client_secret", process.env.AUTH_FACEBOOK_APP_SECRET);
+  tokenUrl.searchParams.set("code", code);
+
+  const response = await fetch(tokenUrl, { headers: { Accept: "application/json" } });
+  return readJsonResponse(response, "No se pudo iniciar sesion con Facebook.");
+}
+
+async function fetchFacebookAuthProfile(accessToken) {
+  const profileUrl = new URL("https://graph.facebook.com/me");
+  profileUrl.searchParams.set("fields", "id,name,email");
+  profileUrl.searchParams.set("access_token", accessToken);
+
+  const response = await fetch(profileUrl, { headers: { Accept: "application/json" } });
+  return readJsonResponse(response, "No se pudo leer el perfil de Facebook.");
+}
+
+async function saveAuthSession(provider, profile) {
+  if (!store.saveSession) {
+    throw new Error("El proveedor de datos no puede guardar sesiones.");
+  }
+  const isGoogle = provider === "google";
+  const providerLabel = isGoogle ? "google" : "facebook";
+  const providerId = isGoogle ? profile.sub : profile.id;
+  const session = normalizeSession({
+    id: `auth-${providerLabel}-${providerId || slugify(profile.email || profile.name || Date.now())}`,
+    name: profile.name || (isGoogle ? "Usuario Google" : "Usuario Facebook"),
+    email: profile.email || "",
+    provider: providerLabel,
+    plan: "starter",
+    status: "active",
+    role: "business_owner",
+  });
+  return store.saveSession(session);
+}
+
 function oauthSetup(platform, required) {
   const missing = missingEnv(required);
   return {
@@ -1763,6 +1842,7 @@ async function handleApi(req, res, url) {
     authUrl.searchParams.set("scope", "openid email profile");
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("include_granted_scopes", "true");
+    authUrl.searchParams.set("prompt", "select_account");
 
     if (url.searchParams.get("mode") === "json") {
       sendJson(res, 200, {
@@ -1791,12 +1871,19 @@ async function handleApi(req, res, url) {
       sendError(res, 400, "missing authorization code");
       return;
     }
-    sendJson(res, 200, {
-      ok: true,
-      provider: "Google Login",
-      mode: "auth-callback-ready",
-      next: "Exchange this code server-side, create or find the user in Supabase Auth, then create a session cookie.",
-    });
+    try {
+      const tokens = await exchangeAuthGoogleCode(req, code);
+      const profile = await fetchGoogleAuthProfile(tokens.access_token);
+      await saveAuthSession("google", profile);
+      redirect(res, authSuccessUrl());
+    } catch (error) {
+      sendOAuthCallbackPage(res, {
+        ok: false,
+        provider: "Google Login",
+        mode: "auth-error",
+        next: error.message || "Revisa las credenciales OAuth de Google y vuelve a intentar.",
+      });
+    }
     return;
   }
 
@@ -1848,12 +1935,19 @@ async function handleApi(req, res, url) {
       sendError(res, 400, "missing authorization code");
       return;
     }
-    sendJson(res, 200, {
-      ok: true,
-      provider: "Facebook Login",
-      mode: "auth-callback-ready",
-      next: "Exchange this code server-side, create or find the user in Supabase Auth, then create a session cookie.",
-    });
+    try {
+      const tokens = await exchangeAuthFacebookCode(req, code);
+      const profile = await fetchFacebookAuthProfile(tokens.access_token);
+      await saveAuthSession("facebook", profile);
+      redirect(res, authSuccessUrl());
+    } catch (error) {
+      sendOAuthCallbackPage(res, {
+        ok: false,
+        provider: "Facebook Login",
+        mode: "auth-error",
+        next: error.message || "Revisa las credenciales OAuth de Facebook y vuelve a intentar.",
+      });
+    }
     return;
   }
 
