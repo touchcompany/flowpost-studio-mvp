@@ -244,6 +244,8 @@ Ver [AUTH_BILLING_PLAN.md](./AUTH_BILLING_PLAN.md) para conectar Google Login, F
 
 Google Login y Facebook Login ya funcionan desde backend cuando existen las variables `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET`, `AUTH_FACEBOOK_APP_ID` y `AUTH_FACEBOOK_APP_SECRET`. Para evitar duplicar configuracion, Google Login tambien acepta `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`; Facebook Login tambien acepta `META_APP_ID`/`META_APP_SECRET` o `FACEBOOK_APP_ID`/`FACEBOOK_APP_SECRET`. Los callbacks guardan la sesion en el proveedor activo (`DATA_PROVIDER=local` o `DATA_PROVIDER=supabase`) y vuelven al dashboard.
 
+Para cPanel/Passenger se recomienda configurar `OAUTH_STATE_SECRET` con un texto largo y secreto. Esto permite validar el callback de Google/Facebook aunque el proceso Node se reinicie entre el inicio de sesion y el regreso del proveedor.
+
 Stripe Checkout ya crea sesiones reales desde backend si existen `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO` y `STRIPE_PRICE_AGENCY`.
 El webhook de Stripe esta en `/api/billing/webhook` y requiere `STRIPE_WEBHOOK_SECRET`.
 

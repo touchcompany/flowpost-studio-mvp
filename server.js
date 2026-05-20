@@ -89,6 +89,49 @@ function sessionIsSuperAdmin(session) {
   return session.role === "super_admin" || identity.includes("touch");
 }
 
+function stateSecret() {
+  return (
+    process.env.OAUTH_STATE_SECRET ||
+    process.env.SESSION_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.CPANEL_WHM_TOKEN ||
+    "flowpost-dev-state-secret"
+  );
+}
+
+function base64UrlJson(payload) {
+  return Buffer.from(JSON.stringify(payload)).toString("base64url");
+}
+
+function signStatePayload(encodedPayload) {
+  return crypto.createHmac("sha256", stateSecret()).update(encodedPayload).digest("base64url");
+}
+
+function signedOAuthState(provider) {
+  const payload = base64UrlJson({
+    provider,
+    nonce: crypto.randomBytes(16).toString("hex"),
+    iat: Date.now(),
+  });
+  return `${payload}.${signStatePayload(payload)}`;
+}
+
+function verifySignedOAuthState(state, provider, maxAgeMs = 15 * 60 * 1000) {
+  if (!state || !state.includes(".")) return false;
+  const [payload, signature] = state.split(".");
+  if (!payload || !signature) return false;
+  const expected = signStatePayload(payload);
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) return false;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return parsed.provider === provider && Number.isFinite(parsed.iat) && Date.now() - parsed.iat <= maxAgeMs;
+  } catch {
+    return false;
+  }
+}
+
 function setSessionCookie(res, sessionId) {
   if (!sessionId) return;
   const secure = process.env.NODE_ENV === "production" || (process.env.APP_PUBLIC_URL || "").startsWith("https://");
@@ -2082,8 +2125,7 @@ async function handleApi(req, res, url) {
       return;
     }
 
-    const state = randomState("auth-google");
-    oauthStates.add(state);
+    const state = signedOAuthState("auth-google");
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.searchParams.set("client_id", authGoogleClientId());
     authUrl.searchParams.set("redirect_uri", authGoogleRedirectUri(req));
@@ -2111,11 +2153,10 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/auth/google/callback") {
     const state = url.searchParams.get("state");
     const code = url.searchParams.get("code");
-    if (!state || !oauthStates.has(state)) {
+    if (!verifySignedOAuthState(state, "auth-google")) {
       sendError(res, 400, "invalid oauth state");
       return;
     }
-    oauthStates.delete(state);
     if (!code) {
       sendError(res, 400, "missing authorization code");
       return;
@@ -2153,8 +2194,7 @@ async function handleApi(req, res, url) {
       return;
     }
 
-    const state = randomState("auth-facebook");
-    oauthStates.add(state);
+    const state = signedOAuthState("auth-facebook");
     const authUrl = new URL("https://www.facebook.com/v20.0/dialog/oauth");
     authUrl.searchParams.set("client_id", authFacebookAppId());
     authUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
@@ -2179,11 +2219,10 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/auth/facebook/callback") {
     const state = url.searchParams.get("state");
     const code = url.searchParams.get("code");
-    if (!state || !oauthStates.has(state)) {
+    if (!verifySignedOAuthState(state, "auth-facebook")) {
       sendError(res, 400, "invalid oauth state");
       return;
     }
-    oauthStates.delete(state);
     if (!code) {
       sendError(res, 400, "missing authorization code");
       return;
