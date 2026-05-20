@@ -1567,6 +1567,98 @@ async function supabaseConnectionCheck() {
   }
 }
 
+async function systemStatus(req) {
+  const supabase = await supabaseConnectionCheck();
+  const auth = {
+    google: oauthSetup("Google Login", ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET"]),
+    facebook: oauthSetup("Facebook Login", ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"]),
+  };
+  const oauth = {
+    googleDrive: oauthSetup("Google Drive", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
+    meta: oauthSetup("Meta / Instagram", ["META_APP_ID", "META_APP_SECRET"]),
+    tiktok: oauthSetup("TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
+  };
+  const billing = oauthSetup("Stripe", ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]);
+  const cpanel = cpanelSetup();
+  const enom = enomSetup();
+  const publicReady = (process.env.APP_PUBLIC_URL || publicUrl(req)).startsWith("https://app.touch.com.co");
+  const publishingEnabled = process.env.ENABLE_REAL_PUBLISHING === "true";
+  const provisioningEnabled = process.env.ENABLE_REAL_PROVISIONING === "true";
+  const checks = [
+    {
+      key: "backend",
+      label: "Backend online",
+      status: publicReady ? "ok" : "warning",
+      detail: publicReady ? "Dominio publico configurado para OAuth y webhooks." : "APP_PUBLIC_URL debe apuntar a https://app.touch.com.co.",
+      action: "Configurar APP_PUBLIC_URL y reiniciar Node.",
+    },
+    {
+      key: "supabase",
+      label: "Base de datos",
+      status: supabase.ok && store.provider === "supabase" ? "ok" : "pending",
+      detail: supabase.ok ? `Supabase conectado con bucket ${supabase.bucket || "sin bucket"}.` : supabase.message,
+      action: "Usar DATA_PROVIDER=supabase y revisar SUPABASE_SERVICE_ROLE_KEY.",
+    },
+    {
+      key: "login",
+      label: "Login Google/Facebook",
+      status: auth.google.ready && auth.facebook.ready ? "ok" : "pending",
+      detail: `${auth.google.ready ? "Google listo" : `Google falta ${auth.google.missing.join(", ")}`} · ${auth.facebook.ready ? "Facebook listo" : `Facebook falta ${auth.facebook.missing.join(", ")}`}`,
+      action: "Completar credenciales AUTH_* y registrar callbacks.",
+    },
+    {
+      key: "drive",
+      label: "Google Drive",
+      status: oauth.googleDrive.ready ? "ok" : "pending",
+      detail: oauth.googleDrive.ready ? "OAuth de Drive listo para seleccionar videos." : `Faltan ${oauth.googleDrive.missing.join(", ")}.`,
+      action: "Configurar GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REDIRECT_URI.",
+    },
+    {
+      key: "meta",
+      label: "Instagram/Facebook",
+      status: oauth.meta.ready ? "ok" : "pending",
+      detail: oauth.meta.ready ? "Meta OAuth preparado para cuentas y publicacion." : `Faltan ${oauth.meta.missing.join(", ")}.`,
+      action: "Completar app Meta, permisos y redirect URI.",
+    },
+    {
+      key: "tiktok",
+      label: "TikTok",
+      status: oauth.tiktok.ready ? "ok" : "pending",
+      detail: oauth.tiktok.ready ? "TikTok OAuth preparado para revision y Content Posting API." : `Faltan ${oauth.tiktok.missing.join(", ")}.`,
+      action: "Completar app TikTok y revision de producto.",
+    },
+    {
+      key: "billing",
+      label: "Pagos",
+      status: billing.ready ? "ok" : "pending",
+      detail: billing.ready ? "Stripe Checkout y webhook configurados." : `Faltan ${billing.missing.join(", ")}.`,
+      action: "Configurar Stripe y webhook /api/billing/webhook.",
+    },
+    {
+      key: "provisioning",
+      label: "Hosting y dominios",
+      status: cpanel.ready && enom.ready ? (provisioningEnabled ? "ok" : "warning") : "pending",
+      detail: `${cpanel.ready ? "cPanel listo" : `cPanel falta ${cpanel.missing.join(", ")}`} · ${enom.ready ? "eNom listo" : `eNom falta ${enom.missing.join(", ")}`}.`,
+      action: provisioningEnabled ? "Provisionamiento real habilitado." : "Mantener ENABLE_REAL_PROVISIONING=false hasta terminar pruebas controladas.",
+    },
+    {
+      key: "publishing",
+      label: "Publicacion automatica",
+      status: publishingEnabled ? "warning" : "pending",
+      detail: publishingEnabled ? "Envio real habilitado. Validar permisos antes de publicar." : "Envio real desactivado por seguridad.",
+      action: "Activar solo cuando Meta/TikTok aprueben permisos y QA este completo.",
+    },
+  ];
+
+  return {
+    ok: checks.every((check) => check.status === "ok"),
+    appUrl: publicUrl(req),
+    dataProvider: store.provider,
+    checkedAt: new Date().toISOString(),
+    checks,
+  };
+}
+
 function adminTokenValid(req, url) {
   const expectedToken = process.env.ADMIN_MIGRATION_TOKEN || "";
   if (!expectedToken) return false;
@@ -1674,6 +1766,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/supabase/check") {
     sendJson(res, 200, await supabaseConnectionCheck());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/system/status") {
+    sendJson(res, 200, await systemStatus(req));
     return;
   }
 

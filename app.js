@@ -289,6 +289,7 @@ let backendProvider = "local";
 let provisioningStatus = null;
 let oauthStatus = null;
 let authStatus = null;
+let systemStatusData = null;
 let apiProbeResults = {};
 let deletedCompanies = [];
 let calendarView = "week";
@@ -5756,6 +5757,53 @@ function realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights
   `;
 }
 
+function renderSystemStatusPanel() {
+  const checks = systemStatusData?.checks || [];
+  if (!checks.length) {
+    return `
+      <section class="system-status-panel">
+        <header>
+          <span class="status-icon"><i data-lucide="radar"></i></span>
+          <div>
+            <h3>Estado real del sistema</h3>
+            <p>Consulta el servidor online para ver que conectores estan listos.</p>
+          </div>
+          <span class="pill muted">Pendiente</span>
+        </header>
+      </section>
+    `;
+  }
+  const readyCount = checks.filter((check) => check.status === "ok").length;
+  return `
+    <section class="system-status-panel">
+      <header>
+        <span class="status-icon"><i data-lucide="radar"></i></span>
+        <div>
+          <h3>Estado real del sistema</h3>
+          <p>${escapeHtml(systemStatusData.dataProvider)} · ${escapeHtml(systemStatusData.appUrl)} · ${readyCount}/${checks.length} listos</p>
+        </div>
+        <span class="pill ${systemStatusData.ok ? "done" : "warning"}">${systemStatusData.ok ? "Listo" : "En progreso"}</span>
+      </header>
+      <div class="system-status-grid">
+        ${checks
+          .map(
+            (check) => `
+              <article class="${escapeHtml(check.status)}">
+                <span class="status-icon small"><i data-lucide="${check.status === "ok" ? "check-circle-2" : check.status === "warning" ? "shield-alert" : "circle-dashed"}"></i></span>
+                <div>
+                  <strong>${escapeHtml(check.label)}</strong>
+                  <p>${escapeHtml(check.detail)}</p>
+                  <small>${escapeHtml(check.action)}</small>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderTestCenter() {
   if (!testCenterPanel) return;
   const company = activeCompany();
@@ -5768,6 +5816,7 @@ function renderTestCenter() {
   const recentActivity = activityLog.filter((item) => item.companyId === company.id).length;
 
   testCenterPanel.innerHTML = `
+    ${renderSystemStatusPanel()}
     ${realTestRoadmap({ connectedAccounts, readyPreflights, blockedPreflights, providerOrders, companyPosts })}
     <div class="test-center-grid">
       ${testStatusCard("Backend", backendEnabled ? "ok" : "mock", backendEnabled ? `Sincronizando con ${backendProvider}.` : "Local activo; abre desde servidor para APIs.", "server")}
@@ -5794,10 +5843,38 @@ function renderTestCenter() {
         <i data-lucide="refresh-cw"></i>
         Probar sistema
       </button>
+      <button class="secondary-button icon-text-button" type="button" data-test-action="system">
+        <i data-lucide="radar"></i>
+        Estado real
+      </button>
     </div>
   `;
   renderIcons();
 }
+
+async function refreshSystemStatus(showFeedback = false) {
+  if (window.location.protocol === "file:") {
+    systemStatusData = null;
+    renderTestCenter();
+    if (showFeedback) showToast("Abre la app online para consultar estado real.");
+    return;
+  }
+  try {
+    const response = await fetch("/api/system/status", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("system status unavailable");
+    systemStatusData = await response.json();
+    renderTestCenter();
+    if (showFeedback) {
+      const ready = (systemStatusData.checks || []).filter((check) => check.status === "ok").length;
+      showToast(`${ready}/${systemStatusData.checks.length} componentes listos para operacion real.`);
+    }
+  } catch {
+    systemStatusData = null;
+    renderTestCenter();
+    if (showFeedback) showToast("No se pudo consultar /api/system/status.");
+  }
+}
+
 
 function technicalCard(label, setup, redirectUri, variables) {
   const missing = setup?.missing || [];
@@ -6752,6 +6829,10 @@ testCenterPanel.addEventListener("click", async (event) => {
     await renderDiagnostics();
     await renderProductionReadinessFromServer();
     renderTestCenter();
+    return;
+  }
+  if (action === "system") {
+    await refreshSystemStatus(true);
   }
 });
 
@@ -7530,6 +7611,7 @@ async function init() {
   renderStorePanel();
   renderAutomationCenter();
   refreshProvisioningStatus(false);
+  refreshSystemStatus(false);
   renderDiagnostics();
   renderTestCenter();
   refreshDeploymentStatus();
