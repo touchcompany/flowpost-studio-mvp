@@ -5188,7 +5188,28 @@ function promptProviderLabel(value = "auto") {
     auto: "Auto",
     openai: "ChatGPT",
     gemini: "Gemini",
+    mock: "Fallback",
+    "mock-local": "Fallback local",
+    "mock-after-error": "Fallback",
   }[value] || "Auto";
+}
+
+function renderScriptAiMeta(publication) {
+  const meta = publication.cover?.ai || {};
+  if (!meta.mode && !meta.generatedAt) return "";
+  const generatedAt = meta.generatedAt ? new Date(meta.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "sin fecha";
+  const provider = promptProviderLabel(meta.mode);
+  const model = meta.model || "sin modelo";
+  const promptTitle = meta.promptTitle || "sin prompt guardado";
+  return `
+    <div class="script-ai-meta">
+      <span class="status-icon small"><i data-lucide="${meta.mode === "openai" || meta.mode === "gemini" ? "sparkles" : "triangle-alert"}"></i></span>
+      <div>
+        <strong>${escapeHtml(provider)} · ${escapeHtml(model)}</strong>
+        <p>Generado ${escapeHtml(generatedAt)} · Prompt: ${escapeHtml(promptTitle)}</p>
+      </div>
+    </div>
+  `;
 }
 
 function renderPromptLibraryPanel() {
@@ -5359,6 +5380,7 @@ function renderCalendarPlanner(companyPublications) {
           </label>
         </div>
 
+        ${renderScriptAiMeta(publication)}
         ${renderPublicationReviewPanel(publication)}
 
         <footer>
@@ -6289,8 +6311,32 @@ async function generateCalendarScript(publicationId) {
     const result = await response.json();
     script = result.script || script;
     mode = result.mode || mode;
+    publication.cover = {
+      ...(publication.cover || {}),
+      ai: {
+        mode,
+        model: result.model || "",
+        generatedAt: result.generatedAt || new Date().toISOString(),
+        promptId: prompt?.id || "",
+        promptTitle: prompt?.title || "",
+        providerSelected: selectedAiProvider || "auto",
+        warning: result.warning || result.message || "",
+      },
+    };
   } catch {
     mode = "mock-local";
+    publication.cover = {
+      ...(publication.cover || {}),
+      ai: {
+        mode,
+        model: "fallback-local",
+        generatedAt: new Date().toISOString(),
+        promptId: prompt?.id || "",
+        promptTitle: prompt?.title || "",
+        providerSelected: selectedAiProvider || "auto",
+        warning: "No se pudo conectar con /api/ai/script.",
+      },
+    };
   }
 
   publications = publications.map((item) =>
@@ -6300,6 +6346,7 @@ async function generateCalendarScript(publicationId) {
           hook,
           cta,
           script,
+          cover: publication.cover,
           notes: item.notes || `Guion base generado para ${company.name}. Ajustar escenas segun recursos disponibles.`,
         }
       : item

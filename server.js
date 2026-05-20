@@ -1318,13 +1318,15 @@ function scriptFallback(payload = {}) {
   const role = profile.roleLabel || profile.role || "negocio";
   return [
     `Hook: ${hook}.`,
-    `Intencion: contenido para ${role} con tono ${voice}, enfocado en ${description}.`,
-    "Escena 1: muestra el resultado final en los primeros 2 segundos. Texto en pantalla: el beneficio principal.",
-    "Escena 2: enseña una prueba concreta del proceso, producto o servicio. Voz: explica por que importa ahora.",
-    "Escena 3: resuelve una objecion real con evidencia simple: ejemplo, antes/despues, dato, testimonio o detalle visual.",
-    `Escena 4: conecta la solucion con ${brand} sin sonar agresivo. Mantén la frase corta y grabable.`,
+    `Insight: este contenido debe ayudar a ${role} a entender por que ${brand} es una opcion clara para ${description}, usando un tono ${voice}.`,
+    "Escena 1: accion visual: muestra el resultado final en los primeros 2 segundos. Texto en pantalla: el beneficio principal. Voz: di el hook en una frase corta. Duracion: 0-2s.",
+    "Escena 2: accion visual: enseña una prueba concreta del proceso, producto o servicio. Texto en pantalla: mira este detalle. Voz: explica por que importa ahora. Duracion: 2-6s.",
+    "Escena 3: accion visual: resuelve una objecion real con evidencia simple: antes/despues, dato, testimonio o detalle visual. Texto en pantalla: lo que pocos muestran. Voz: aterriza el beneficio. Duracion: 6-11s.",
+    `Escena 4: accion visual: conecta la solucion con ${brand} sin sonar agresivo. Texto en pantalla: siguiente paso. Voz: invita a actuar con naturalidad. Duracion: 11-15s.`,
     `Cierre: ${cta}`,
-    "Caption sugerido: resume el beneficio, agrega una pregunta de respuesta facil y repite el CTA.",
+    "Caption sugerido corto: resume el beneficio, agrega una pregunta de respuesta facil y repite el CTA.",
+    "Caption sugerido Facebook: agrega contexto, una razon para confiar y una invitacion directa.",
+    "Checklist de produccion: toma principal, toma de apoyo, detalle cercano, prueba visual y CTA visible.",
   ].join("\n");
 }
 
@@ -1366,6 +1368,8 @@ function aiPromptForScript(payload = {}) {
     "El Insight debe explicar por que esta pieza puede funcionar para la audiencia.",
     "El Caption debe tener 2 versiones: corta para Instagram/TikTok y una un poco mas informativa para Facebook.",
     "El Checklist debe listar recursos necesarios, toma principal, toma de apoyo y detalle que no se debe olvidar.",
+    "Incluye una variante de hook alternativa al final si mejora la pieza.",
+    "No uses markdown complejo, tablas ni numeraciones largas. Debe poder copiarse directo al equipo de produccion.",
     "Evita promesas exageradas, frases infladas, lenguaje dificil de grabar y claims que no se puedan probar.",
     "Incluye una promesa clara, especifica y creible para pymes, marcas personales, agencias o negocios locales.",
   ].join("\n");
@@ -1397,6 +1401,8 @@ async function generateAiScript(payload) {
     if (!response.ok) throw new Error(result.error?.message || "OpenAI script generation failed");
     return {
       mode: "openai",
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      generatedAt: new Date().toISOString(),
       script: result.choices?.[0]?.message?.content?.trim() || scriptFallback(payload),
     };
   }
@@ -1415,6 +1421,8 @@ async function generateAiScript(payload) {
     if (!response.ok) throw new Error(result.error?.message || "Gemini script generation failed");
     return {
       mode: "gemini",
+      model,
+      generatedAt: new Date().toISOString(),
       script: result.candidates?.[0]?.content?.parts?.map((part) => part.text).join("").trim() || scriptFallback(payload),
     };
   }
@@ -1430,6 +1438,8 @@ async function generateAiScript(payload) {
 
   return {
     mode: "mock",
+    model: "fallback",
+    generatedAt: new Date().toISOString(),
     warning: errors.join(" | "),
     script: scriptFallback(payload),
   };
@@ -1578,6 +1588,8 @@ async function systemStatus(req) {
     meta: oauthSetup("Meta / Instagram", ["META_APP_ID", "META_APP_SECRET"]),
     tiktok: oauthSetup("TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
   };
+  const aiReady = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+  const aiProvider = process.env.OPENAI_API_KEY ? "ChatGPT/OpenAI" : process.env.GEMINI_API_KEY ? "Gemini" : "Sin proveedor";
   const billing = oauthSetup("Stripe", ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]);
   const cpanel = cpanelSetup();
   const enom = enomSetup();
@@ -1612,6 +1624,13 @@ async function systemStatus(req) {
       status: oauth.googleDrive.ready ? "ok" : "pending",
       detail: oauth.googleDrive.ready ? "OAuth de Drive listo para seleccionar videos." : `Faltan ${oauth.googleDrive.missing.join(", ")}.`,
       action: "Configurar GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REDIRECT_URI.",
+    },
+    {
+      key: "ai",
+      label: "Guiones con IA",
+      status: aiReady ? "ok" : "pending",
+      detail: aiReady ? `${aiProvider} listo para generar guiones desde backend.` : "Falta configurar OPENAI_API_KEY o GEMINI_API_KEY.",
+      action: "Guardar keys solo en variables de entorno del servidor.",
     },
     {
       key: "meta",
