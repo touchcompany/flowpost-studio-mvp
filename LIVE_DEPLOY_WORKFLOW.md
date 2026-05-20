@@ -131,6 +131,60 @@ https://app.touch.com.co/api/production-readiness
 https://app.touch.com.co/api/services/provisioning/status
 ```
 
+Tambien revisa:
+
+```text
+https://app.touch.com.co/api/version
+https://app.touch.com.co/api/system/status
+https://app.touch.com.co/api/auth/status
+```
+
+`/api/version` debe mostrar el commit mas reciente de GitHub. Si no aparece el ultimo commit, cPanel todavia esta ejecutando una version anterior.
+
+## 4.1 Checklist para dejar Google/Facebook funcionando
+
+Cuando estes en cPanel, haz esto en este orden:
+
+1. En **Git Version Control**, entra al repo de `app.touch.com.co`.
+2. Clic en **Update from Remote**.
+3. Verifica que el commit coincida con el ultimo de GitHub.
+4. En **Node.js App**, clic en **Restart**.
+5. Abre `https://app.touch.com.co/api/version`.
+6. Si `/api/version` no existe o muestra un commit viejo, vuelve a reiniciar Node.js o revisa que el Application Root sea `/home/touchestudio/app.touch.com.co`.
+7. En variables de entorno de Node.js, agrega:
+
+```bash
+NODE_ENV=production
+HOST=0.0.0.0
+APP_PUBLIC_URL=https://app.touch.com.co
+DATA_PROVIDER=supabase
+OAUTH_STATE_SECRET=un-texto-largo-secreto
+AUTH_GOOGLE_CLIENT_ID=
+AUTH_GOOGLE_CLIENT_SECRET=
+AUTH_GOOGLE_REDIRECT_URI=https://app.touch.com.co/api/auth/google/callback
+AUTH_FACEBOOK_APP_ID=
+AUTH_FACEBOOK_APP_SECRET=
+AUTH_FACEBOOK_REDIRECT_URI=https://app.touch.com.co/api/auth/facebook/callback
+```
+
+8. En Google Cloud Console, el OAuth Client debe ser **Web application** y debe tener este redirect autorizado:
+
+```text
+https://app.touch.com.co/api/auth/google/callback
+```
+
+9. En Meta Developers, Facebook Login debe tener este valid OAuth redirect URI:
+
+```text
+https://app.touch.com.co/api/auth/facebook/callback
+```
+
+10. Reinicia Node.js otra vez.
+11. Abre `https://app.touch.com.co/api/auth/status`.
+12. Google y Facebook deben mostrar `ready:true`.
+
+Si Google/Facebook siguen en `ready:false`, no es problema visual de la app: falta alguna variable en cPanel o el redirect no coincide exactamente con el configurado en Google/Meta.
+
 ## 5. Para que GitHub actualice cPanel automáticamente
 
 Hay dos caminos:
@@ -184,4 +238,3 @@ La app estará lista para pruebas reales cuando:
 - Stripe esté en test mode.
 - cPanel/eNom estén en test/sandbox.
 - OAuth de Google/Meta esté configurado con redirect HTTPS.
-
