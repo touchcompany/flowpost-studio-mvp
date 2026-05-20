@@ -17,6 +17,7 @@ const statusText = document.querySelector("#loginStatus");
 const emailForm = document.querySelector("#emailLoginForm");
 const nameInput = document.querySelector("#loginName");
 const emailInput = document.querySelector("#loginEmail");
+const authReadinessPanel = document.querySelector("#authReadinessPanel");
 const landingServices = {
   website: { id: "website", name: "Pagina web landing", price: 1200000, group: "Web" },
   hosting: { id: "hosting", name: "Hosting administrado", price: 180000, group: "Web" },
@@ -28,6 +29,102 @@ const landingServices = {
 
 function setStatus(message) {
   if (statusText) statusText.textContent = message;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function providerLabel(provider) {
+  return provider === "facebook" ? "Facebook" : "Google";
+}
+
+function authEnvSnippet(provider, setup = {}) {
+  const redirect = setup.redirectUri || `https://app.touch.com.co/api/auth/${provider}/callback`;
+  if (provider === "facebook") {
+    return [
+      "AUTH_FACEBOOK_APP_ID=pega-tu-app-id",
+      "AUTH_FACEBOOK_APP_SECRET=pega-tu-app-secret",
+      `AUTH_FACEBOOK_REDIRECT_URI=${redirect}`,
+    ].join("\n");
+  }
+  return [
+    "AUTH_GOOGLE_CLIENT_ID=pega-tu-client-id",
+    "AUTH_GOOGLE_CLIENT_SECRET=pega-tu-client-secret",
+    `AUTH_GOOGLE_REDIRECT_URI=${redirect}`,
+  ].join("\n");
+}
+
+function renderAuthReadiness(status = null) {
+  if (!authReadinessPanel) return;
+  if (!status) {
+    authReadinessPanel.innerHTML = `
+      <strong>Revisando login social...</strong>
+      <p>Consultando el backend para saber si Google y Facebook estan configurados.</p>
+    `;
+    return;
+  }
+  const providers = ["google", "facebook"];
+  const ready = providers.filter((provider) => status[provider]?.ready).length;
+  authReadinessPanel.innerHTML = `
+    <header>
+      <strong>${ready}/2 logins sociales listos</strong>
+      <button type="button" data-refresh-auth-status>Actualizar</button>
+    </header>
+    ${providers
+      .map((provider) => {
+        const setup = status[provider] || {};
+        const label = providerLabel(provider);
+        const missing = setup.missing || [];
+        return `
+          <article class="${setup.ready ? "ready" : "pending"}">
+            <div>
+              <strong>${escapeHtml(label)}</strong>
+              <p>${setup.ready ? "Listo para iniciar sesion real." : `Pendiente: ${escapeHtml(missing.join(", ") || "faltan credenciales")}`}</p>
+              <small>Redirect: ${escapeHtml(setup.redirectUri || "")}</small>
+              ${
+                setup.detectedVariables?.length
+                  ? `<small>Detectado: ${escapeHtml(setup.detectedVariables.join(", "))}</small>`
+                  : `<small>Acepta: ${escapeHtml([...(setup.acceptedVariables || []), ...(setup.acceptedAliases || [])].join(", "))}</small>`
+              }
+            </div>
+            <button type="button" data-copy-auth-snippet="${provider}">Copiar variables</button>
+          </article>
+        `;
+      })
+      .join("")}
+  `;
+}
+
+async function refreshAuthReadiness(showFeedback = false) {
+  if (window.location.protocol === "file:") {
+    renderAuthReadiness(null);
+    setStatus("Abre la app online para revisar Google/Facebook real.");
+    return null;
+  }
+  try {
+    const response = await fetch("/api/auth/status", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("auth status unavailable");
+    const status = await response.json();
+    renderAuthReadiness(status);
+    if (showFeedback) {
+      const ready = ["google", "facebook"].filter((provider) => status[provider]?.ready).length;
+      setStatus(`${ready}/2 proveedores de login listos.`);
+    }
+    return status;
+  } catch {
+    authReadinessPanel.innerHTML = `
+      <strong>No se pudo consultar el login social</strong>
+      <p>Verifica que el backend este corriendo y prueba /api/auth/status.</p>
+    `;
+    if (showFeedback) setStatus("No se pudo consultar /api/auth/status.");
+    return null;
+  }
 }
 
 async function hydrateInviteDetails() {
@@ -222,11 +319,34 @@ if (inviteToken) {
 }
 
 ensurePendingServiceFromUrl();
+renderAuthReadiness(null);
+refreshAuthReadiness(false);
 
 document.querySelectorAll("[data-social-login]").forEach((button) => {
   button.addEventListener("click", () => {
     tryProviderLogin(button.dataset.socialLogin);
   });
+});
+
+authReadinessPanel?.addEventListener("click", async (event) => {
+  const refreshButton = event.target.closest("[data-refresh-auth-status]");
+  if (refreshButton) {
+    await refreshAuthReadiness(true);
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-copy-auth-snippet]");
+  if (copyButton) {
+    const provider = copyButton.dataset.copyAuthSnippet;
+    const status = await refreshAuthReadiness(false);
+    const snippet = authEnvSnippet(provider, status?.[provider] || {});
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setStatus(`Variables de ${providerLabel(provider)} copiadas.`);
+    } catch {
+      setStatus(snippet);
+    }
+  }
 });
 
 emailForm?.addEventListener("submit", (event) => {

@@ -1046,6 +1046,76 @@ button.social-login-button {
   font-size: 1.35rem;
 }
 
+.login-auth-readiness {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.login-auth-readiness:empty {
+  display: none;
+}
+
+.login-auth-readiness header,
+.login-auth-readiness article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.login-auth-readiness article {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.login-auth-readiness article.ready {
+  border-color: rgba(21, 128, 61, 0.2);
+  background: #f0fdf4;
+}
+
+.login-auth-readiness strong,
+.login-auth-readiness p,
+.login-auth-readiness small {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+
+.login-auth-readiness p,
+.login-auth-readiness small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.login-auth-readiness p {
+  margin-top: 3px;
+  font-size: 0.78rem;
+}
+
+.login-auth-readiness small {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
+.login-auth-readiness button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 850;
+  cursor: pointer;
+}
+
 .login-divider {
   display: flex;
   align-items: center;
