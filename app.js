@@ -5274,6 +5274,11 @@ function renderAuthSetupChecklist() {
                       ? `<small>Falta detectar: ${escapeHtml(missing.join(", "))}</small>`
                       : `<small>Credenciales detectadas desde el backend.</small>`
                   }
+                  ${
+                    setup.detectedVariables?.length
+                      ? `<small>Detectado: ${escapeHtml(setup.detectedVariables.join(", "))}</small>`
+                      : `<small>Acepta alias: ${escapeHtml((setup.acceptedAliases || config.fallbackVariables || []).join(", "))}</small>`
+                  }
                 </div>
                 <div class="auth-provider-actions">
                   <button class="secondary-button icon-button compact" type="button" data-copy-auth-env="${provider}" aria-label="Copiar variables ${config.label}">
@@ -5282,7 +5287,7 @@ function renderAuthSetupChecklist() {
                   <button class="secondary-button icon-button compact" type="button" data-copy-auth-redirect="${provider}" aria-label="Copiar redirect ${config.label}">
                     <i data-lucide="link"></i>
                   </button>
-                  <a class="secondary-button icon-button compact" href="${escapeHtml(config.consoleUrl)}" target="_blank" rel="noreferrer" aria-label="Abrir consola ${config.label}">
+                  <a class="secondary-button icon-button compact" href="${escapeHtml(setup.consoleUrl || config.consoleUrl)}" target="_blank" rel="noreferrer" aria-label="Abrir consola ${config.label}">
                     <i data-lucide="external-link"></i>
                   </a>
                   <button class="connect-button icon-button compact" type="button" data-auth-login="${provider}" aria-label="Probar ${config.label}">

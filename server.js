@@ -1313,6 +1313,10 @@ function oauthSetupAny(platform, groups) {
   };
 }
 
+function detectedEnvNames(groups) {
+  return groups.map((group) => group.find((name) => Boolean(process.env[name])) || "").filter(Boolean);
+}
+
 function authGoogleClientId() {
   return envFirst(["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"]);
 }
@@ -1327,6 +1331,43 @@ function authFacebookAppId() {
 
 function authFacebookAppSecret() {
   return envFirst(["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"]);
+}
+
+function authProviderStatus(req, provider) {
+  if (provider === "google") {
+    const groups = [
+      ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
+      ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
+    ];
+    return {
+      ...oauthSetupAny("Google Login", groups),
+      provider: "google",
+      redirectUri: authGoogleRedirectUri(req),
+      scopes: "openid email profile",
+      startUrl: "/api/auth/google/start",
+      consoleUrl: "https://console.cloud.google.com/apis/credentials",
+      acceptedVariables: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_REDIRECT_URI"],
+      acceptedAliases: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+      detectedVariables: detectedEnvNames(groups),
+      nextStep: "Crear OAuth Client Web application en Google Cloud y registrar el redirect exacto.",
+    };
+  }
+  const groups = [
+    ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
+    ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
+  ];
+  return {
+    ...oauthSetupAny("Facebook Login", groups),
+    provider: "facebook",
+    redirectUri: authFacebookRedirectUri(req),
+    scopes: "email,public_profile",
+    startUrl: "/api/auth/facebook/start",
+    consoleUrl: "https://developers.facebook.com/apps/",
+    acceptedVariables: ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET", "AUTH_FACEBOOK_REDIRECT_URI"],
+    acceptedAliases: ["META_APP_ID", "META_APP_SECRET", "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"],
+    detectedVariables: detectedEnvNames(groups),
+    nextStep: "Activar Facebook Login en Meta Developers y registrar el redirect exacto.",
+  };
 }
 
 function authSuccessUrl() {
@@ -1626,14 +1667,8 @@ function diagnostics(req) {
       enom: ["ENOM_UID", "ENOM_TOKEN", "ENOM_ENV"],
     },
     auth: {
-      google: oauthSetupAny("Google Login", [
-        ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
-        ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
-      ]),
-      facebook: oauthSetupAny("Facebook Login", [
-        ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
-        ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
-      ]),
+      google: authProviderStatus(req, "google"),
+      facebook: authProviderStatus(req, "facebook"),
     },
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
@@ -1716,14 +1751,8 @@ async function supabaseConnectionCheck() {
 async function systemStatus(req) {
   const supabase = await supabaseConnectionCheck();
   const auth = {
-    google: oauthSetupAny("Google Login", [
-      ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
-      ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
-    ]),
-    facebook: oauthSetupAny("Facebook Login", [
-      ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
-      ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
-    ]),
+    google: authProviderStatus(req, "google"),
+    facebook: authProviderStatus(req, "facebook"),
   };
   const oauth = {
     googleDrive: oauthSetup("Google Drive", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
@@ -2091,24 +2120,8 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/auth/status") {
     sendJson(res, 200, {
-      google: {
-        ...oauthSetupAny("Google Login", [
-          ["AUTH_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
-          ["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
-        ]),
-        redirectUri: authGoogleRedirectUri(req),
-        scopes: "openid email profile",
-        startUrl: "/api/auth/google/start",
-      },
-      facebook: {
-        ...oauthSetupAny("Facebook Login", [
-          ["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"],
-          ["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"],
-        ]),
-        redirectUri: authFacebookRedirectUri(req),
-        scopes: "email,public_profile",
-        startUrl: "/api/auth/facebook/start",
-      },
+      google: authProviderStatus(req, "google"),
+      facebook: authProviderStatus(req, "facebook"),
     });
     return;
   }
