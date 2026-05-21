@@ -1146,17 +1146,21 @@ function renderAccount() {
 }
 
 async function hydrateSessionFromBackend() {
-  if (window.location.protocol === "file:") return;
+  if (window.location.protocol === "file:") return true;
   try {
     const response = await fetch("/api/session", { headers: { Accept: "application/json" } });
-    if (!response.ok) return;
+    if (!response.ok) throw new Error("session unavailable");
     const result = await response.json();
     if (result.session?.id) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+      return true;
     }
   } catch {
-    // Keep browser session.
+    // Online production requires a server session.
   }
+  localStorage.removeItem(SESSION_KEY);
+  window.location.href = `login.html?next=${encodeURIComponent(window.location.hash || "#dashboard")}`;
+  return false;
 }
 
 async function saveClientSession(session) {
@@ -1174,6 +1178,9 @@ async function saveClientSession(session) {
           localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
           return currentSession();
         }
+      } else {
+        const result = await response.json().catch(() => ({}));
+        showToast(result.message || "Esta accion requiere permisos de administrador.");
       }
     } catch {
       showToast("No se pudo guardar la sesion en el servidor.");
@@ -7632,15 +7639,21 @@ automationCenterPanel.addEventListener("click", (event) => {
   }
 });
 
-logoutButton.addEventListener("click", () => {
+logoutButton.addEventListener("click", async () => {
   const session = currentSession();
   if (!session.id) {
     window.location.href = "login.html";
     return;
   }
+  if (window.location.protocol !== "file:") {
+    try {
+      await fetch("/api/session", { method: "DELETE", headers: { Accept: "application/json" } });
+    } catch {
+      // Local logout should still continue if the network drops.
+    }
+  }
   localStorage.removeItem(SESSION_KEY);
-  renderAccount();
-  showToast("Sesion MVP cerrada.");
+  window.location.href = "login.html";
 });
 
 document.querySelectorAll("[data-connect-source]").forEach((button) => {
@@ -8001,7 +8014,8 @@ async function init() {
   restoreState();
   restoreUiState();
   await hydrateStateFromBackend();
-  await hydrateSessionFromBackend();
+  const hasSession = await hydrateSessionFromBackend();
+  if (!hasSession) return;
   applyPendingLandingPurchases();
   selectedVideoId = activeCompany().videos[0]?.id || null;
   renderQueue();

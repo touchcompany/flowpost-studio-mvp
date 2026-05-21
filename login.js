@@ -12,6 +12,7 @@ const selectedService = params.get("service") || "";
 const inviteToken = params.get("invite") || "";
 const checkoutRequested = params.get("checkout") === "1";
 const debugMode = params.get("debug") === "1";
+const nextHash = params.get("next")?.startsWith("#") ? params.get("next") : "#dashboard";
 const plan = planLabels[selectedPlan] ? selectedPlan : "starter";
 const planBadge = document.querySelector("#loginPlanBadge");
 const statusText = document.querySelector("#loginStatus");
@@ -280,7 +281,7 @@ async function saveSession(payload) {
       const invitedSession = await acceptInviteSession(payload);
       if (invitedSession) {
         localStorage.setItem(SESSION_KEY, JSON.stringify(invitedSession));
-        window.location.href = "index.html#dashboard";
+        window.location.href = `index.html${nextHash}`;
         return;
       }
     } catch (error) {
@@ -313,7 +314,7 @@ async function saveSession(payload) {
   }
   localStorage.setItem(SESSION_KEY, JSON.stringify(nextPayload));
   if (await startCheckout(nextPayload)) return;
-  window.location.href = "index.html#dashboard";
+  window.location.href = `index.html${nextHash}`;
 }
 
 async function saveEmailAuthSession({ name, email, password }) {
@@ -336,7 +337,7 @@ async function saveEmailAuthSession({ name, email, password }) {
     if (result.mode === "created") setStatus("Cuenta creada. Entrando al panel...");
     else setStatus("Acceso confirmado. Entrando al panel...");
     if (await startCheckout(result.session)) return;
-    window.location.href = "index.html#dashboard";
+    window.location.href = `index.html${nextHash}`;
   } catch {
     setStatus("No se pudo conectar con el servidor de login.");
   }
