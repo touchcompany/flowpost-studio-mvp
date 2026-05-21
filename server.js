@@ -1801,10 +1801,12 @@ async function supabaseConnectionCheck() {
       };
     }
 
+    const schema = await supabaseSchemaCheck(supabaseUrl, serviceRoleKey);
     return {
       ok: true,
       dataProvider: store.provider,
       bucket,
+      schema,
       message: "Supabase conectado y tablas disponibles.",
     };
   } catch (error) {
@@ -1816,6 +1818,73 @@ async function supabaseConnectionCheck() {
       detail: error.message,
     };
   }
+}
+
+async function supabaseSchemaCheck(supabaseUrl, serviceRoleKey) {
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    Accept: "application/json",
+  };
+  const checks = [
+    {
+      key: "soft_delete_companies",
+      table: "companies",
+      columns: ["id", "deleted_at", "deletion_expires_at", "deleted_by"],
+      migration: "supabase/soft-delete.sql",
+      label: "Papelera de empresas",
+    },
+    {
+      key: "soft_delete_profiles",
+      table: "app_profiles",
+      columns: ["id", "deleted_at", "deletion_expires_at", "deleted_by"],
+      migration: "supabase/soft-delete.sql",
+      label: "Papelera de usuarios",
+    },
+    {
+      key: "profile_roles",
+      table: "app_profiles",
+      columns: ["id", "role", "role_label", "company_access"],
+      migration: "supabase/agency-records.sql",
+      label: "Roles y accesos por empresa",
+    },
+    {
+      key: "prompt_templates",
+      table: "prompt_templates",
+      columns: ["id", "company_id", "type", "title", "prompt"],
+      migration: "supabase/prompt-templates.sql",
+      label: "Biblioteca de prompts",
+    },
+  ];
+
+  const results = [];
+  for (const check of checks) {
+    const response = await fetch(`${supabaseUrl}/rest/v1/${check.table}?select=${check.columns.join(",")}&limit=1`, { headers });
+    const detail = await response.text();
+    results.push({
+      key: check.key,
+      label: check.label,
+      table: check.table,
+      ok: response.ok,
+      status: response.status,
+      migration: check.migration,
+      detail: response.ok ? "" : detail.slice(0, 220),
+    });
+  }
+
+  const pending = results.filter((result) => !result.ok);
+  return {
+    ok: pending.length === 0,
+    checks: results,
+    pending: pending.map((result) => ({
+      key: result.key,
+      label: result.label,
+      table: result.table,
+      migration: result.migration,
+      status: result.status,
+      detail: result.detail,
+    })),
+  };
 }
 
 async function systemStatus(req) {
@@ -1850,6 +1919,15 @@ async function systemStatus(req) {
       status: supabase.ok && store.provider === "supabase" ? "ok" : "pending",
       detail: supabase.ok ? `Supabase conectado con bucket ${supabase.bucket || "sin bucket"}.` : supabase.message,
       action: "Usar DATA_PROVIDER=supabase y revisar SUPABASE_SERVICE_ROLE_KEY.",
+    },
+    {
+      key: "supabase_schema",
+      label: "Migraciones Supabase",
+      status: supabase.schema?.ok ? "ok" : "pending",
+      detail: supabase.schema?.ok
+        ? "Esquema actualizado para usuarios, papelera, roles y prompts."
+        : `Faltan migraciones: ${(supabase.schema?.pending || []).map((item) => item.migration).filter(Boolean).join(", ") || "revisar Supabase SQL Editor"}.`,
+      action: "Ejecutar las migraciones pendientes desde GitHub en Supabase SQL Editor.",
     },
     {
       key: "login",
