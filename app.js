@@ -293,6 +293,7 @@ let systemStatusData = null;
 let apiProbeResults = {};
 let deletedCompanies = [];
 let deletedUsers = [];
+let activeUsers = [];
 let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let selectedAiProvider = "auto";
@@ -5619,6 +5620,7 @@ function renderAccounts() {
     renderAuthSetupChecklist(),
     renderAuthLoginPanel(),
     renderUserSafetyPanel(),
+    renderActiveUsersPanel(),
     renderApiStatusSummary(networks),
     renderTrashPanel(),
     renderApiEventPanel(networks),
@@ -5778,6 +5780,49 @@ function renderUserSafetyPanel() {
   `;
 }
 
+function renderActiveUsersPanel() {
+  const session = currentSession();
+  if (!isTouchSuperAdmin(session)) return "";
+  const rows = activeUsers.slice(0, 8);
+  return `
+    <section class="active-users-panel">
+      <header>
+        <span class="dashboard-icon"><i data-lucide="users"></i></span>
+        <div>
+          <h3>Usuarios activos</h3>
+          <p>Vista de super admin para revisar cuentas reales, plan, rol y proveedor de acceso.</p>
+        </div>
+        <button class="secondary-button icon-button compact" type="button" data-refresh-users aria-label="Actualizar usuarios">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+      </header>
+      ${
+        rows.length
+          ? `<div class="active-users-list">
+              ${rows
+                .map(
+                  (user) => `
+                    <article>
+                      <span class="company-avatar small" style="--company-color: ${escapeHtml(user.role === "super_admin" ? "#ff3040" : "#111")}">
+                        <i data-lucide="${user.role === "super_admin" ? "crown" : user.role === "client_user" ? "eye" : "user-round"}"></i>
+                      </span>
+                      <div>
+                        <strong>${escapeHtml(user.name || user.email || "Usuario sin nombre")}</strong>
+                        <p>${escapeHtml(user.email || "Sin email")} · ${escapeHtml(user.roleLabel || user.role || "Sin rol")} · ${escapeHtml(user.planLabel || user.plan || "Sin plan")}</p>
+                      </div>
+                      <span class="pill ${user.status === "active" ? "done" : "muted"}">${escapeHtml(user.status || "trial")}</span>
+                      <span class="pill ready">${escapeHtml(user.provider || "email")}</span>
+                    </article>
+                  `
+                )
+                .join("")}
+            </div>`
+          : `<div class="empty-state compact"><strong>Sin usuarios cargados</strong><p>Actualiza para consultar perfiles activos desde el backend.</p></div>`
+      }
+    </section>
+  `;
+}
+
 function renderTrashPanel() {
   const companyRows = deletedCompanies.slice(0, 5);
   const userRows = deletedUsers.slice(0, 5);
@@ -5855,6 +5900,24 @@ async function refreshTrash(showFeedback = false) {
     if (showFeedback) showToast("Papelera actualizada.");
   } catch {
     if (showFeedback) showToast("No se pudo consultar la papelera.");
+  }
+}
+
+async function refreshActiveUsers(showFeedback = false) {
+  if (window.location.protocol === "file:" || !isTouchSuperAdmin()) {
+    activeUsers = [];
+    return;
+  }
+  try {
+    const response = await fetch("/api/users", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("users unavailable");
+    activeUsers = await response.json();
+    renderAccounts();
+    if (showFeedback) showToast("Usuarios actualizados.");
+  } catch {
+    activeUsers = [];
+    renderAccounts();
+    if (showFeedback) showToast("No se pudo consultar usuarios activos.");
   }
 }
 
@@ -6976,6 +7039,12 @@ accountsGrid.addEventListener("click", async (event) => {
     return;
   }
 
+  const refreshUsersButton = event.target.closest("[data-refresh-users]");
+  if (refreshUsersButton) {
+    await refreshActiveUsers(true);
+    return;
+  }
+
   const restoreCompanyButton = event.target.closest("[data-restore-company]");
   if (restoreCompanyButton) {
     restoreCompanyButton.disabled = true;
@@ -7940,6 +8009,7 @@ async function init() {
   renderAccounts();
   refreshTrash(false);
   refreshOAuthStatus(false);
+  refreshActiveUsers(false);
   renderStorePanel();
   renderAutomationCenter();
   refreshProvisioningStatus(false);

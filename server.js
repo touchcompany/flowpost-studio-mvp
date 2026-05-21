@@ -2768,6 +2768,20 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/users") {
+    if (!store.listProfiles) {
+      sendJson(res, 200, []);
+      return;
+    }
+    const session = await sessionFromRequest(req);
+    if (!sessionIsSuperAdmin(session)) {
+      sendError(res, 403, "users list forbidden");
+      return;
+    }
+    sendJson(res, 200, await store.listProfiles());
+    return;
+  }
+
   if (req.method === "POST" && parts[0] === "api" && parts[1] === "trash" && parts[2] === "users" && parts[3] && parts[4] === "restore") {
     if (!store.restoreProfile) {
       sendError(res, 501, "restore unavailable");
