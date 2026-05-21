@@ -122,11 +122,37 @@ function sessionCanManageProfile(session, profileId) {
 function sessionIsSuperAdmin(session) {
   if (!session?.id) return false;
   const identity = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase();
-  const adminEmails = (process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS || "")
+  const adminEmails = (process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS || process.env.CPANEL_DEFAULT_CONTACT_EMAIL || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
   return session.role === "super_admin" || identity.includes("touch") || adminEmails.includes(String(session.email || "").toLowerCase());
+}
+
+function superAdminStatus() {
+  const detectedVariable = process.env.SUPER_ADMIN_EMAILS
+    ? "SUPER_ADMIN_EMAILS"
+    : process.env.TOUCH_ADMIN_EMAILS
+      ? "TOUCH_ADMIN_EMAILS"
+      : process.env.CPANEL_DEFAULT_CONTACT_EMAIL
+        ? "CPANEL_DEFAULT_CONTACT_EMAIL"
+        : "";
+  return {
+    ready: Boolean(detectedVariable),
+    detectedVariable,
+    acceptedVariables: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS", "CPANEL_DEFAULT_CONTACT_EMAIL"],
+    message: "Define correos separados por coma para dar acceso total sin tocar codigo.",
+  };
+}
+
+function emailAuthStatus() {
+  return {
+    ready: Boolean(store.saveSession && store.getProfileByEmail),
+    provider: "email",
+    platform: "Email y contraseña",
+    startUrl: "/api/auth/email",
+    message: "Login por correo con contraseña y hash seguro en backend.",
+  };
 }
 
 function stateSecret() {
@@ -1809,14 +1835,11 @@ function diagnostics(req) {
       enom: ["ENOM_UID", "ENOM_TOKEN", "ENOM_ENV"],
     },
     auth: {
+      email: emailAuthStatus(),
       google: authProviderStatus(req, "google"),
       facebook: authProviderStatus(req, "facebook"),
       state: oauthStateStatus(),
-      superAdmin: {
-        ready: Boolean(process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS),
-        acceptedVariables: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS"],
-        message: "Define correos separados por coma para dar acceso total sin tocar codigo.",
-      },
+      superAdmin: superAdminStatus(),
     },
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
@@ -1968,6 +1991,7 @@ async function supabaseSchemaCheck(supabaseUrl, serviceRoleKey) {
 async function systemStatus(req) {
   const supabase = await supabaseConnectionCheck();
   const auth = {
+    email: emailAuthStatus(),
     google: authProviderStatus(req, "google"),
     facebook: authProviderStatus(req, "facebook"),
   };
@@ -2009,10 +2033,10 @@ async function systemStatus(req) {
     },
     {
       key: "login",
-      label: "Login Google/Facebook",
-      status: auth.google.ready && auth.facebook.ready ? "ok" : "pending",
-      detail: `${auth.google.ready ? "Google listo" : `Google falta ${auth.google.missing.join(", ")}`} · ${auth.facebook.ready ? "Facebook listo" : `Facebook falta ${auth.facebook.missing.join(", ")}`}`,
-      action: "Completar credenciales AUTH_* y registrar callbacks.",
+      label: "Login",
+      status: auth.email.ready ? (auth.google.ready && auth.facebook.ready ? "ok" : "warning") : "pending",
+      detail: `${auth.email.ready ? "Email listo" : "Email pendiente"} · ${auth.google.ready ? "Google listo" : `Google falta ${auth.google.missing.join(", ")}`} · ${auth.facebook.ready ? "Facebook listo" : `Facebook falta ${auth.facebook.missing.join(", ")}`}`,
+      action: auth.email.ready ? "Login base listo; completar Google/Facebook cuando tengas credenciales OAuth." : "Activar /api/auth/email.",
     },
     {
       key: "drive",
@@ -2367,14 +2391,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/auth/status") {
     sendJson(res, 200, {
+      email: emailAuthStatus(),
       google: authProviderStatus(req, "google"),
       facebook: authProviderStatus(req, "facebook"),
       state: oauthStateStatus(),
-      superAdmin: {
-        ready: Boolean(process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS),
-        acceptedVariables: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS"],
-        message: "Define correos separados por coma para dar acceso total sin tocar codigo.",
-      },
+      superAdmin: superAdminStatus(),
     });
     return;
   }
