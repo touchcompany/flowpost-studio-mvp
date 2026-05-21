@@ -14,9 +14,9 @@
           <span class="brand-mark">F</span>
           <span><strong>Flowpost</strong> Studio</span>
         </a>
-        <h1>Tu cuenta para manejar marcas, contenido y publicaciones en un solo lugar.</h1>
+        <h1>Tu cuenta para manejar marcas, contenido y publicaciones.</h1>
         <p>
-          El acceso social queda preparado para OAuth real. Mientras configuramos credenciales, puedes entrar al MVP y probar el producto completo.
+          Entra con Google, Facebook o email y administra contenido, clientes, servicios y guiones desde un solo panel.
         </p>
         <div class="login-plan-badge" id="loginPlanBadge">Plan Starter seleccionado</div>
         <div class="login-preview">
@@ -26,9 +26,9 @@
         </div>
       </section>
 
-      <section class="login-card" aria-label="Crear cuenta">
-        <h2>Crear cuenta</h2>
-        <p>Empieza gratis y activa integraciones cuando el backend este listo.</p>
+      <section class="login-card" aria-label="Entrar a Flowpost Studio">
+        <h2>Entrar</h2>
+        <p>Accede a tu panel o crea una cuenta para empezar.</p>
         <div class="social-login-stack">
           <button class="social-login-button" type="button" data-social-login="google">
             <span class="provider-mark google">G</span>
@@ -39,7 +39,6 @@
             Continuar con Facebook
           </button>
         </div>
-        <div class="login-auth-readiness" id="authReadinessPanel" aria-live="polite"></div>
         <div class="login-divider"><span>o entra con email</span></div>
         <form class="email-login" id="emailLoginForm">
           <label>
@@ -50,9 +49,13 @@
             Email
             <input id="loginEmail" type="email" name="email" placeholder="tu@email.com" autocomplete="email" />
           </label>
-          <button class="marketing-button dark" type="submit">Entrar al MVP</button>
+          <button class="marketing-button dark" type="submit">Entrar con email</button>
         </form>
         <p class="login-status" id="loginStatus" aria-live="polite"></p>
+        <details class="login-technical-details" id="authDebugDetails">
+          <summary>Configuracion técnica</summary>
+          <div class="login-auth-readiness" id="authReadinessPanel" aria-live="polite"></div>
+        </details>
         <footer>
           <a href="index.html">Abrir dashboard</a>
           <a href="landing.html#planes">Ver planes</a>

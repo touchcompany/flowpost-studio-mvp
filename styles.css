@@ -940,7 +940,7 @@ body.modal-open {
 .login-copy h1 {
   margin-top: 42px;
   color: #2a1728;
-  font-size: clamp(2.55rem, 5.2vw, 5rem);
+  font-size: clamp(2.35rem, 4.5vw, 4.25rem);
   line-height: 1;
   font-weight: 900;
 }
@@ -1049,11 +1049,38 @@ button.social-login-button {
 .login-auth-readiness {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 12px;
   padding: 12px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 14px;
   background: #fafafa;
+}
+
+.login-technical-details {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.login-technical-details summary {
+  min-height: 46px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.login-technical-details[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.login-technical-details .login-auth-readiness {
+  margin: 0;
+  border: 0;
+  border-radius: 0 0 14px 14px;
 }
 
 .login-auth-readiness:empty {
@@ -1096,7 +1123,7 @@ button.social-login-button {
 
 .login-auth-readiness p {
   margin-top: 3px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .login-auth-readiness small {
@@ -1106,13 +1133,14 @@ button.social-login-button {
 }
 
 .login-auth-readiness button {
-  min-height: 34px;
+  min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
   color: var(--ink);
   font-weight: 850;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 

@@ -18,6 +18,7 @@ const emailForm = document.querySelector("#emailLoginForm");
 const nameInput = document.querySelector("#loginName");
 const emailInput = document.querySelector("#loginEmail");
 const authReadinessPanel = document.querySelector("#authReadinessPanel");
+const authDebugDetails = document.querySelector("#authDebugDetails");
 const landingServices = {
   website: { id: "website", name: "Pagina web landing", price: 1200000, group: "Web" },
   hosting: { id: "hosting", name: "Hosting administrado", price: 180000, group: "Web" },
@@ -64,8 +65,12 @@ function renderAuthReadiness(status = null) {
   if (!authReadinessPanel) return;
   if (!status) {
     authReadinessPanel.innerHTML = `
-      <strong>Revisando login social...</strong>
-      <p>Consultando el backend para saber si Google y Facebook estan configurados.</p>
+      <article>
+        <div>
+          <strong>Revisando login social...</strong>
+          <p>Consultando el backend para saber si Google y Facebook estan configurados.</p>
+        </div>
+      </article>
     `;
     return;
   }
@@ -133,6 +138,8 @@ async function refreshAuthReadiness(showFeedback = false) {
     if (showFeedback) {
       const ready = ["google", "facebook"].filter((provider) => status[provider]?.ready).length;
       setStatus(`${ready}/2 proveedores de login listos.`);
+    } else if (!status.google?.ready && !status.facebook?.ready) {
+      setStatus("Puedes entrar con email. Google y Facebook se activan al agregar sus credenciales OAuth.");
     }
     return status;
   } catch {
@@ -337,6 +344,7 @@ if (inviteToken) {
 }
 
 ensurePendingServiceFromUrl();
+if (params.get("debug") === "1" && authDebugDetails) authDebugDetails.open = true;
 renderAuthReadiness(null);
 refreshAuthReadiness(false);
 
