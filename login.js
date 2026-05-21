@@ -202,9 +202,10 @@ function ensurePendingServiceFromUrl() {
 }
 
 function sessionPayload({ provider, name, email }) {
+  const emailName = email ? email.split("@")[0].replace(/[._-]+/g, " ").trim() : "";
   return {
     id: `user-${Date.now()}`,
-    name: name || (provider === "facebook" ? "Usuario Facebook" : provider === "google" ? "Usuario Google" : "Usuario MVP"),
+    name: name || emailName || (provider === "facebook" ? "Usuario Facebook" : provider === "google" ? "Usuario Google" : "Usuario MVP"),
     email: email || "",
     provider,
     plan,
@@ -306,7 +307,8 @@ async function saveSession(payload) {
 
 async function tryProviderLogin(provider) {
   const endpoint = provider === "facebook" ? "/api/auth/facebook/start?mode=json" : "/api/auth/google/start?mode=json";
-  setStatus(`Preparando acceso con ${provider === "facebook" ? "Facebook" : "Google"}...`);
+  const label = provider === "facebook" ? "Facebook" : "Google";
+  setStatus(`Preparando acceso con ${label}...`);
 
   if (window.location.protocol !== "file:") {
     try {
@@ -316,7 +318,7 @@ async function tryProviderLogin(provider) {
         window.location.href = result.authUrl;
         return;
       }
-      setStatus(result.message || "Credenciales pendientes. Configura este proveedor para continuar.");
+      setStatus(`${label} aun no esta activo. Entra con email mientras se agregan las credenciales OAuth.`);
       return;
     } catch {
       setStatus("No se pudo consultar el backend. Revisa el servidor antes de continuar.");
@@ -401,9 +403,10 @@ emailForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   const name = nameInput.value.trim();
   const email = emailInput.value.trim();
-  if (!name || !email) {
-    setStatus("Escribe tu nombre y email para crear la cuenta.");
+  if (!email) {
+    setStatus("Escribe tu email para entrar.");
     return;
   }
+  setStatus("Entrando con email...");
   saveSession(sessionPayload({ provider: "email", name, email }));
 });
