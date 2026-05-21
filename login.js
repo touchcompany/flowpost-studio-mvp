@@ -18,6 +18,7 @@ const statusText = document.querySelector("#loginStatus");
 const emailForm = document.querySelector("#emailLoginForm");
 const nameInput = document.querySelector("#loginName");
 const emailInput = document.querySelector("#loginEmail");
+const passwordInput = document.querySelector("#loginPassword");
 const authReadinessPanel = document.querySelector("#authReadinessPanel");
 const authDebugDetails = document.querySelector("#authDebugDetails");
 const landingServices = {
@@ -315,6 +316,32 @@ async function saveSession(payload) {
   window.location.href = "index.html#dashboard";
 }
 
+async function saveEmailAuthSession({ name, email, password }) {
+  if (window.location.protocol === "file:") {
+    setStatus("Abre la app online para entrar con correo y contraseña.");
+    return;
+  }
+  try {
+    const response = await fetch("/api/auth/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ name, email, password, plan, inviteToken }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.session) {
+      setStatus(result.message || "No se pudo entrar con email.");
+      return;
+    }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+    if (result.mode === "created") setStatus("Cuenta creada. Entrando al panel...");
+    else setStatus("Acceso confirmado. Entrando al panel...");
+    if (await startCheckout(result.session)) return;
+    window.location.href = "index.html#dashboard";
+  } catch {
+    setStatus("No se pudo conectar con el servidor de login.");
+  }
+}
+
 async function tryProviderLogin(provider) {
   const endpoint = provider === "facebook" ? "/api/auth/facebook/start?mode=json" : "/api/auth/google/start?mode=json";
   const label = provider === "facebook" ? "Facebook" : "Google";
@@ -416,10 +443,15 @@ emailForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   const name = nameInput.value.trim();
   const email = emailInput.value.trim();
+  const password = passwordInput.value;
   if (!email) {
     setStatus("Escribe tu email para entrar.");
     return;
   }
-  setStatus("Entrando con email...");
-  saveSession(sessionPayload({ provider: "email", name, email }));
+  if (!password || password.length < 6) {
+    setStatus("Escribe una contraseña de minimo 6 caracteres.");
+    return;
+  }
+  setStatus("Validando cuenta...");
+  saveEmailAuthSession({ name, email, password });
 });

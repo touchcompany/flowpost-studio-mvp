@@ -421,10 +421,88 @@ function normalizeSession(payload) {
     role,
     roleLabel: payload.roleLabel || roleLabels[role] || "",
     companyAccess: Array.isArray(payload.companyAccess) ? payload.companyAccess : [],
+    metadata: payload.metadata || {},
     inviteToken: payload.inviteToken || "",
     status: isTouch ? "active" : payload.status || "trial",
     createdAt: payload.createdAt || new Date().toISOString(),
   };
+}
+
+function stableEmailProfileId(email = "") {
+  const safeEmail = String(email || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return safeEmail ? `user-${safeEmail}` : `user-${Date.now()}`;
+}
+
+function passwordHash(password, salt = crypto.randomBytes(16).toString("hex"), iterations = 120000) {
+  const hash = crypto.pbkdf2Sync(String(password), salt, iterations, 32, "sha256").toString("hex");
+  return { hash, salt, iterations, digest: "sha256" };
+}
+
+function verifyPassword(password, auth = {}) {
+  if (!auth.passwordHash || !auth.passwordSalt) return false;
+  const next = passwordHash(password, auth.passwordSalt, Number(auth.passwordIterations || 120000));
+  const expected = Buffer.from(String(auth.passwordHash), "hex");
+  const actual = Buffer.from(next.hash, "hex");
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+async function emailAuth(payload) {
+  if (!store.saveSession || !store.getProfileByEmail) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta login por email." };
+  }
+  const email = String(payload.email || "").trim().toLowerCase();
+  const password = String(payload.password || "");
+  const name = String(payload.name || "").trim();
+  if (!email || !email.includes("@")) return { ok: false, status: 400, message: "Escribe un email valido." };
+  if (password.length < 6) return { ok: false, status: 400, message: "La contraseña debe tener minimo 6 caracteres." };
+
+  const existing = await store.getProfileByEmail(email);
+  const existingAuth = existing?.metadata?.emailAuth || {};
+  if (existing?.id && existingAuth.passwordHash) {
+    if (!verifyPassword(password, existingAuth)) {
+      return { ok: false, status: 401, message: "La contraseña no coincide." };
+    }
+    const session = await store.saveSession(
+      normalizeSession({
+        ...existing,
+        provider: "email",
+        status: "active",
+        metadata: existing.metadata || {},
+      })
+    );
+    return { ok: true, status: 200, mode: "login", session };
+  }
+
+  const securePassword = passwordHash(password);
+  const session = await store.saveSession(
+    normalizeSession({
+      ...(existing || {}),
+      id: existing?.id || stableEmailProfileId(email),
+      name: name || existing?.name || email.split("@")[0].replace(/[._-]+/g, " "),
+      email,
+      provider: "email",
+      plan: existing?.plan || payload.plan || "starter",
+      status: "active",
+      role: existing?.role || payload.role || "business_owner",
+      roleLabel: existing?.roleLabel || "",
+      companyAccess: existing?.companyAccess || [],
+      metadata: {
+        ...(existing?.metadata || {}),
+        emailAuth: {
+          passwordHash: securePassword.hash,
+          passwordSalt: securePassword.salt,
+          passwordIterations: securePassword.iterations,
+          passwordDigest: securePassword.digest,
+          configuredAt: new Date().toISOString(),
+        },
+      },
+    })
+  );
+  return { ok: true, status: existing?.id ? 200 : 201, mode: existing?.id ? "secured" : "created", session };
 }
 
 function inviteIsExpired(invite) {
@@ -2196,6 +2274,13 @@ async function handleApi(req, res, url) {
 
   if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/invitations/accept") {
     const result = await acceptInvitation(await readBody(req));
+    if (result.session?.id) setSessionCookie(res, result.session.id);
+    sendJson(res, result.status, result);
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/auth/email") {
+    const result = await emailAuth(await readBody(req));
     if (result.session?.id) setSessionCookie(res, result.session.id);
     sendJson(res, result.status, result);
     return;
