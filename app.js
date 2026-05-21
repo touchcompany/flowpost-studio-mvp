@@ -1041,8 +1041,7 @@ function currentSession() {
 }
 
 function isTouchSuperAdmin(session = currentSession()) {
-  const identity = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase();
-  return session.role === "super_admin" || identity.includes("touch");
+  return session.role === "super_admin";
 }
 
 function isClientPortalSession(session = currentSession()) {
@@ -1050,7 +1049,7 @@ function isClientPortalSession(session = currentSession()) {
 }
 
 function normalizeClientSession(session = {}) {
-  const isTouch = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase().includes("touch");
+  const isTouch = session.role === "super_admin";
   const plan = isTouch ? "agency" : planLimits[session.plan] ? session.plan : "starter";
   const role = isTouch ? "super_admin" : session.role || (plan === "agency" ? "agency_owner" : "business_owner");
   return {

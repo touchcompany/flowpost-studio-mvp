@@ -121,12 +121,11 @@ function sessionCanManageProfile(session, profileId) {
 
 function sessionIsSuperAdmin(session) {
   if (!session?.id) return false;
-  const identity = `${session.id || ""} ${session.name || ""} ${session.email || ""}`.toLowerCase();
   const adminEmails = (process.env.SUPER_ADMIN_EMAILS || process.env.TOUCH_ADMIN_EMAILS || process.env.CPANEL_DEFAULT_CONTACT_EMAIL || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
-  return session.role === "super_admin" || identity.includes("touch") || adminEmails.includes(String(session.email || "").toLowerCase());
+  return session.role === "super_admin" || adminEmails.includes(String(session.email || "").toLowerCase());
 }
 
 function superAdminStatus() {
@@ -433,8 +432,7 @@ function normalizeSession(payload) {
     creator: "Creador",
     client_user: "Cliente invitado",
   };
-  const identity = `${payload.id || ""} ${payload.name || ""} ${payload.email || ""}`.toLowerCase();
-  const isTouch = identity.includes("touch") || sessionIsSuperAdmin({ ...payload, id: payload.id || "pending-profile" });
+  const isTouch = sessionIsSuperAdmin({ ...payload, id: payload.id || "pending-profile" });
   const plan = isTouch ? "agency" : planLabels[payload.plan] ? payload.plan : "starter";
   const role = isTouch ? "super_admin" : payload.role || (plan === "agency" ? "agency_owner" : "business_owner");
   return {
@@ -501,6 +499,13 @@ async function emailAuth(payload) {
       })
     );
     return { ok: true, status: 200, mode: "login", session };
+  }
+  if (existing?.id && !existingAuth.passwordHash) {
+    return {
+      ok: false,
+      status: 409,
+      message: "Esta cuenta ya existe sin contraseña. Entra con su proveedor original o pide al administrador activar contraseña.",
+    };
   }
 
   const securePassword = passwordHash(password);
@@ -648,6 +653,19 @@ async function currentStoredSession(req) {
   } catch {
     return null;
   }
+}
+
+async function requireAppSession(req, res) {
+  const session = await currentStoredSession(req);
+  if (store.provider === "supabase" && !session?.id) {
+    sendJson(res, 401, {
+      ok: false,
+      message: "Sesion requerida. Entra con email, OAuth o invitacion.",
+      loginUrl: "/login.html",
+    });
+    return null;
+  }
+  return session;
 }
 
 function isClientSession(session) {
@@ -2901,19 +2919,22 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/state") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
     const state = await store.getState();
-    sendJson(res, 200, filterStateForSession(state, await currentStoredSession(req)));
+    sendJson(res, 200, filterStateForSession(state, session));
     return;
   }
 
   if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/state") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
     const payload = await readBody(req);
     const validationError = validateState(payload);
     if (validationError) {
       sendError(res, 400, validationError);
       return;
     }
-    const session = await currentStoredSession(req);
     if (isClientSession(session)) {
       const currentState = await store.getState();
       const nextState = mergeClientScopedRecords(currentState, payload, session);
@@ -2925,8 +2946,10 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/companies") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
     const db = await store.getState();
-    sendJson(res, 200, db.companies);
+    sendJson(res, 200, filterStateForSession(db, session).companies || []);
     return;
   }
 
