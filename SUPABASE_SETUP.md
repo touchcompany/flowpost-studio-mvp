@@ -35,6 +35,8 @@ Si `schema.ok` sale `false`, la respuesta indica que archivo SQL falta ejecutar.
 
 Para corregir de una sola vez las migraciones pendientes mas comunes, ejecuta `supabase/apply-pending-production.sql` en Supabase SQL Editor y luego vuelve a abrir `/api/supabase/check`.
 
+Si Supabase esta conectado directamente con GitHub, tambien queda versionada la misma migracion en `supabase/migrations/20260521000100_apply_pending_production.sql`.
+
 ## Variables de entorno
 
 En cPanel Node.js App Manager:
