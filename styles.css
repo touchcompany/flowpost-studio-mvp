@@ -1166,6 +1166,10 @@ button.social-login-button {
   gap: 14px;
 }
 
+.email-login.compact {
+  gap: 10px;
+}
+
 .email-login label {
   display: grid;
   gap: 8px;
@@ -1183,6 +1187,51 @@ button.social-login-button {
 
 .email-login .marketing-button {
   width: 100%;
+}
+
+.password-reset-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfbfc;
+}
+
+.password-reset-panel summary {
+  cursor: pointer;
+  color: #4f535c;
+  font-weight: 850;
+}
+
+.password-reset-panel[open] summary {
+  margin-bottom: 12px;
+}
+
+.reset-link-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #c8ecd7;
+  border-radius: 12px;
+  background: #f3fbf6;
+  color: #24563b;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.reset-link-box a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--accent-dark);
+}
+
+.reset-link-box button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 850;
 }
 
 .login-status {

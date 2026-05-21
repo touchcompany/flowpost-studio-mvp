@@ -10,6 +10,7 @@ const params = new URLSearchParams(window.location.search);
 const selectedPlan = params.get("plan") || "starter";
 const selectedService = params.get("service") || "";
 const inviteToken = params.get("invite") || "";
+const resetToken = params.get("reset") || "";
 const checkoutRequested = params.get("checkout") === "1";
 const debugMode = params.get("debug") === "1";
 const nextHash = params.get("next")?.startsWith("#") ? params.get("next") : "#dashboard";
@@ -20,6 +21,12 @@ const emailForm = document.querySelector("#emailLoginForm");
 const nameInput = document.querySelector("#loginName");
 const emailInput = document.querySelector("#loginEmail");
 const passwordInput = document.querySelector("#loginPassword");
+const passwordResetPanel = document.querySelector("#passwordResetPanel");
+const passwordResetRequestForm = document.querySelector("#passwordResetRequestForm");
+const passwordResetConfirmForm = document.querySelector("#passwordResetConfirmForm");
+const resetEmailInput = document.querySelector("#resetEmail");
+const resetPasswordInput = document.querySelector("#resetPassword");
+const resetLinkBox = document.querySelector("#resetLinkBox");
 const authReadinessPanel = document.querySelector("#authReadinessPanel");
 const authDebugDetails = document.querySelector("#authDebugDetails");
 const landingServices = {
@@ -343,6 +350,60 @@ async function saveEmailAuthSession({ name, email, password }) {
   }
 }
 
+async function requestPasswordReset(email) {
+  if (window.location.protocol === "file:") {
+    setStatus("Abre la app online para recuperar contraseña.");
+    return;
+  }
+  try {
+    const response = await fetch("/api/auth/password-reset/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setStatus(result.message || "No se pudo generar el enlace.");
+      return;
+    }
+    setStatus(result.message || "Revisa tu enlace de recuperacion.");
+    if (result.resetUrl && resetLinkBox) {
+      resetLinkBox.hidden = false;
+      resetLinkBox.innerHTML = `
+        <span>Enlace temporal generado por 30 minutos.</span>
+        <a href="${escapeHtml(result.resetUrl)}">Abrir recuperación</a>
+        <button type="button" data-copy-reset-url>Copiar enlace</button>
+      `;
+    }
+  } catch {
+    setStatus("No se pudo conectar con el servidor de recuperacion.");
+  }
+}
+
+async function confirmPasswordReset(password) {
+  if (!resetToken) {
+    setStatus("Solicita un enlace de recuperacion primero.");
+    return;
+  }
+  try {
+    const response = await fetch("/api/auth/password-reset/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ token: resetToken, password }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.session) {
+      setStatus(result.message || "No se pudo restablecer la contraseña.");
+      return;
+    }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+    setStatus("Contraseña restablecida. Entrando al panel...");
+    window.location.href = `index.html${nextHash}`;
+  } catch {
+    setStatus("No se pudo conectar con el servidor de recuperacion.");
+  }
+}
+
 async function tryProviderLogin(provider) {
   const endpoint = provider === "facebook" ? "/api/auth/facebook/start?mode=json" : "/api/auth/google/start?mode=json";
   const label = provider === "facebook" ? "Facebook" : "Google";
@@ -381,6 +442,13 @@ if (inviteToken) {
   setStatus("Escribe el correo invitado para entrar al panel compartido.");
   if (emailInput) emailInput.placeholder = "correo invitado";
   hydrateInviteDetails();
+}
+
+if (resetToken) {
+  if (passwordResetPanel) passwordResetPanel.open = true;
+  if (passwordResetRequestForm) passwordResetRequestForm.hidden = true;
+  if (passwordResetConfirmForm) passwordResetConfirmForm.hidden = false;
+  setStatus("Escribe tu nueva contraseña para recuperar el acceso.");
 }
 
 ensurePendingServiceFromUrl();
@@ -455,4 +523,38 @@ emailForm?.addEventListener("submit", (event) => {
   }
   setStatus("Validando cuenta...");
   saveEmailAuthSession({ name, email, password });
+});
+
+passwordResetRequestForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const email = resetEmailInput?.value.trim() || emailInput?.value.trim() || "";
+  if (!email) {
+    setStatus("Escribe el email de tu cuenta.");
+    return;
+  }
+  setStatus("Generando enlace seguro...");
+  requestPasswordReset(email);
+});
+
+passwordResetConfirmForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const password = resetPasswordInput?.value || "";
+  if (!password || password.length < 6) {
+    setStatus("La nueva contraseña debe tener minimo 6 caracteres.");
+    return;
+  }
+  setStatus("Restableciendo contraseña...");
+  confirmPasswordReset(password);
+});
+
+resetLinkBox?.addEventListener("click", async (event) => {
+  const copyButton = event.target.closest("[data-copy-reset-url]");
+  if (!copyButton) return;
+  const url = resetLinkBox.querySelector("a")?.href || "";
+  try {
+    await navigator.clipboard.writeText(url);
+    setStatus("Enlace de recuperacion copiado.");
+  } catch {
+    setStatus(url);
+  }
 });

@@ -103,19 +103,20 @@ async function run() {
     assert.equal(sessionPut.session.plan, "pro", "session PUT should save pro plan");
     assert.equal(sessionPut.session.planLabel, "Pro", "session PUT should normalize plan label");
 
+    const smokeAuthEmail = `smoke-auth-${Date.now()}@example.com`;
     const emailAuthResponse = await fetch(`${BASE_URL}/api/auth/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         name: "Smoke Auth",
-        email: "smoke-auth@example.com",
+        email: smokeAuthEmail,
         password: "smoke-password",
       }),
     });
     assert.ok([200, 201].includes(emailAuthResponse.status), "email auth should respond 200 or 201");
     const emailAuth = await emailAuthResponse.json();
     assert.ok(["created", "login"].includes(emailAuth.mode), "email auth should create or login");
-    assert.equal(emailAuth.session.email, "smoke-auth@example.com", "email auth should return session");
+    assert.equal(emailAuth.session.email, smokeAuthEmail, "email auth should return session");
 
     const passwordChange = await postJson("/api/auth/password", {
       currentPassword: "smoke-password",
@@ -126,9 +127,26 @@ async function run() {
     const badEmailAuth = await fetch(`${BASE_URL}/api/auth/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ email: "smoke-auth@example.com", password: "wrong-password" }),
+      body: JSON.stringify({ email: smokeAuthEmail, password: "wrong-password" }),
     });
     assert.equal(badEmailAuth.status, 401, "email auth should reject wrong password");
+
+    const resetRequest = await postJson("/api/auth/password-reset/request", { email: smokeAuthEmail });
+    assert.equal(resetRequest.ok, true, "password reset request should succeed");
+    assert.ok(resetRequest.resetUrl?.includes("reset="), "password reset should return a temporary reset url");
+    const resetToken = new URL(resetRequest.resetUrl).searchParams.get("reset");
+    const resetConfirm = await postJson("/api/auth/password-reset/confirm", {
+      token: resetToken,
+      password: "smoke-password-3",
+    });
+    assert.equal(resetConfirm.ok, true, "password reset confirm should succeed");
+
+    const resetLoginResponse = await fetch(`${BASE_URL}/api/auth/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ email: smokeAuthEmail, password: "smoke-password-3" }),
+    });
+    assert.equal(resetLoginResponse.status, 200, "email auth should accept reset password");
 
     const state = await getJson("/api/state");
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");

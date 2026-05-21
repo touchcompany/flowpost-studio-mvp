@@ -55,6 +55,24 @@
           </label>
           <button class="marketing-button dark" type="submit">Entrar con email</button>
         </form>
+        <details class="password-reset-panel" id="passwordResetPanel">
+          <summary>Olvidé mi contraseña</summary>
+          <form class="email-login compact" id="passwordResetRequestForm">
+            <label>
+              Email de la cuenta
+              <input id="resetEmail" type="email" placeholder="tu@email.com" autocomplete="email" />
+            </label>
+            <button class="marketing-button ghost" type="submit">Generar enlace</button>
+          </form>
+          <form class="email-login compact" id="passwordResetConfirmForm" hidden>
+            <label>
+              Nueva contraseña
+              <input id="resetPassword" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+            </label>
+            <button class="marketing-button dark" type="submit">Restablecer y entrar</button>
+          </form>
+          <div class="reset-link-box" id="resetLinkBox" hidden></div>
+        </details>
         <p class="login-status" id="loginStatus" aria-live="polite"></p>
         <details class="login-technical-details" id="authDebugDetails">
           <summary>Configuracion técnica</summary>

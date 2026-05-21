@@ -474,6 +474,10 @@ function verifyPassword(password, auth = {}) {
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
+function passwordResetHash(token = "") {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
 async function emailAuth(payload) {
   if (!store.saveSession || !store.getProfileByEmail) {
     return { ok: false, status: 501, message: "El proveedor de datos no soporta login por email." };
@@ -579,6 +583,84 @@ async function changeEmailPassword(req, payload) {
     })
   );
   return { ok: true, status: 200, session: nextSession, message: "Contraseña actualizada." };
+}
+
+async function requestPasswordReset(payload) {
+  if (!store.saveSession || !store.getProfileByEmail) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta recuperacion de contraseña." };
+  }
+  const email = String(payload.email || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) return { ok: false, status: 400, message: "Escribe un email valido." };
+
+  const profile = await store.getProfileByEmail(email);
+  const genericResponse = {
+    ok: true,
+    status: 200,
+    message: "Si el correo existe, se genero un enlace de recuperacion.",
+  };
+  if (!profile?.id) return genericResponse;
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = passwordResetHash(token);
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString();
+  await store.saveSession(
+    normalizeSession({
+      ...profile,
+      metadata: {
+        ...(profile.metadata || {}),
+        passwordReset: {
+          tokenHash,
+          createdAt: new Date().toISOString(),
+          expiresAt,
+        },
+      },
+    })
+  );
+  const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${PORT}`;
+  return {
+    ...genericResponse,
+    expiresAt,
+    resetUrl: `${baseUrl.replace(/\/$/, "")}/login.html?reset=${encodeURIComponent(token)}`,
+  };
+}
+
+async function confirmPasswordReset(payload) {
+  if (!store.saveSession || !store.getProfileByPasswordResetToken) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta tokens de recuperacion." };
+  }
+  const token = String(payload.token || "").trim();
+  const password = String(payload.password || "");
+  if (!token) return { ok: false, status: 400, message: "Token requerido." };
+  if (password.length < 6) return { ok: false, status: 400, message: "La contraseña debe tener minimo 6 caracteres." };
+
+  const profile = await store.getProfileByPasswordResetToken(passwordResetHash(token));
+  const reset = profile?.metadata?.passwordReset || {};
+  if (!profile?.id || !reset.expiresAt || new Date(reset.expiresAt).getTime() < Date.now()) {
+    return { ok: false, status: 400, message: "El enlace vencio o no es valido. Solicita uno nuevo." };
+  }
+
+  const securePassword = passwordHash(password);
+  const nextMetadata = { ...(profile.metadata || {}) };
+  delete nextMetadata.passwordReset;
+  const session = await store.saveSession(
+    normalizeSession({
+      ...profile,
+      provider: "email",
+      status: "active",
+      metadata: {
+        ...nextMetadata,
+        emailAuth: {
+          passwordHash: securePassword.hash,
+          passwordSalt: securePassword.salt,
+          passwordIterations: securePassword.iterations,
+          passwordDigest: securePassword.digest,
+          configuredAt: profile.metadata?.emailAuth?.configuredAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    })
+  );
+  return { ok: true, status: 200, session, message: "Contraseña restablecida." };
 }
 
 function inviteIsExpired(invite) {
@@ -2375,6 +2457,19 @@ async function handleApi(req, res, url) {
 
   if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/auth/password") {
     const result = await changeEmailPassword(req, await readBody(req));
+    if (result.session?.id) setSessionCookie(res, result.session.id);
+    sendJson(res, result.status, result);
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/auth/password-reset/request") {
+    const result = await requestPasswordReset(await readBody(req));
+    sendJson(res, result.status, result);
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/auth/password-reset/confirm") {
+    const result = await confirmPasswordReset(await readBody(req));
     if (result.session?.id) setSessionCookie(res, result.session.id);
     sendJson(res, result.status, result);
     return;
