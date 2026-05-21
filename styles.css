@@ -3656,8 +3656,32 @@ input[type="file"]:focus {
   background: #fafafa;
 }
 
+.password-change-box {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(120px, 180px) minmax(120px, 180px) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.password-change-box input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  font: inherit;
+  background: #fafafa;
+}
+
 .user-safety-panel h3,
 .user-safety-panel p,
+.password-change-box strong,
+.password-change-box p,
 .active-users-panel h3,
 .active-users-panel p,
 .user-safety-row strong {
@@ -8122,6 +8146,7 @@ input[type="file"] {
   .dashboard-access-summary article,
   .user-safety-panel header,
   .user-safety-row,
+  .password-change-box,
   .active-users-panel header,
   .active-users-list article,
   .dashboard-insights article,

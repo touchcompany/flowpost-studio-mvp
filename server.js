@@ -536,6 +536,51 @@ async function emailAuth(payload) {
   return { ok: true, status: existing?.id ? 200 : 201, mode: existing?.id ? "secured" : "created", session };
 }
 
+async function changeEmailPassword(req, payload) {
+  if (!store.saveSession || !store.getProfileByEmail) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta contraseñas." };
+  }
+  const session = await sessionFromRequest(req);
+  if (!session?.id || !session.email) {
+    return { ok: false, status: 401, message: "Sesion requerida para cambiar contraseña." };
+  }
+  const currentPassword = String(payload.currentPassword || "");
+  const nextPassword = String(payload.nextPassword || "");
+  if (nextPassword.length < 6) {
+    return { ok: false, status: 400, message: "La nueva contraseña debe tener minimo 6 caracteres." };
+  }
+
+  const profile = await store.getProfileByEmail(session.email);
+  if (!profile?.id || profile.id !== session.id) {
+    return { ok: false, status: 403, message: "No se pudo confirmar la cuenta actual." };
+  }
+  const existingAuth = profile.metadata?.emailAuth || {};
+  if (existingAuth.passwordHash && !verifyPassword(currentPassword, existingAuth)) {
+    return { ok: false, status: 401, message: "La contraseña actual no coincide." };
+  }
+
+  const securePassword = passwordHash(nextPassword);
+  const nextSession = await store.saveSession(
+    normalizeSession({
+      ...profile,
+      provider: profile.provider || "email",
+      status: "active",
+      metadata: {
+        ...(profile.metadata || {}),
+        emailAuth: {
+          passwordHash: securePassword.hash,
+          passwordSalt: securePassword.salt,
+          passwordIterations: securePassword.iterations,
+          passwordDigest: securePassword.digest,
+          configuredAt: existingAuth.configuredAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    })
+  );
+  return { ok: true, status: 200, session: nextSession, message: "Contraseña actualizada." };
+}
+
 function inviteIsExpired(invite) {
   return Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now());
 }
@@ -2323,6 +2368,13 @@ async function handleApi(req, res, url) {
 
   if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/auth/email") {
     const result = await emailAuth(await readBody(req));
+    if (result.session?.id) setSessionCookie(res, result.session.id);
+    sendJson(res, result.status, result);
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/auth/password") {
+    const result = await changeEmailPassword(req, await readBody(req));
     if (result.session?.id) setSessionCookie(res, result.session.id);
     sendJson(res, result.status, result);
     return;

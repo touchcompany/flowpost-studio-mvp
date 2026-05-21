@@ -5781,6 +5781,18 @@ function renderUserSafetyPanel() {
           Enviar a papelera
         </button>
       </div>
+      <div class="password-change-box">
+        <div>
+          <strong>Contraseña de acceso</strong>
+          <p>Cambia la contraseña usada para entrar con email.</p>
+        </div>
+        <input type="password" data-password-current placeholder="Actual" autocomplete="current-password" />
+        <input type="password" data-password-next placeholder="Nueva contraseña" autocomplete="new-password" />
+        <button class="secondary-button icon-text-button" type="button" data-change-password ${session.id ? "" : "disabled"}>
+          <i data-lucide="key-round"></i>
+          Actualizar
+        </button>
+      </div>
       ${isTouchSuperAdmin(session) ? `<p class="user-safety-note">El super admin activo no se puede eliminar desde esta pantalla para evitar bloquear la administracion.</p>` : ""}
     </section>
   `;
@@ -7120,6 +7132,36 @@ accountsGrid.addEventListener("click", async (event) => {
       showToast("Cuenta enviada a papelera.");
     } catch {
       showToast("No se pudo eliminar la cuenta.");
+      renderAccounts();
+    }
+    return;
+  }
+
+  const changePasswordButton = event.target.closest("[data-change-password]");
+  if (changePasswordButton) {
+    const currentPassword = accountsGrid.querySelector("[data-password-current]")?.value || "";
+    const nextPassword = accountsGrid.querySelector("[data-password-next]")?.value || "";
+    if (!nextPassword || nextPassword.length < 6) {
+      showToast("La nueva contraseña debe tener minimo 6 caracteres.");
+      return;
+    }
+    changePasswordButton.disabled = true;
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ currentPassword, nextPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "password failed");
+      if (result.session) localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+      accountsGrid.querySelector("[data-password-current]").value = "";
+      accountsGrid.querySelector("[data-password-next]").value = "";
+      renderAccount();
+      renderAccounts();
+      showToast(result.message || "Contraseña actualizada.");
+    } catch (error) {
+      showToast(error.message || "No se pudo actualizar la contraseña.");
       renderAccounts();
     }
     return;
