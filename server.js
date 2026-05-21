@@ -145,12 +145,21 @@ function superAdminStatus() {
 }
 
 function emailAuthStatus() {
+  const resetReady = Boolean(store.saveSession && store.getProfileByEmail && store.getProfileByPasswordResetToken);
   return {
     ready: Boolean(store.saveSession && store.getProfileByEmail),
     provider: "email",
     platform: "Email y contraseña",
     startUrl: "/api/auth/email",
-    message: "Login por correo con contraseña y hash seguro en backend.",
+    passwordReset: {
+      ready: resetReady,
+      requestUrl: "/api/auth/password-reset/request",
+      confirmUrl: "/api/auth/password-reset/confirm",
+      delivery: "manual-link",
+    },
+    message: resetReady
+      ? "Login por correo y recuperacion de contraseña listos en backend."
+      : "Login por correo con contraseña y hash seguro en backend.",
   };
 }
 

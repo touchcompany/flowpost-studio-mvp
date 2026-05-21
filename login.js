@@ -95,6 +95,8 @@ function renderAuthReadiness(status = null) {
   }
   const providers = ["google", "facebook"];
   const ready = providers.filter((provider) => status[provider]?.ready).length;
+  const emailReady = Boolean(status.email?.ready);
+  const resetReady = Boolean(status.email?.passwordReset?.ready);
   const stateReady = Boolean(status.state?.ready);
   const adminReady = Boolean(status.superAdmin?.ready);
   authReadinessPanel.innerHTML = `
@@ -102,6 +104,13 @@ function renderAuthReadiness(status = null) {
       <strong>${ready}/2 logins sociales listos</strong>
       <button type="button" data-refresh-auth-status>Actualizar</button>
     </header>
+    <article class="${emailReady ? "ready" : "pending"}">
+      <div>
+        <strong>Email y contraseña</strong>
+        <p>${emailReady ? "Listo para entrar con correo." : "Pendiente de backend de perfiles."}</p>
+        <small>${resetReady ? "Recuperacion de contraseña activa." : "Recuperacion pendiente."}</small>
+      </div>
+    </article>
     <article class="${adminReady ? "ready" : "pending"}">
       <div>
         <strong>Super admin</strong>
