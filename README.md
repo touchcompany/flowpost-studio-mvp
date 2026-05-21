@@ -141,6 +141,8 @@ npm run deploy:package
 - `deploy:package` crea una carpeta limpia para subir a cPanel.
 - Endpoint de readiness: `/api/production-readiness`.
 
+Si `/api/auth/status` o la seccion de cuentas muestran usuarios, pero borrar o recuperar perfiles no funciona, ejecuta el contenido completo de [supabase/soft-delete.sql](./supabase/soft-delete.sql) en Supabase SQL Editor. Sin esa migracion la app sigue funcionando, pero la papelera de usuarios queda en modo pendiente para evitar borrados permanentes accidentales.
+
 Ver [CPANEL_DEPLOYMENT.md](./CPANEL_DEPLOYMENT.md) para subir la app a `app.touch.com.co`.
 Si el dominio abre pero `/api/health` da 404, revisa [CPANEL_NODE_SETUP.md](./CPANEL_NODE_SETUP.md).
 

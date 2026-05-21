@@ -45,6 +45,15 @@ function providerLabel(provider) {
   return provider === "facebook" ? "Facebook" : "Google";
 }
 
+function stableUserId(email) {
+  const safeEmail = String(email || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return safeEmail ? `user-${safeEmail}` : `user-${Date.now()}`;
+}
+
 function authEnvSnippet(provider, setup = {}) {
   const redirect = setup.redirectUri || `https://app.touch.com.co/api/auth/${provider}/callback`;
   if (provider === "facebook") {
@@ -204,7 +213,7 @@ function ensurePendingServiceFromUrl() {
 function sessionPayload({ provider, name, email }) {
   const emailName = email ? email.split("@")[0].replace(/[._-]+/g, " ").trim() : "";
   return {
-    id: `user-${Date.now()}`,
+    id: stableUserId(email || `${provider}-${Date.now()}@flowpost.local`),
     name: name || emailName || (provider === "facebook" ? "Usuario Facebook" : provider === "google" ? "Usuario Google" : "Usuario MVP"),
     email: email || "",
     provider,
@@ -302,7 +311,7 @@ async function saveSession(payload) {
   }
   localStorage.setItem(SESSION_KEY, JSON.stringify(nextPayload));
   if (await startCheckout(nextPayload)) return;
-  window.location.href = "onboarding.html?welcome=1";
+  window.location.href = "index.html#dashboard";
 }
 
 async function tryProviderLogin(provider) {
