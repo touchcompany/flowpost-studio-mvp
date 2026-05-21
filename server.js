@@ -1851,7 +1851,7 @@ async function supabaseSchemaCheck(supabaseUrl, serviceRoleKey) {
     {
       key: "prompt_templates",
       table: "prompt_templates",
-      columns: ["id", "company_id", "type", "title", "prompt"],
+      columns: ["id", "company_id", "type", "title", "body"],
       migration: "supabase/prompt-templates.sql",
       label: "Biblioteca de prompts",
     },

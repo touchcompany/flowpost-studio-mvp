@@ -33,6 +33,8 @@ https://app.touch.com.co/api/production-readiness
 
 Si `schema.ok` sale `false`, la respuesta indica que archivo SQL falta ejecutar.
 
+Para corregir de una sola vez las migraciones pendientes mas comunes, ejecuta `supabase/apply-pending-production.sql` en Supabase SQL Editor y luego vuelve a abrir `/api/supabase/check`.
+
 ## Variables de entorno
 
 En cPanel Node.js App Manager:

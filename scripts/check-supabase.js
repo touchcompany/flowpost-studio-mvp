@@ -41,7 +41,7 @@ const requiredColumnChecks = [
   {
     label: "Prompts",
     table: "prompt_templates",
-    columns: ["id", "company_id", "type", "title", "prompt"],
+    columns: ["id", "company_id", "type", "title", "body"],
     migration: "supabase/prompt-templates.sql",
   },
 ];
