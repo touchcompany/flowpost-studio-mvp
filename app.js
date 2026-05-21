@@ -5618,6 +5618,7 @@ function renderAccounts() {
   accountsGrid.innerHTML = [
     renderAuthSetupChecklist(),
     renderAuthLoginPanel(),
+    renderUserSafetyPanel(),
     renderApiStatusSummary(networks),
     renderTrashPanel(),
     renderApiEventPanel(networks),
@@ -5745,6 +5746,34 @@ function renderAuthLoginPanel() {
           })
           .join("")}
       </div>
+    </section>
+  `;
+}
+
+function renderUserSafetyPanel() {
+  const session = currentSession();
+  const canDelete = Boolean(session.id) && !isTouchSuperAdmin(session);
+  return `
+    <section class="user-safety-panel">
+      <header>
+        <span class="dashboard-icon"><i data-lucide="shield-alert"></i></span>
+        <div>
+          <h3>Cuenta y recuperacion</h3>
+          <p>Las cuentas eliminadas van a papelera y se pueden recuperar durante 30 dias.</p>
+        </div>
+        <span class="pill ${session.id ? "done" : "muted"}">${session.id ? "Activa" : "Sin cuenta"}</span>
+      </header>
+      <div class="user-safety-row">
+        <div>
+          <strong>${escapeHtml(session.name || "Sin sesion")}</strong>
+          <p>${escapeHtml(session.email || "Sin correo")} · ${escapeHtml(session.roleLabel || session.role || "Sin rol")}</p>
+        </div>
+        <button class="secondary-button danger icon-text-button" type="button" data-delete-current-user ${canDelete ? "" : "disabled"}>
+          <i data-lucide="trash-2"></i>
+          Enviar a papelera
+        </button>
+      </div>
+      ${isTouchSuperAdmin(session) ? `<p class="user-safety-note">El super admin activo no se puede eliminar desde esta pantalla para evitar bloquear la administracion.</p>` : ""}
     </section>
   `;
 }
@@ -6988,6 +7017,34 @@ accountsGrid.addEventListener("click", async (event) => {
       showToast("Usuario restaurado.");
     } catch {
       showToast("No se pudo restaurar el usuario.");
+      renderAccounts();
+    }
+    return;
+  }
+
+  const deleteCurrentUserButton = event.target.closest("[data-delete-current-user]");
+  if (deleteCurrentUserButton) {
+    const session = currentSession();
+    if (!session.id || isTouchSuperAdmin(session)) {
+      showToast("Esta cuenta no se puede eliminar desde aqui.");
+      return;
+    }
+    const confirmed = window.confirm("Esta cuenta ira a papelera y podra recuperarse durante 30 dias. ¿Continuar?");
+    if (!confirmed) return;
+    deleteCurrentUserButton.disabled = true;
+    try {
+      const response = await fetch(`/api/users/${encodeURIComponent(session.id)}`, {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("delete user failed");
+      localStorage.removeItem(SESSION_KEY);
+      await refreshTrash(false);
+      renderAccount();
+      renderAccounts();
+      showToast("Cuenta enviada a papelera.");
+    } catch {
+      showToast("No se pudo eliminar la cuenta.");
       renderAccounts();
     }
     return;
