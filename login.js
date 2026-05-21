@@ -11,6 +11,7 @@ const selectedPlan = params.get("plan") || "starter";
 const selectedService = params.get("service") || "";
 const inviteToken = params.get("invite") || "";
 const checkoutRequested = params.get("checkout") === "1";
+const debugMode = params.get("debug") === "1";
 const plan = planLabels[selectedPlan] ? selectedPlan : "starter";
 const planBadge = document.querySelector("#loginPlanBadge");
 const statusText = document.querySelector("#loginStatus");
@@ -355,7 +356,10 @@ if (inviteToken) {
 }
 
 ensurePendingServiceFromUrl();
-if (params.get("debug") === "1" && authDebugDetails) authDebugDetails.open = true;
+if (authDebugDetails) {
+  authDebugDetails.hidden = !debugMode;
+  authDebugDetails.open = debugMode;
+}
 renderAuthReadiness(null);
 refreshAuthReadiness(false);
 
