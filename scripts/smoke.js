@@ -103,6 +103,33 @@ async function run() {
     assert.equal(sessionPut.session.plan, "pro", "session PUT should save pro plan");
     assert.equal(sessionPut.session.planLabel, "Pro", "session PUT should normalize plan label");
 
+    const emailAuthResponse = await fetch(`${BASE_URL}/api/auth/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        name: "Smoke Auth",
+        email: "smoke-auth@example.com",
+        password: "smoke-password",
+      }),
+    });
+    assert.ok([200, 201].includes(emailAuthResponse.status), "email auth should respond 200 or 201");
+    const emailAuth = await emailAuthResponse.json();
+    assert.ok(["created", "login"].includes(emailAuth.mode), "email auth should create or login");
+    assert.equal(emailAuth.session.email, "smoke-auth@example.com", "email auth should return session");
+
+    const passwordChange = await postJson("/api/auth/password", {
+      currentPassword: "smoke-password",
+      nextPassword: "smoke-password-2",
+    });
+    assert.equal(passwordChange.ok, true, "password change should succeed");
+
+    const badEmailAuth = await fetch(`${BASE_URL}/api/auth/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ email: "smoke-auth@example.com", password: "wrong-password" }),
+    });
+    assert.equal(badEmailAuth.status, 401, "email auth should reject wrong password");
+
     const state = await getJson("/api/state");
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");
     assert.ok(Array.isArray(state.jobs), "state.jobs should be an array");
