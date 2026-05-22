@@ -393,6 +393,10 @@ async function saveEmailAuthSession({ name, email, password }) {
     if (result.mode === "created") setStatus("Cuenta creada. Entrando al panel...");
     else setStatus("Sesion iniciada. Entrando al panel...");
     if (await startCheckout(result.session)) return;
+    if (result.mode === "created" && !inviteToken) {
+      window.location.href = `onboarding.html?mode=${encodeURIComponent(authMode)}&plan=${encodeURIComponent(plan)}`;
+      return;
+    }
     window.location.href = `index.html${nextHash}`;
   } catch {
     setStatus("No se pudo conectar con el servidor de login.");

@@ -1372,6 +1372,52 @@ button.social-login-button {
   background: #fffdf8;
 }
 
+.onboarding-persona-box {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 48, 64, 0.06), rgba(0, 149, 246, 0.05)), #fff;
+}
+
+.onboarding-personas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.onboarding-personas label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.onboarding-personas input {
+  accent-color: var(--accent);
+}
+
+.onboarding-personas span,
+.onboarding-personas small {
+  display: block;
+  min-width: 0;
+}
+
+.onboarding-personas span {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.onboarding-personas small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .onboarding-networks {
   display: flex;
   flex-wrap: wrap;
@@ -8324,6 +8370,10 @@ input[type="file"] {
   }
 
   .onboarding-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-personas {
     grid-template-columns: 1fr;
   }
 

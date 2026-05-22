@@ -290,7 +290,7 @@ async function run() {
 
     const login = await get("/login.html");
     assert.equal(login.response.status, 200, "login page should respond 200");
-    assert.ok(login.text.includes("Continuar con Google"), "login should include Google login");
+    assert.ok(login.text.includes("Entrar con Google"), "login should include Google login");
 
     const loginJs = await get("/login.js");
     assert.equal(loginJs.response.status, 200, "login.js should respond 200");
@@ -299,6 +299,7 @@ async function run() {
     const onboarding = await get("/onboarding.html");
     assert.equal(onboarding.response.status, 200, "onboarding page should respond 200");
     assert.ok(onboarding.text.includes("Crear espacio de trabajo"), "onboarding should include submit CTA");
+    assert.ok(onboarding.text.includes("¿Como vas a usar Flowpost?"), "onboarding should include persona selector");
 
     const onboardingJs = await get("/onboarding.js");
     assert.equal(onboardingJs.response.status, 200, "onboarding.js should respond 200");

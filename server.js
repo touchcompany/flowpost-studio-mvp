@@ -827,6 +827,47 @@ async function confirmPasswordReset(payload) {
   return { ok: true, status: 200, session, message: "Contraseña restablecida." };
 }
 
+function onboardingRoleForPersona(persona = "") {
+  const value = String(persona || "").trim();
+  if (value === "agency") return { role: "agency_owner", plan: "agency", roleLabel: "Agencia" };
+  if (value === "creator") return { role: "creator", plan: "starter", roleLabel: "Creador" };
+  return { role: "business_owner", plan: "starter", roleLabel: "Empresa" };
+}
+
+async function saveOnboardingProfile(req, payload) {
+  if (!store.saveSession) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta perfiles." };
+  }
+  const session = await sessionFromRequest(req);
+  if (!session?.id) {
+    return { ok: false, status: 401, message: "Sesion requerida para completar onboarding." };
+  }
+  if (session.role === "client_user") {
+    return { ok: false, status: 403, message: "Los clientes invitados no pueden cambiar el perfil principal." };
+  }
+  const persona = String(payload.persona || "business").trim();
+  const profile = onboardingRoleForPersona(persona);
+  const metadata = {
+    ...(session.metadata || {}),
+    onboarding: {
+      persona,
+      goal: payload.goal || "",
+      teamSize: payload.teamSize || "",
+      clientCount: payload.clientCount || "",
+      completedAt: new Date().toISOString(),
+    },
+  };
+  const nextSession = await store.saveSession(
+    normalizeSession({
+      ...session,
+      ...profile,
+      metadata,
+      status: "active",
+    })
+  );
+  return { ok: true, status: 200, session: nextSession };
+}
+
 function inviteIsExpired(invite) {
   return Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now());
 }
@@ -2629,6 +2670,13 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/ai/status") {
     sendJson(res, 200, aiProviderStatus());
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/profile/onboarding") {
+    const result = await saveOnboardingProfile(req, await readBody(req));
+    if (result.session?.id) setSessionCookie(res, result.session.id);
+    sendJson(res, result.status, result);
     return;
   }
 

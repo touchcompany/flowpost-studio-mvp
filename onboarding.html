@@ -27,13 +27,34 @@
 
       <form class="onboarding-card" id="onboardingForm">
         <div class="section-heading">
-          <h2>Primera empresa</h2>
-          <p>Esta informacion alimenta calendario, biblioteca, cuentas y tono de IA.</p>
+          <h2>Configura tu perfil</h2>
+          <p>Esto define que modulos ves primero y como Flowpost organiza empresas, clientes y permisos.</p>
         </div>
+
+        <section class="onboarding-persona-box" aria-label="Tipo de usuario">
+          <strong>¿Como vas a usar Flowpost?</strong>
+          <div class="onboarding-personas">
+            <label>
+              <input type="radio" name="persona" value="agency" checked />
+              <span>Agencia</span>
+              <small>Gestiono varios clientes, servicios, cobros y contenido.</small>
+            </label>
+            <label>
+              <input type="radio" name="persona" value="business" />
+              <span>Empresa o pyme</span>
+              <small>Quiero organizar mi marca, redes y publicaciones.</small>
+            </label>
+            <label>
+              <input type="radio" name="persona" value="creator" />
+              <span>Marca personal</span>
+              <small>Creo contenido propio, guiones y calendario editorial.</small>
+            </label>
+          </div>
+        </section>
 
         <div class="onboarding-grid">
           <label class="field">
-            <span>Nombre de la empresa</span>
+            <span id="companyNameLabel">Nombre de la empresa</span>
             <input id="onboardingCompanyName" type="text" placeholder="Verde Lima Studio" required />
           </label>
 
@@ -45,9 +66,9 @@
           <label class="field">
             <span>Tipo de negocio</span>
             <select id="onboardingBusinessType">
+              <option value="Agencia">Agencia</option>
               <option value="Pyme">Pyme</option>
               <option value="Marca personal">Marca personal</option>
-              <option value="Agencia">Agencia</option>
               <option value="Ecommerce">Ecommerce</option>
               <option value="Restaurante">Restaurante</option>
             </select>
@@ -63,6 +84,29 @@
           <span>Tono de voz</span>
           <textarea id="onboardingVoice" rows="3" placeholder="Cercano, claro, comercial y con energia."></textarea>
         </label>
+
+        <div class="onboarding-grid">
+          <label class="field">
+            <span>Objetivo principal</span>
+            <select id="onboardingGoal">
+              <option value="Planear contenido">Planear contenido</option>
+              <option value="Vender servicios">Vender servicios</option>
+              <option value="Gestionar clientes">Gestionar clientes</option>
+              <option value="Automatizar agencia">Automatizar agencia</option>
+              <option value="Publicar en redes">Publicar en redes</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span id="clientCountLabel">Clientes o marcas que administras</span>
+            <select id="onboardingClientCount">
+              <option value="1">1</option>
+              <option value="2-5">2 a 5</option>
+              <option value="6-15">6 a 15</option>
+              <option value="16+">16 o mas</option>
+            </select>
+          </label>
+        </div>
 
         <section class="onboarding-network-box" aria-label="Redes iniciales">
           <strong>Redes que vas a gestionar</strong>
