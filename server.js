@@ -1932,6 +1932,10 @@ function authFacebookAppSecret() {
   return envFirst(["AUTH_FACEBOOK_APP_SECRET", "META_APP_SECRET", "FACEBOOK_APP_SECRET"]);
 }
 
+function authFacebookScopes() {
+  return process.env.AUTH_FACEBOOK_SCOPES || "public_profile";
+}
+
 function authProviderStatus(req, provider) {
   if (provider === "google") {
     const groups = [
@@ -1960,7 +1964,7 @@ function authProviderStatus(req, provider) {
     provider: "facebook",
     redirectUri: authFacebookRedirectUri(req),
     graphVersion: metaGraphVersion(),
-    scopes: "email,public_profile",
+    scopes: authFacebookScopes(),
     startUrl: "/api/auth/facebook/start",
     consoleUrl: "https://developers.facebook.com/apps/",
     acceptedVariables: ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET", "AUTH_FACEBOOK_REDIRECT_URI"],
@@ -2023,7 +2027,7 @@ async function exchangeAuthFacebookCode(req, code) {
 
 async function fetchFacebookAuthProfile(accessToken) {
   const profileUrl = new URL(facebookGraphUrl("/me"));
-  profileUrl.searchParams.set("fields", "id,name,email");
+  profileUrl.searchParams.set("fields", authFacebookScopes().split(",").map((scope) => scope.trim()).includes("email") ? "id,name,email" : "id,name");
   profileUrl.searchParams.set("access_token", accessToken);
 
   const response = await fetch(profileUrl, { headers: { Accept: "application/json" } });
@@ -3062,7 +3066,7 @@ async function handleApi(req, res, url) {
       sendJson(res, 200, {
         ...setup,
         redirectUri: authFacebookRedirectUri(req),
-        scopes: "email,public_profile",
+        scopes: authFacebookScopes(),
         message: "Configura AUTH_FACEBOOK_APP_ID/AUTH_FACEBOOK_APP_SECRET o META_APP_ID/META_APP_SECRET para activar login real con Facebook.",
         demoNext: "/index.html",
       });
@@ -3074,7 +3078,7 @@ async function handleApi(req, res, url) {
     authUrl.searchParams.set("client_id", authFacebookAppId());
     authUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
     authUrl.searchParams.set("state", state);
-    authUrl.searchParams.set("scope", "email,public_profile");
+    authUrl.searchParams.set("scope", authFacebookScopes());
 
     if (url.searchParams.get("mode") === "json") {
       sendJson(res, 200, {
@@ -3082,7 +3086,7 @@ async function handleApi(req, res, url) {
         provider: "Facebook Login",
         redirectUri: authFacebookRedirectUri(req),
         graphVersion: metaGraphVersion(),
-        scopes: "email,public_profile",
+        scopes: authFacebookScopes(),
         authUrl: authUrl.toString(),
         setupChecklist: [
           `Valid OAuth Redirect URI: ${authFacebookRedirectUri(req)}`,
