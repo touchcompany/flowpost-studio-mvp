@@ -3624,6 +3624,59 @@ input[type="file"]:focus {
   line-height: 1.35;
 }
 
+.dashboard-next-steps {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(250, 250, 250, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.dashboard-next-steps header strong,
+.dashboard-next-steps header p {
+  display: block;
+  margin: 0;
+}
+
+.dashboard-next-steps header p {
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.dashboard-next-steps > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-next-steps article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.dashboard-next-steps article strong,
+.dashboard-next-steps article p {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+
+.dashboard-next-steps article p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .role-switcher {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -8196,6 +8249,7 @@ input[type="file"] {
   .automation-connectors,
   .automation-layout,
   .dashboard-access-summary,
+  .dashboard-next-steps > div,
   .dashboard-metrics,
   .dashboard-grid,
   .client-command-center {

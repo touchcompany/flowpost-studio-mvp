@@ -3793,6 +3793,58 @@ function renderAccessSummary(company, client) {
   `;
 }
 
+function renderOnboardingNextSteps(company, client) {
+  const session = currentSession();
+  const persona = session.metadata?.onboarding?.persona || (session.role === "agency_owner" ? "agency" : session.role === "creator" ? "creator" : "business");
+  const stepsByPersona = {
+    agency: [
+      { icon: "users", title: "Crea o importa clientes", detail: "Cada cliente puede tener empresa, servicios, cobros, guiones y permisos separados.", view: "clients", action: "Ver clientes" },
+      { icon: "store", title: "Activa servicios vendibles", detail: "Define planes, reels, ads, hosting, dominios y paginas para vender desde la plataforma.", view: "store", action: "Abrir tienda" },
+      { icon: "mail-check", title: "Prueba invitaciones", detail: "Invita un cliente o aprobador para validar el portal limitado por empresa.", view: "clients", action: "Invitar" },
+    ],
+    creator: [
+      { icon: "sparkles", title: "Crea tu primer guion", detail: "Usa IA con tu tono de voz para planear reels, historias y carruseles.", view: "calendar", action: "Ir a guiones" },
+      { icon: "layers", title: "Sube referencias", detail: "Guarda recursos y videos de referencia para adaptar contenido.", view: "library", action: "Biblioteca" },
+      { icon: "calendar-days", title: "Programa tu semana", detail: "Organiza ideas, aprobados y piezas publicadas en el calendario.", view: "calendar", action: "Calendario" },
+    ],
+    business: [
+      { icon: "plug-zap", title: "Conecta redes", detail: "Prepara Instagram, Facebook, TikTok o Drive para empezar pruebas reales.", view: "accounts", action: "Cuentas" },
+      { icon: "plus-square", title: "Crea una publicacion", detail: "Genera copy, guion, portada y trabajos por plataforma.", view: "compose", action: "Crear" },
+      { icon: "wallet", title: "Organiza cobros", detail: "Gestiona cuentas de cobro, facturas y servicios contratados.", view: "clients", action: "Cobros" },
+    ],
+  };
+  const steps = stepsByPersona[persona] || stepsByPersona.business;
+  return `
+    <section class="dashboard-next-steps">
+      <header>
+        <div>
+          <span class="workspace-label">Siguiente paso</span>
+          <strong>${escapeHtml(session.metadata?.onboarding?.goal || "Poner tu espacio en marcha")}</strong>
+          <p>${escapeHtml(client?.name || company.name)} ya tiene una base inicial. Completa estos pasos para empezar a probar en serio.</p>
+        </div>
+      </header>
+      <div>
+        ${steps
+          .map(
+            (step) => `
+              <article>
+                <span class="dashboard-icon"><i data-lucide="${step.icon}"></i></span>
+                <div>
+                  <strong>${escapeHtml(step.title)}</strong>
+                  <p>${escapeHtml(step.detail)}</p>
+                </div>
+                <button class="secondary-button icon-button compact" type="button" data-dashboard-action="${step.view}" aria-label="${escapeHtml(step.action)}">
+                  <i data-lucide="arrow-right"></i>
+                </button>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function activityIcon(type) {
   const icons = {
     automation: "workflow",
@@ -3935,6 +3987,7 @@ function renderDashboard() {
 
     ${isClientPortalSession() ? renderClientPortalAccess(client, { compact: true }) : ""}
     ${!isClientPortalSession() ? renderAccessSummary(company, client) : ""}
+    ${!isClientPortalSession() ? renderOnboardingNextSteps(company, client) : ""}
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
