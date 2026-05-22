@@ -2253,6 +2253,7 @@ function diagnostics(req) {
     legal: {
       privacy: fileExists("legal/privacy.html"),
       terms: fileExists("legal/terms.html"),
+      dataDeletion: fileExists("legal/data-deletion.html"),
     },
     storage: {
       supabaseBucket: process.env.SUPABASE_STORAGE_BUCKET || "",

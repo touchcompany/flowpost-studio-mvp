@@ -75,6 +75,7 @@ async function run() {
     assert.equal(diagnostics.ok, true, "diagnostics.ok should be true");
     assert.equal(diagnostics.legal.privacy, true, "privacy page should exist");
     assert.equal(diagnostics.legal.terms, true, "terms page should exist");
+    assert.equal(diagnostics.legal.dataDeletion, true, "data deletion page should exist");
     assert.ok(diagnostics.redirects.googleDrive, "diagnostics should include google redirect");
     assert.ok(Array.isArray(diagnostics.env.googleDrive), "diagnostics should include env checklist");
     assert.equal(diagnostics.features.reviewModal, true, "review modal feature should be true");
@@ -307,11 +308,20 @@ async function run() {
 
     const privacy = await get("/legal/privacy.html");
     assert.equal(privacy.response.status, 200, "privacy page should respond 200");
-    assert.ok(privacy.text.includes("Politica de privacidad"), "privacy page should include title");
+    assert.ok(privacy.text.includes("Política de privacidad"), "privacy page should include title");
+    assert.ok(privacy.text.includes("Facebook Login"), "privacy page should mention Facebook Login");
+    assert.ok(
+      privacy.text.includes("https://app.touch.com.co/legal/privacy.html"),
+      "privacy page should include public canonical URL"
+    );
 
     const terms = await get("/legal/terms.html");
     assert.equal(terms.response.status, 200, "terms page should respond 200");
     assert.ok(terms.text.includes("Terminos de uso"), "terms page should include title");
+
+    const dataDeletion = await get("/legal/data-deletion.html");
+    assert.equal(dataDeletion.response.status, 200, "data deletion page should respond 200");
+    assert.ok(dataDeletion.text.includes("Eliminación de datos"), "data deletion page should include title");
 
     console.log("Smoke tests OK");
   } finally {

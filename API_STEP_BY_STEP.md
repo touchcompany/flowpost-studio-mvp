@@ -71,8 +71,9 @@ Pasos en Meta Developers:
 
 1. Crear app tipo Business.
 2. Configurar dominio publico HTTPS.
-3. Agregar URL de Politica de privacidad: `/legal/privacy.html`.
-4. Agregar URL de Terminos: `/legal/terms.html`.
+3. Agregar URL de Politica de privacidad: `https://app.touch.com.co/legal/privacy.html`.
+4. Agregar URL de Terminos: `https://app.touch.com.co/legal/terms.html`.
+5. Agregar URL de eliminacion de datos si Meta la solicita: `https://app.touch.com.co/legal/data-deletion.html`.
 5. Configurar OAuth redirect URI.
 6. Pedir permisos necesarios para paginas e Instagram.
 7. Agregar usuarios de prueba antes de enviar a revision.

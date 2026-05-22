@@ -238,7 +238,13 @@ El plan resumido esta en [API_CONNECT_PLAN.md](./API_CONNECT_PLAN.md):
 3. TikTok Content Posting API.
 4. LinkedIn/YouTube en una fase posterior.
 
-Para TikTok, revisar [TIKTOK_REVIEW_READINESS.md](./TIKTOK_REVIEW_READINESS.md). Ya existen paginas legales base en `/legal/privacy.html` y `/legal/terms.html`, necesarias para una app comercial revisable.
+Para TikTok y Meta, revisar [TIKTOK_REVIEW_READINESS.md](./TIKTOK_REVIEW_READINESS.md). Ya existen paginas legales publicas en `/legal/privacy.html`, `/legal/terms.html` y `/legal/data-deletion.html`, necesarias para una app comercial revisable.
+
+URLs publicas para paneles de desarrollador:
+
+- Politica de privacidad: `https://app.touch.com.co/legal/privacy.html`
+- Terminos de uso: `https://app.touch.com.co/legal/terms.html`
+- Eliminacion de datos: `https://app.touch.com.co/legal/data-deletion.html`
 
 Google Drive ya tiene intercambio OAuth preparado en backend:
 

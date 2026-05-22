@@ -8,6 +8,7 @@ Objetivo: dejar Flowpost Studio listo para solicitar acceso a TikTok Content Pos
 - Debe existir una URL publica funcional.
 - Debe tener Politica de privacidad publica: `/legal/privacy.html`.
 - Debe tener Terminos de uso publicos: `/legal/terms.html`.
+- Debe tener pagina publica de eliminacion de datos: `/legal/data-deletion.html`.
 - El flujo debe explicar por que se solicita acceso a TikTok.
 - El usuario debe conectar su cuenta por OAuth.
 - La app debe mostrar claramente cuando una cuenta esta conectada.

@@ -35,6 +35,7 @@ Probar:
 - `/api/oauth/status`
 - `/legal/privacy.html`
 - `/legal/terms.html`
+- `/legal/data-deletion.html`
 
 ## Prueba automatica
 
@@ -50,6 +51,7 @@ Esto levanta el backend en un puerto de prueba y valida:
 - `/api/oauth/status`
 - `/legal/privacy.html`
 - `/legal/terms.html`
+- `/legal/data-deletion.html`
 
 ## Funciones ya reales
 
