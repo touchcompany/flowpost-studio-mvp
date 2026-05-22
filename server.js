@@ -1933,7 +1933,13 @@ function authFacebookAppSecret() {
 }
 
 function authFacebookScopes() {
-  return process.env.AUTH_FACEBOOK_SCOPES || "public_profile";
+  const requested = (process.env.AUTH_FACEBOOK_SCOPES || "public_profile")
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+  const allowEmail = process.env.AUTH_FACEBOOK_ALLOW_EMAIL === "true";
+  const safeScopes = requested.filter((scope) => scope !== "email" || allowEmail);
+  return Array.from(new Set(safeScopes.length ? safeScopes : ["public_profile"])).join(",");
 }
 
 function authProviderStatus(req, provider) {
