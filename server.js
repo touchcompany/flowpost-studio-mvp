@@ -2827,6 +2827,42 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/mail/status") {
+    sendJson(res, 200, mailDeliveryStatus());
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/mail/test") {
+    const session = await currentStoredSession(req);
+    if (store.provider === "supabase" && !sessionIsSuperAdmin(session)) {
+      sendError(res, 403, "mail test forbidden");
+      return;
+    }
+    const setup = mailDeliveryStatus();
+    if (!setup.ready) {
+      sendJson(res, 501, { ok: false, ...setup, message: `SMTP pendiente: ${setup.missing.join(", ")}` });
+      return;
+    }
+    const payload = await readBody(req);
+    const to = String(payload.email || session?.email || process.env.CPANEL_DEFAULT_CONTACT_EMAIL || "").trim();
+    if (!to || !to.includes("@")) {
+      sendError(res, 400, "email is required");
+      return;
+    }
+    try {
+      const result = await sendSmtpEmail({
+        to,
+        subject: "Prueba SMTP Flowpost Studio",
+        text: "SMTP esta funcionando en Flowpost Studio.",
+        html: "<p>SMTP esta funcionando en <strong>Flowpost Studio</strong>.</p>",
+      });
+      sendJson(res, 200, { ok: Boolean(result.ok), to, result });
+    } catch (error) {
+      sendJson(res, 502, { ok: false, to, message: error.message });
+    }
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/services/provisioning/status") {
     sendJson(res, 200, {
       cpanel: { ...cpanelSetup(), plans: cpanelPlanConfig() },

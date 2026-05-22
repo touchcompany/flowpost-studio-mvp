@@ -147,6 +147,8 @@ async function run() {
       body: JSON.stringify({ email: smokeAuthEmail, password: "smoke-password-3" }),
     });
     assert.equal(resetLoginResponse.status, 200, "email auth should accept reset password");
+    const mailStatus = await getJson("/api/mail/status");
+    assert.equal(mailStatus.provider, "smtp", "mail status should report smtp provider");
 
     const state = await getJson("/api/state");
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");

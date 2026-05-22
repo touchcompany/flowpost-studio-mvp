@@ -36,6 +36,8 @@ Para enviar correos reales desde cPanel configura SMTP:
 
 Si SMTP no esta configurado, la app no se rompe: muestra un enlace temporal manual para pruebas controladas. El estado completo se revisa en `/api/auth/status`.
 
+Tambien puedes revisar SMTP en `/api/mail/status` y enviar una prueba con `POST /api/mail/test` estando logueado como super admin.
+
 ## Siguiente capa tecnica
 
 1. Mantener `DATA_PROVIDER=supabase` en produccion.
