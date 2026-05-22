@@ -21,6 +21,21 @@ No usa Vite, React ni Next.js. Es una app HTML/CSS/JavaScript con backend Node p
 - Configuracion tecnica: redirect URIs, variables faltantes y estado por proveedor.
 - Cola: trabajos internos por plataforma.
 
+## Login y recuperacion de acceso
+
+El login por email funciona desde backend con hash PBKDF2 y sesion `HttpOnly`. La recuperacion de contraseña usa tokens temporales de 30 minutos guardados como hash en la base.
+
+Para enviar correos reales desde cPanel configura SMTP:
+
+- `SMTP_HOST`
+- `SMTP_PORT=465`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `SMTP_SECURE=true`
+
+Si SMTP no esta configurado, la app no se rompe: muestra un enlace temporal manual para pruebas controladas. El estado completo se revisa en `/api/auth/status`.
+
 ## Siguiente capa tecnica
 
 1. Mantener `DATA_PROVIDER=supabase` en produccion.

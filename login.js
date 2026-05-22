@@ -375,11 +375,11 @@ async function requestPasswordReset(email) {
       setStatus(result.message || "No se pudo generar el enlace.");
       return;
     }
-    setStatus(result.message || "Revisa tu enlace de recuperacion.");
+    setStatus(result.emailSent ? "Correo de recuperacion enviado. Revisa tu bandeja." : result.message || "Revisa tu enlace de recuperacion.");
     if (result.resetUrl && resetLinkBox) {
       resetLinkBox.hidden = false;
       resetLinkBox.innerHTML = `
-        <span>Enlace temporal generado por 30 minutos.</span>
+        <span>${escapeHtml(result.deliveryMessage || "Enlace temporal generado por 30 minutos.")}</span>
         <a href="${escapeHtml(result.resetUrl)}">Abrir recuperación</a>
         <button type="button" data-copy-reset-url>Copiar enlace</button>
       `;

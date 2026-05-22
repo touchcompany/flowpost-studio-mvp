@@ -2,6 +2,8 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const net = require("net");
+const tls = require("tls");
 const { createDataStore } = require("./lib/data-store");
 const { loadEnvFile } = require("./scripts/env-utils");
 const { missingEnv, publicUrl, randomState, redirect } = require("./lib/oauth-utils");
@@ -146,6 +148,7 @@ function superAdminStatus() {
 
 function emailAuthStatus() {
   const resetReady = Boolean(store.saveSession && store.getProfileByEmail && store.getProfileByPasswordResetToken);
+  const mail = mailDeliveryStatus();
   return {
     ready: Boolean(store.saveSession && store.getProfileByEmail),
     provider: "email",
@@ -155,11 +158,26 @@ function emailAuthStatus() {
       ready: resetReady,
       requestUrl: "/api/auth/password-reset/request",
       confirmUrl: "/api/auth/password-reset/confirm",
-      delivery: "manual-link",
+      delivery: mail.ready ? "smtp" : "manual-link",
+      emailDeliveryReady: mail.ready,
     },
     message: resetReady
-      ? "Login por correo y recuperacion de contraseña listos en backend."
+      ? `Login por correo y recuperacion de contraseña listos en backend${mail.ready ? " con email SMTP." : " con enlace manual."}`
       : "Login por correo con contraseña y hash seguro en backend.",
+  };
+}
+
+function mailDeliveryStatus() {
+  const required = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"];
+  const missing = required.filter((name) => !process.env[name]);
+  return {
+    ready: missing.length === 0,
+    provider: "smtp",
+    hostConfigured: Boolean(process.env.SMTP_HOST),
+    fromConfigured: Boolean(process.env.SMTP_FROM || process.env.SMTP_USER),
+    secure: process.env.SMTP_SECURE !== "false",
+    port: Number(process.env.SMTP_PORT || (process.env.SMTP_SECURE === "false" ? 587 : 465)),
+    missing,
   };
 }
 
@@ -487,6 +505,109 @@ function passwordResetHash(token = "") {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
+function smtpEncode(value = "") {
+  return Buffer.from(String(value), "utf8").toString("base64");
+}
+
+function smtpSafeHeader(value = "") {
+  return String(value).replace(/[\r\n]+/g, " ").trim();
+}
+
+function smtpMessage({ from, to, subject, text, html }) {
+  const safeFrom = smtpSafeHeader(from);
+  const safeTo = smtpSafeHeader(to);
+  const boundary = `flowpost-${crypto.randomBytes(8).toString("hex")}`;
+  const plain = String(text || "").replace(/\r?\n/g, "\r\n");
+  const bodyHtml = String(html || "").replace(/\r?\n/g, "\r\n");
+  const lines = [
+    `From: ${safeFrom}`,
+    `To: ${safeTo}`,
+    `Subject: ${smtpSafeHeader(subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    plain,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    bodyHtml || plain,
+    "",
+    `--${boundary}--`,
+    "",
+  ];
+  return lines.join("\r\n").replace(/^\./gm, "..");
+}
+
+function smtpRead(socket) {
+  return new Promise((resolve, reject) => {
+    let buffer = "";
+    const onData = (chunk) => {
+      buffer += chunk.toString("utf8");
+      const lines = buffer.split(/\r?\n/).filter(Boolean);
+      const last = lines[lines.length - 1] || "";
+      if (/^\d{3}\s/.test(last)) {
+        socket.off("data", onData);
+        socket.off("error", onError);
+        resolve(buffer);
+      }
+    };
+    const onError = (error) => {
+      socket.off("data", onData);
+      reject(error);
+    };
+    socket.on("data", onData);
+    socket.on("error", onError);
+  });
+}
+
+async function smtpCommand(socket, command, expected = /^[23]/) {
+  if (command) socket.write(`${command}\r\n`);
+  const response = await smtpRead(socket);
+  if (!expected.test(response)) {
+    throw new Error(`SMTP rejected command ${command || "connect"}: ${response.trim().slice(0, 180)}`);
+  }
+  return response;
+}
+
+async function sendSmtpEmail({ to, subject, text, html }) {
+  const status = mailDeliveryStatus();
+  if (!status.ready) {
+    return { ok: false, skipped: true, message: `SMTP pendiente: ${status.missing.join(", ")}` };
+  }
+  const host = process.env.SMTP_HOST;
+  const port = status.port;
+  const secure = status.secure;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const from = process.env.SMTP_FROM || user;
+  const socket = secure
+    ? tls.connect({ host, port, servername: host, rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false" })
+    : net.connect({ host, port });
+
+  try {
+    await smtpCommand(socket, null, /^220/);
+    await smtpCommand(socket, `EHLO ${process.env.SMTP_EHLO_DOMAIN || "app.touch.com.co"}`);
+    await smtpCommand(socket, "AUTH LOGIN", /^334/);
+    await smtpCommand(socket, smtpEncode(user), /^334/);
+    await smtpCommand(socket, smtpEncode(pass), /^235/);
+    await smtpCommand(socket, `MAIL FROM:<${from}>`);
+    await smtpCommand(socket, `RCPT TO:<${to}>`);
+    await smtpCommand(socket, "DATA", /^354/);
+    socket.write(`${smtpMessage({ from, to, subject, text, html })}\r\n.\r\n`);
+    await smtpCommand(socket, null);
+    await smtpCommand(socket, "QUIT", /^221|^250/);
+    return { ok: true, skipped: false };
+  } finally {
+    socket.end();
+  }
+}
+
 async function emailAuth(payload) {
   if (!store.saveSession || !store.getProfileByEmail) {
     return { ok: false, status: 501, message: "El proveedor de datos no soporta login por email." };
@@ -626,10 +747,37 @@ async function requestPasswordReset(payload) {
     })
   );
   const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${PORT}`;
+  const resetUrl = `${baseUrl.replace(/\/$/, "")}/login.html?reset=${encodeURIComponent(token)}`;
+  let emailDelivery = { ok: false, skipped: true };
+  try {
+    emailDelivery = await sendSmtpEmail({
+      to: email,
+      subject: "Recupera tu acceso a Flowpost Studio",
+      text: [
+        "Hola,",
+        "",
+        "Recibimos una solicitud para restablecer tu contraseña en Flowpost Studio.",
+        `Abre este enlace antes de 30 minutos: ${resetUrl}`,
+        "",
+        "Si no solicitaste este cambio, puedes ignorar este correo.",
+      ].join("\n"),
+      html: `
+        <p>Hola,</p>
+        <p>Recibimos una solicitud para restablecer tu contraseña en Flowpost Studio.</p>
+        <p><a href="${resetUrl}">Restablecer contraseña</a></p>
+        <p>Este enlace vence en 30 minutos. Si no solicitaste este cambio, puedes ignorar este correo.</p>
+      `,
+    });
+  } catch (error) {
+    emailDelivery = { ok: false, skipped: false, message: error.message };
+  }
   return {
     ...genericResponse,
     expiresAt,
-    resetUrl: `${baseUrl.replace(/\/$/, "")}/login.html?reset=${encodeURIComponent(token)}`,
+    resetUrl,
+    emailSent: Boolean(emailDelivery.ok),
+    delivery: emailDelivery.ok ? "smtp" : "manual-link",
+    deliveryMessage: emailDelivery.ok ? "Correo de recuperacion enviado." : emailDelivery.message || "Usa el enlace temporal manual.",
   };
 }
 
@@ -1982,6 +2130,7 @@ function diagnostics(req) {
       meta: ["META_APP_ID", "META_APP_SECRET", "META_REDIRECT_URI"],
       tiktok: ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET", "TIKTOK_REDIRECT_URI", "TIKTOK_SCOPES"],
       auth: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET"],
+      emailDelivery: ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_SECURE"],
       superAdmin: ["SUPER_ADMIN_EMAILS", "TOUCH_ADMIN_EMAILS"],
       billing: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"],
       supabase: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_STORAGE_BUCKET"],
@@ -1995,6 +2144,7 @@ function diagnostics(req) {
       state: oauthStateStatus(),
       superAdmin: superAdminStatus(),
     },
+    emailDelivery: mailDeliveryStatus(),
     billing: oauthSetup("Stripe Checkout", ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO", "STRIPE_PRICE_AGENCY"]),
     billingWebhook: oauthSetup("Stripe Webhook", ["STRIPE_WEBHOOK_SECRET"]),
     provisioning: {
@@ -2148,6 +2298,7 @@ async function systemStatus(req) {
     email: emailAuthStatus(),
     google: authProviderStatus(req, "google"),
     facebook: authProviderStatus(req, "facebook"),
+    emailDelivery: mailDeliveryStatus(),
   };
   const oauth = {
     googleDrive: oauthSetup("Google Drive", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
