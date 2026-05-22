@@ -3727,6 +3727,17 @@ input[type="file"]:focus {
   background: #fafafa;
 }
 
+.compact-mail-test {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) 42px minmax(140px, 190px);
+  margin-top: 0;
+}
+
+.compact-mail-test .connect-button,
+.compact-mail-test .secondary-button {
+  min-height: 42px;
+}
+
 .user-safety-panel h3,
 .user-safety-panel p,
 .password-change-box strong,

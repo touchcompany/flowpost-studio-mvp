@@ -289,6 +289,7 @@ let backendProvider = "local";
 let provisioningStatus = null;
 let oauthStatus = null;
 let authStatus = null;
+let mailStatus = null;
 let systemStatusData = null;
 let apiProbeResults = {};
 let deletedCompanies = [];
@@ -5647,6 +5648,7 @@ function renderAccounts() {
   accountsGrid.innerHTML = [
     renderAuthSetupChecklist(),
     renderAuthLoginPanel(),
+    renderMailDeliveryPanel(),
     renderUserSafetyPanel(),
     renderActiveUsersPanel(),
     renderApiStatusSummary(networks),
@@ -5775,6 +5777,69 @@ function renderAuthLoginPanel() {
             `;
           })
           .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderMailDeliveryPanel() {
+  const setup = mailStatus || authStatus?.email?.passwordReset || {};
+  const ready = Boolean(setup.ready || setup.emailDeliveryReady);
+  const missing = setup.missing || [];
+  const session = currentSession();
+  return `
+    <section class="auth-login-panel mail-delivery-panel">
+      <header>
+        <span class="dashboard-icon"><i data-lucide="mail-check"></i></span>
+        <div>
+          <h3>Correo transaccional</h3>
+          <p>Envio real para recuperar contraseña e invitar clientes a una empresa.</p>
+        </div>
+        <span class="pill ${ready ? "done" : "muted"}">${ready ? "SMTP listo" : "Manual"}</span>
+      </header>
+      <div class="auth-login-grid">
+        <article class="${ready ? "ready" : "pending"}">
+          <div class="auth-provider-main">
+            <span class="status-icon small"><i data-lucide="${ready ? "send" : "mail-warning"}"></i></span>
+            <div>
+              <strong>${ready ? "Correo activo" : "Falta configurar SMTP"}</strong>
+              <p>${ready ? `Puerto ${setup.port || 465} · ${setup.secure === false ? "STARTTLS" : "SSL/TLS"}` : "La app crea enlaces manuales hasta que agregues SMTP."}</p>
+            </div>
+          </div>
+          <span class="pill ${ready ? "done" : "warning"}">${ready ? "Funciona" : "Pendiente"}</span>
+          <div class="auth-provider-meta">
+            <small>Variables cPanel</small>
+            <code>SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_SECURE</code>
+            <small>Faltantes</small>
+            <code>${escapeHtml(missing.length ? missing.join(", ") : "Ninguna variable critica faltante")}</code>
+          </div>
+          <div class="password-change-box compact-mail-test">
+            <input type="email" data-mail-test-email placeholder="${escapeHtml(session.email || "correo@touch.com.co")}" value="${escapeHtml(session.email || "")}" />
+            <button class="secondary-button icon-button compact" type="button" data-copy-smtp-vars aria-label="Copiar variables SMTP">
+              <i data-lucide="copy"></i>
+            </button>
+            <button class="connect-button icon-text-button" type="button" data-test-mail ${ready ? "" : "disabled"}>
+              <i data-lucide="send"></i>
+              Probar correo
+            </button>
+          </div>
+        </article>
+        <article class="ready">
+          <div class="auth-provider-main">
+            <span class="status-icon small"><i data-lucide="key-round"></i></span>
+            <div>
+              <strong>Recuperacion e invitaciones</strong>
+              <p>Tokens temporales, enlaces seguros y fallback manual para no bloquear pruebas.</p>
+            </div>
+          </div>
+          <span class="pill done">Activo</span>
+          <div class="auth-provider-meta">
+            <small>Endpoints</small>
+            <code>/api/auth/password-reset/request · /api/invitations/create · /api/mail/test</code>
+            <small>Entrega actual</small>
+            <code>${ready ? "SMTP automatico" : "Enlace manual visible para pruebas controladas"}</code>
+          </div>
+        </article>
       </div>
     </section>
   `;
@@ -5965,19 +6030,22 @@ async function refreshOAuthStatus(showFeedback = false) {
   if (window.location.protocol === "file:") {
     oauthStatus = null;
     authStatus = null;
+    mailStatus = null;
     renderAccounts();
     if (showFeedback) showToast("Abre la app desde http://127.0.0.1:4176 para revisar APIs.");
     return;
   }
 
   try {
-    const [oauthResponse, authResponse] = await Promise.all([
+    const [oauthResponse, authResponse, mailResponse] = await Promise.all([
       fetch("/api/oauth/status", { headers: { Accept: "application/json" } }),
       fetch("/api/auth/status", { headers: { Accept: "application/json" } }),
+      fetch("/api/mail/status", { headers: { Accept: "application/json" } }),
     ]);
     if (!oauthResponse.ok) throw new Error("oauth status unavailable");
     oauthStatus = await oauthResponse.json();
     authStatus = authResponse.ok ? await authResponse.json() : null;
+    mailStatus = mailResponse.ok ? await mailResponse.json() : null;
     renderAccounts();
     if (showFeedback) {
       const providers = Object.values(oauthStatus);
@@ -5988,6 +6056,7 @@ async function refreshOAuthStatus(showFeedback = false) {
   } catch {
     oauthStatus = null;
     authStatus = null;
+    mailStatus = null;
     renderAccounts();
     if (showFeedback) showToast("No se pudo consultar /api/oauth/status.");
   }
@@ -7031,6 +7100,50 @@ queueSummary.addEventListener("click", (event) => {
 });
 
 accountsGrid.addEventListener("click", async (event) => {
+  const copySmtpVarsButton = event.target.closest("[data-copy-smtp-vars]");
+  if (copySmtpVarsButton) {
+    const snippet = [
+      "SMTP_HOST=mail.tudominio.com",
+      "SMTP_PORT=465",
+      "SMTP_USER=correo@tudominio.com",
+      "SMTP_PASS=pega-la-clave-del-correo",
+      "SMTP_FROM=correo@tudominio.com",
+      "SMTP_SECURE=true",
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(snippet);
+      showToast("Variables SMTP copiadas.");
+    } catch {
+      showToast(snippet);
+    }
+    return;
+  }
+
+  const testMailButton = event.target.closest("[data-test-mail]");
+  if (testMailButton) {
+    const email = accountsGrid.querySelector("[data-mail-test-email]")?.value.trim() || currentSession().email || "";
+    if (!email || !email.includes("@")) {
+      showToast("Escribe un correo valido para la prueba.");
+      return;
+    }
+    testMailButton.disabled = true;
+    try {
+      const response = await fetch("/api/mail/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.message || "No se pudo enviar el correo.");
+      showToast(`Correo de prueba enviado a ${email}.`);
+    } catch (error) {
+      showToast(error.message || "No se pudo probar SMTP.");
+    } finally {
+      await refreshOAuthStatus(false);
+    }
+    return;
+  }
+
   const authLoginButton = event.target.closest("[data-auth-login]");
   if (authLoginButton) {
     const result = await startAuthLogin(authLoginButton.dataset.authLogin);
