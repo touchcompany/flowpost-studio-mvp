@@ -27,8 +27,12 @@
       </section>
 
       <section class="login-card" aria-label="Entrar a Flowpost Studio">
-        <h2>Entrar</h2>
-        <p>Accede a tu panel o crea una cuenta para empezar.</p>
+        <div class="auth-mode-switch" role="tablist" aria-label="Tipo de acceso">
+          <button class="active" type="button" role="tab" aria-selected="true" data-auth-mode="login">Iniciar sesión</button>
+          <button type="button" role="tab" aria-selected="false" data-auth-mode="register">Crear cuenta</button>
+        </div>
+        <h2 id="loginCardTitle">Iniciar sesión</h2>
+        <p id="loginCardCopy">Entra a tu panel con una cuenta existente.</p>
         <div class="social-login-stack">
           <button class="social-login-button" type="button" data-social-login="google">
             <span class="provider-mark google">G</span>
@@ -53,7 +57,7 @@
             Contraseña
             <input id="loginPassword" type="password" name="password" placeholder="Mínimo 6 caracteres" autocomplete="current-password" />
           </label>
-          <button class="marketing-button dark" type="submit">Entrar con email</button>
+          <button class="marketing-button dark" id="emailSubmitButton" type="submit">Iniciar sesión</button>
         </form>
         <details class="password-reset-panel" id="passwordResetPanel">
           <summary>Olvidé mi contraseña</summary>

@@ -11,16 +11,21 @@ const selectedPlan = params.get("plan") || "starter";
 const selectedService = params.get("service") || "";
 const inviteToken = params.get("invite") || "";
 const resetToken = params.get("reset") || "";
+const authModeParam = params.get("mode") === "register" || params.get("signup") === "1" ? "register" : "login";
 const checkoutRequested = params.get("checkout") === "1";
 const debugMode = params.get("debug") === "1";
 const nextHash = params.get("next")?.startsWith("#") ? params.get("next") : "#dashboard";
 const plan = planLabels[selectedPlan] ? selectedPlan : "starter";
 const planBadge = document.querySelector("#loginPlanBadge");
 const statusText = document.querySelector("#loginStatus");
+const loginCardTitle = document.querySelector("#loginCardTitle");
+const loginCardCopy = document.querySelector("#loginCardCopy");
+const authModeButtons = document.querySelectorAll("[data-auth-mode]");
 const emailForm = document.querySelector("#emailLoginForm");
 const nameInput = document.querySelector("#loginName");
 const emailInput = document.querySelector("#loginEmail");
 const passwordInput = document.querySelector("#loginPassword");
+const emailSubmitButton = document.querySelector("#emailSubmitButton");
 const passwordResetPanel = document.querySelector("#passwordResetPanel");
 const passwordResetRequestForm = document.querySelector("#passwordResetRequestForm");
 const passwordResetConfirmForm = document.querySelector("#passwordResetConfirmForm");
@@ -37,6 +42,7 @@ const landingServices = {
   reels: { id: "reels", name: "Paquete de reels", price: 280000, group: "Produccion" },
   chatbot: { id: "chatbot", name: "Chatbot y soporte", price: 450000, group: "Automatizacion" },
 };
+let authMode = inviteToken || checkoutRequested || selectedService ? "register" : authModeParam;
 
 function setStatus(message) {
   if (statusText) statusText.textContent = message;
@@ -53,6 +59,34 @@ function escapeHtml(value) {
 
 function providerLabel(provider) {
   return provider === "facebook" ? "Facebook" : "Google";
+}
+
+function applyAuthMode(mode, options = {}) {
+  authMode = mode === "register" ? "register" : "login";
+  authModeButtons.forEach((button) => {
+    const active = button.dataset.authMode === authMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  if (loginCardTitle) loginCardTitle.textContent = authMode === "register" ? "Crear cuenta" : "Iniciar sesión";
+  if (loginCardCopy) {
+    loginCardCopy.textContent =
+      authMode === "register"
+        ? "Registra tu cuenta para crear empresas, clientes y publicaciones."
+        : "Entra a tu panel con una cuenta existente.";
+  }
+  if (nameInput) {
+    const nameLabel = nameInput.closest("label");
+    nameLabel.hidden = authMode !== "register";
+    nameInput.required = authMode === "register";
+    nameInput.autocomplete = authMode === "register" ? "name" : "off";
+  }
+  if (passwordInput) passwordInput.autocomplete = authMode === "register" ? "new-password" : "current-password";
+  if (emailSubmitButton) emailSubmitButton.textContent = authMode === "register" ? "Crear cuenta" : "Iniciar sesión";
+  if (passwordResetPanel) passwordResetPanel.hidden = authMode === "register";
+  if (!options.silent) {
+    setStatus(authMode === "register" ? "Crea tu cuenta nueva con email o proveedor social." : "Entra con tu cuenta existente.");
+  }
 }
 
 function stableUserId(email) {
@@ -342,7 +376,7 @@ async function saveEmailAuthSession({ name, email, password }) {
     const response = await fetch("/api/auth/email", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ name, email, password, plan, inviteToken }),
+      body: JSON.stringify({ name, email, password, plan, inviteToken, mode: authMode }),
     });
     const result = await response.json();
     if (!response.ok || !result.session) {
@@ -351,7 +385,7 @@ async function saveEmailAuthSession({ name, email, password }) {
     }
     localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
     if (result.mode === "created") setStatus("Cuenta creada. Entrando al panel...");
-    else setStatus("Acceso confirmado. Entrando al panel...");
+    else setStatus("Sesion iniciada. Entrando al panel...");
     if (await startCheckout(result.session)) return;
     window.location.href = `index.html${nextHash}`;
   } catch {
@@ -448,16 +482,22 @@ if (planBadge) {
 }
 
 if (inviteToken) {
+  applyAuthMode("register", { silent: true });
   setStatus("Escribe el correo invitado para entrar al panel compartido.");
   if (emailInput) emailInput.placeholder = "correo invitado";
   hydrateInviteDetails();
 }
 
 if (resetToken) {
+  applyAuthMode("login", { silent: true });
   if (passwordResetPanel) passwordResetPanel.open = true;
   if (passwordResetRequestForm) passwordResetRequestForm.hidden = true;
   if (passwordResetConfirmForm) passwordResetConfirmForm.hidden = false;
   setStatus("Escribe tu nueva contraseña para recuperar el acceso.");
+}
+
+if (!inviteToken && !resetToken) {
+  applyAuthMode(authMode, { silent: true });
 }
 
 ensurePendingServiceFromUrl();
@@ -471,6 +511,12 @@ refreshAuthReadiness(false);
 document.querySelectorAll("[data-social-login]").forEach((button) => {
   button.addEventListener("click", () => {
     tryProviderLogin(button.dataset.socialLogin);
+  });
+});
+
+authModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    applyAuthMode(button.dataset.authMode);
   });
 });
 
@@ -519,9 +565,13 @@ authReadinessPanel?.addEventListener("click", async (event) => {
 
 emailForm?.addEventListener("submit", (event) => {
   event.preventDefault();
-  const name = nameInput.value.trim();
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
+  const name = nameInput?.value.trim() || "";
+  const email = emailInput?.value.trim() || "";
+  const password = passwordInput?.value || "";
+  if (authMode === "register" && !name) {
+    setStatus("Escribe tu nombre o marca para crear la cuenta.");
+    return;
+  }
   if (!email) {
     setStatus("Escribe tu email para entrar.");
     return;

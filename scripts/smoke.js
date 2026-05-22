@@ -104,6 +104,17 @@ async function run() {
     assert.equal(sessionPut.session.planLabel, "Pro", "session PUT should normalize plan label");
 
     const smokeAuthEmail = `smoke-auth-${Date.now()}@example.com`;
+    const missingAccountResponse = await fetch(`${BASE_URL}/api/auth/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        email: smokeAuthEmail,
+        password: "smoke-password",
+        mode: "login",
+      }),
+    });
+    assert.equal(missingAccountResponse.status, 404, "login mode should not create missing accounts");
+
     const emailAuthResponse = await fetch(`${BASE_URL}/api/auth/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -111,12 +122,20 @@ async function run() {
         name: "Smoke Auth",
         email: smokeAuthEmail,
         password: "smoke-password",
+        mode: "register",
       }),
     });
     assert.ok([200, 201].includes(emailAuthResponse.status), "email auth should respond 200 or 201");
     const emailAuth = await emailAuthResponse.json();
     assert.ok(["created", "login"].includes(emailAuth.mode), "email auth should create or login");
     assert.equal(emailAuth.session.email, smokeAuthEmail, "email auth should return session");
+
+    const duplicateRegisterResponse = await fetch(`${BASE_URL}/api/auth/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ email: smokeAuthEmail, password: "smoke-password", mode: "register" }),
+    });
+    assert.equal(duplicateRegisterResponse.status, 409, "register mode should reject existing accounts");
 
     const passwordChange = await postJson("/api/auth/password", {
       currentPassword: "smoke-password",

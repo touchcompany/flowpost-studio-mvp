@@ -615,11 +615,15 @@ async function emailAuth(payload) {
   const email = String(payload.email || "").trim().toLowerCase();
   const password = String(payload.password || "");
   const name = String(payload.name || "").trim();
+  const mode = payload.mode === "register" ? "register" : "login";
   if (!email || !email.includes("@")) return { ok: false, status: 400, message: "Escribe un email valido." };
   if (password.length < 6) return { ok: false, status: 400, message: "La contraseña debe tener minimo 6 caracteres." };
 
   const existing = await store.getProfileByEmail(email);
   const existingAuth = existing?.metadata?.emailAuth || {};
+  if (existing?.id && existingAuth.passwordHash && mode === "register") {
+    return { ok: false, status: 409, message: "Esta cuenta ya existe. Usa Iniciar sesion para entrar." };
+  }
   if (existing?.id && existingAuth.passwordHash) {
     if (!verifyPassword(password, existingAuth)) {
       return { ok: false, status: 401, message: "La contraseña no coincide." };
@@ -640,6 +644,9 @@ async function emailAuth(payload) {
       status: 409,
       message: "Esta cuenta ya existe sin contraseña. Entra con su proveedor original o pide al administrador activar contraseña.",
     };
+  }
+  if (!existing?.id && mode === "login") {
+    return { ok: false, status: 404, message: "No encontramos esa cuenta. Cambia a Crear cuenta para registrarte." };
   }
 
   const securePassword = passwordHash(password);
