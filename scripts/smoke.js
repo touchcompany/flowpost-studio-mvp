@@ -152,6 +152,20 @@ async function run() {
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");
     assert.ok(Array.isArray(state.jobs), "state.jobs should be an array");
     const inviteTestCompanyId = state.companies[0]?.id || "casa-norte";
+    const inviteCreateResponse = await fetch(`${BASE_URL}/api/invitations/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        companyId: inviteTestCompanyId,
+        email: `invite-${Date.now()}@example.com`,
+        role: "client_viewer",
+      }),
+    });
+    assert.equal(inviteCreateResponse.status, 201, "invitation create should respond 201");
+    const inviteCreate = await inviteCreateResponse.json();
+    assert.equal(inviteCreate.ok, true, "invitation create should succeed");
+    assert.ok(inviteCreate.inviteUrl?.includes("invite="), "invitation create should return a link");
+
     const inviteTestState = await putJson("/api/state", {
       ...state,
       activeCompanyId: state.activeCompanyId || inviteTestCompanyId,

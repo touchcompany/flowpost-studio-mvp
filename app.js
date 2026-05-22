@@ -3461,7 +3461,7 @@ function generateClientAiProfile(clientId) {
   showToast("Perfil IA generado para el cliente.");
 }
 
-function addCompanyMember(companyId) {
+async function addCompanyMember(companyId) {
   const form = clientWorkspacePanel.querySelector(`[data-member-invite="${CSS.escape(companyId)}"]`);
   const email = form?.querySelector("[data-member-email]")?.value.trim().toLowerCase();
   const role = form?.querySelector("[data-member-new-role]")?.value || "client_viewer";
@@ -3472,6 +3472,28 @@ function addCompanyMember(companyId) {
   if (accessMembers.some((member) => member.companyId === companyId && member.email.toLowerCase() === email)) {
     showToast("Ese usuario ya tiene acceso a esta empresa.");
     return;
+  }
+  if (window.location.protocol !== "file:") {
+    try {
+      const response = await fetch("/api/invitations/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ companyId, email, role }),
+      });
+      const result = await response.json();
+      if (response.ok && result.invite && result.member) {
+        accessMembers = [...accessMembers, result.member];
+        accessInvites = [result.invite, ...accessInvites];
+        renderClientBillingPanel();
+        showToast(result.emailSent ? "Invitacion enviada por correo." : "Invitacion creada. Puedes copiar el enlace.");
+        return;
+      }
+      showToast(result.message || "No se pudo crear la invitacion.");
+      return;
+    } catch {
+      showToast("No se pudo conectar con el servidor de invitaciones.");
+      return;
+    }
   }
   const token = (window.crypto?.randomUUID?.() || `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, "");
   accessMembers = [
@@ -3500,7 +3522,7 @@ function addCompanyMember(companyId) {
   ];
   persistState();
   renderClientBillingPanel();
-  showToast("Invitacion registrada. Luego la conectamos con Supabase Auth para envio real.");
+  showToast("Invitacion registrada para prueba local.");
 }
 
 function updateCompanyMemberRole(memberId, role) {

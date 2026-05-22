@@ -902,6 +902,102 @@ async function acceptInvitation(payload) {
   return { ok: true, status: 200, session, invite: { companyId: invite.companyId, email, role: invite.role, status: "Aceptada" } };
 }
 
+async function sendInvitationEmail({ email, company, role, inviteUrl }) {
+  try {
+    const delivery = await sendSmtpEmail({
+      to: email,
+      subject: `${company.name || "Flowpost Studio"} te invito a Flowpost`,
+      text: [
+        "Hola,",
+        "",
+        `${company.name || "Una empresa"} te dio acceso a su espacio en Flowpost Studio.`,
+        `Rol asignado: ${role}.`,
+        `Acepta la invitacion aqui: ${inviteUrl}`,
+        "",
+        "Si no esperabas esta invitacion, puedes ignorar este correo.",
+      ].join("\n"),
+      html: `
+        <p>Hola,</p>
+        <p><strong>${company.name || "Una empresa"}</strong> te dio acceso a su espacio en Flowpost Studio.</p>
+        <p>Rol asignado: <strong>${role}</strong></p>
+        <p><a href="${inviteUrl}">Aceptar invitación</a></p>
+        <p>Si no esperabas esta invitación, puedes ignorar este correo.</p>
+      `,
+    });
+    return delivery;
+  } catch (error) {
+    return { ok: false, skipped: false, message: error.message };
+  }
+}
+
+async function createInvitation(req, payload) {
+  if (!store.getState || !store.saveState) {
+    return { ok: false, status: 501, message: "El proveedor de datos no soporta invitaciones." };
+  }
+  const session = await currentStoredSession(req);
+  if (store.provider === "supabase" && !session?.id) {
+    return { ok: false, status: 401, message: "Sesion requerida para invitar usuarios." };
+  }
+  if (isClientSession(session)) {
+    return { ok: false, status: 403, message: "Un cliente invitado no puede invitar nuevos usuarios." };
+  }
+  const companyId = String(payload.companyId || "").trim();
+  const email = String(payload.email || "").trim().toLowerCase();
+  const role = String(payload.role || "client_viewer").trim();
+  if (!companyId) return { ok: false, status: 400, message: "Falta la empresa." };
+  if (!email || !email.includes("@")) return { ok: false, status: 400, message: "Escribe un email valido." };
+
+  const state = await store.getState();
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  if (!company) return { ok: false, status: 404, message: "Empresa no encontrada." };
+  const accessMembers = Array.isArray(state.accessMembers) ? state.accessMembers : [];
+  const accessInvites = Array.isArray(state.accessInvites) ? state.accessInvites : [];
+  if (accessMembers.some((member) => member.companyId === companyId && String(member.email || "").toLowerCase() === email)) {
+    return { ok: false, status: 409, message: "Ese usuario ya tiene acceso a esta empresa." };
+  }
+
+  const now = new Date().toISOString();
+  const token = crypto.randomBytes(24).toString("hex");
+  const member = {
+    id: `member-${companyId}-${Date.now()}`,
+    companyId,
+    email,
+    role,
+    status: "Invitado",
+    invitedAt: now,
+  };
+  const invite = {
+    id: `invite-${companyId}-${Date.now()}`,
+    companyId,
+    email,
+    role,
+    token,
+    status: "Pendiente",
+    createdAt: now,
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+  };
+  const nextState = {
+    ...state,
+    accessMembers: [...accessMembers, member],
+    accessInvites: [invite, ...accessInvites],
+  };
+  await store.saveState(nextState);
+
+  const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${PORT}`;
+  const inviteUrl = `${baseUrl.replace(/\/$/, "")}/login.html?invite=${encodeURIComponent(token)}`;
+  const delivery = await sendInvitationEmail({ email, company, role, inviteUrl });
+  return {
+    ok: true,
+    status: 201,
+    member,
+    invite,
+    inviteUrl,
+    emailSent: Boolean(delivery.ok),
+    delivery: delivery.ok ? "smtp" : "manual-link",
+    deliveryMessage: delivery.ok ? "Invitacion enviada por correo." : delivery.message || "Invitacion creada; copia el enlace manual.",
+  };
+}
+
 async function lookupInvitation(token) {
   if (!store.getState) {
     return { ok: false, status: 501, message: "El proveedor de datos no soporta invitaciones." };
@@ -2604,6 +2700,12 @@ async function handleApi(req, res, url) {
   if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/invitations/accept") {
     const result = await acceptInvitation(await readBody(req));
     if (result.session?.id) setSessionCookie(res, result.session.id);
+    sendJson(res, result.status, result);
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/invitations/create") {
+    const result = await createInvitation(req, await readBody(req));
     sendJson(res, result.status, result);
     return;
   }
