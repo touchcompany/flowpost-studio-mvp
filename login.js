@@ -178,6 +178,7 @@ function renderAuthReadiness(status = null) {
               <strong>${escapeHtml(label)}</strong>
               <p>${setup.ready ? "Listo para iniciar sesion real." : `Pendiente: ${escapeHtml(missing.join(", ") || "faltan credenciales")}`}</p>
               <small>Redirect: ${escapeHtml(setup.redirectUri || "")}</small>
+              ${setup.graphVersion ? `<small>Meta Graph: ${escapeHtml(setup.graphVersion)}</small>` : ""}
               ${
                 setup.detectedVariables?.length
                   ? `<small>Detectado: ${escapeHtml(setup.detectedVariables.join(", "))}</small>`

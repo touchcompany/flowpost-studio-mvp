@@ -65,6 +65,7 @@ Variables:
 META_APP_ID=
 META_APP_SECRET=
 META_REDIRECT_URI=https://tu-dominio.com/api/oauth/meta/callback
+META_GRAPH_VERSION=v25.0
 ```
 
 Pasos en Meta Developers:
@@ -74,8 +75,9 @@ Pasos en Meta Developers:
 3. Agregar URL de Politica de privacidad: `https://app.touch.com.co/legal/privacy.html`.
 4. Agregar URL de Terminos: `https://app.touch.com.co/legal/terms.html`.
 5. Agregar URL de eliminacion de datos si Meta la solicita: `https://app.touch.com.co/legal/data-deletion.html`.
-5. Configurar OAuth redirect URI.
-6. Pedir permisos necesarios para paginas e Instagram.
+6. Configurar OAuth redirect URI exacto para login: `https://app.touch.com.co/api/auth/facebook/callback`.
+7. Configurar OAuth redirect URI exacto para conectar cuentas Meta: `https://app.touch.com.co/api/oauth/meta/callback`.
+8. Pedir permisos necesarios para paginas e Instagram.
 7. Agregar usuarios de prueba antes de enviar a revision.
 
 Permisos esperados:

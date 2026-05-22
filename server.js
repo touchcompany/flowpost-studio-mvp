@@ -301,6 +301,17 @@ function sendOAuthCallbackPage(res, payload) {
   );
 }
 
+function oauthProviderError(url) {
+  const error = url.searchParams.get("error");
+  const errorReason = url.searchParams.get("error_reason");
+  const errorDescription = url.searchParams.get("error_description");
+  if (!error && !errorReason && !errorDescription) return null;
+  return {
+    error: error || errorReason || "oauth_error",
+    description: errorDescription || errorReason || error || "El proveedor cancelo o rechazo la autorizacion.",
+  };
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -1870,6 +1881,20 @@ function authFacebookRedirectUri(req) {
   return process.env.AUTH_FACEBOOK_REDIRECT_URI || `${publicUrl(req)}/api/auth/facebook/callback`;
 }
 
+function metaGraphVersion() {
+  const rawVersion = process.env.META_GRAPH_VERSION || process.env.FACEBOOK_GRAPH_VERSION || "v25.0";
+  const version = String(rawVersion).trim();
+  return /^v\d+\.\d+$/.test(version) ? version : "v25.0";
+}
+
+function facebookDialogUrl() {
+  return `https://www.facebook.com/${metaGraphVersion()}/dialog/oauth`;
+}
+
+function facebookGraphUrl(path) {
+  return `https://graph.facebook.com/${metaGraphVersion()}${path}`;
+}
+
 function envFirst(names) {
   return names.map((name) => process.env[name]).find(Boolean) || "";
 }
@@ -1934,11 +1959,12 @@ function authProviderStatus(req, provider) {
     ...oauthSetupAny("Facebook Login", groups),
     provider: "facebook",
     redirectUri: authFacebookRedirectUri(req),
+    graphVersion: metaGraphVersion(),
     scopes: "email,public_profile",
     startUrl: "/api/auth/facebook/start",
     consoleUrl: "https://developers.facebook.com/apps/",
     acceptedVariables: ["AUTH_FACEBOOK_APP_ID", "AUTH_FACEBOOK_APP_SECRET", "AUTH_FACEBOOK_REDIRECT_URI"],
-    acceptedAliases: ["META_APP_ID", "META_APP_SECRET", "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"],
+    acceptedAliases: ["META_APP_ID", "META_APP_SECRET", "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET", "META_GRAPH_VERSION"],
     detectedVariables: detectedEnvNames(groups),
     nextStep: "Activar Facebook Login en Meta Developers y registrar el redirect exacto.",
   };
@@ -1985,7 +2011,7 @@ async function fetchGoogleAuthProfile(accessToken) {
 }
 
 async function exchangeAuthFacebookCode(req, code) {
-  const tokenUrl = new URL("https://graph.facebook.com/v20.0/oauth/access_token");
+  const tokenUrl = new URL(facebookGraphUrl("/oauth/access_token"));
   tokenUrl.searchParams.set("client_id", authFacebookAppId());
   tokenUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
   tokenUrl.searchParams.set("client_secret", authFacebookAppSecret());
@@ -1996,7 +2022,7 @@ async function exchangeAuthFacebookCode(req, code) {
 }
 
 async function fetchFacebookAuthProfile(accessToken) {
-  const profileUrl = new URL("https://graph.facebook.com/me");
+  const profileUrl = new URL(facebookGraphUrl("/me"));
   profileUrl.searchParams.set("fields", "id,name,email");
   profileUrl.searchParams.set("access_token", accessToken);
 
@@ -3044,7 +3070,7 @@ async function handleApi(req, res, url) {
     }
 
     const state = signedOAuthState("auth-facebook");
-    const authUrl = new URL("https://www.facebook.com/v20.0/dialog/oauth");
+    const authUrl = new URL(facebookDialogUrl());
     authUrl.searchParams.set("client_id", authFacebookAppId());
     authUrl.searchParams.set("redirect_uri", authFacebookRedirectUri(req));
     authUrl.searchParams.set("state", state);
@@ -3055,8 +3081,15 @@ async function handleApi(req, res, url) {
         ready: true,
         provider: "Facebook Login",
         redirectUri: authFacebookRedirectUri(req),
+        graphVersion: metaGraphVersion(),
         scopes: "email,public_profile",
         authUrl: authUrl.toString(),
+        setupChecklist: [
+          `Valid OAuth Redirect URI: ${authFacebookRedirectUri(req)}`,
+          `App Domain: ${new URL(publicUrl(req)).hostname}`,
+          "Facebook Login producto agregado en Meta Developers",
+          "Privacy Policy URL publicada y rastreable",
+        ],
       });
       return;
     }
@@ -3066,6 +3099,16 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/auth/facebook/callback") {
+    const providerError = oauthProviderError(url);
+    if (providerError) {
+      sendOAuthCallbackPage(res, {
+        ok: false,
+        provider: "Facebook Login",
+        mode: providerError.error,
+        next: providerError.description,
+      });
+      return;
+    }
     const state = url.searchParams.get("state");
     const code = url.searchParams.get("code");
     if (!verifySignedOAuthState(state, "auth-facebook")) {
@@ -3251,7 +3294,7 @@ async function handleApi(req, res, url) {
 
     const state = randomState("meta");
     oauthStates.add(state);
-    const authUrl = new URL("https://www.facebook.com/v20.0/dialog/oauth");
+    const authUrl = new URL(facebookDialogUrl());
     authUrl.searchParams.set("client_id", process.env.META_APP_ID);
     authUrl.searchParams.set("redirect_uri", metaRedirectUri(req));
     authUrl.searchParams.set("state", state);
@@ -3262,6 +3305,7 @@ async function handleApi(req, res, url) {
         ready: true,
         provider: "Meta",
         redirectUri: metaRedirectUri(req),
+        graphVersion: metaGraphVersion(),
         scopes: "pages_show_list,pages_read_engagement,instagram_basic,instagram_content_publish",
         authUrl: authUrl.toString(),
       });
@@ -3273,6 +3317,16 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/oauth/meta/callback") {
+    const providerError = oauthProviderError(url);
+    if (providerError) {
+      sendOAuthCallbackPage(res, {
+        ok: false,
+        provider: "Meta",
+        mode: providerError.error,
+        next: providerError.description,
+      });
+      return;
+    }
     const state = url.searchParams.get("state");
     const code = url.searchParams.get("code");
     if (!state || !oauthStates.has(state)) {
