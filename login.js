@@ -20,6 +20,7 @@ const planBadge = document.querySelector("#loginPlanBadge");
 const statusText = document.querySelector("#loginStatus");
 const loginCardTitle = document.querySelector("#loginCardTitle");
 const loginCardCopy = document.querySelector("#loginCardCopy");
+const loginDividerText = document.querySelector("#loginDividerText");
 const authModeButtons = document.querySelectorAll("[data-auth-mode]");
 const emailForm = document.querySelector("#emailLoginForm");
 const nameInput = document.querySelector("#loginName");
@@ -75,6 +76,11 @@ function applyAuthMode(mode, options = {}) {
         ? "Registra tu cuenta para crear empresas, clientes y publicaciones."
         : "Entra a tu panel con una cuenta existente.";
   }
+  document.querySelectorAll("[data-social-label]").forEach((label) => {
+    const provider = providerLabel(label.dataset.socialLabel);
+    label.textContent = `${authMode === "register" ? "Crear cuenta con" : "Entrar con"} ${provider}`;
+  });
+  if (loginDividerText) loginDividerText.textContent = authMode === "register" ? "o crea tu cuenta con email" : "o entra con email";
   if (nameInput) {
     const nameLabel = nameInput.closest("label");
     nameLabel.hidden = authMode !== "register";
