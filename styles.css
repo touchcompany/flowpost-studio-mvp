@@ -3441,6 +3441,59 @@ input[type="file"]:focus {
   line-height: 1.55;
 }
 
+.script-quality-checklist {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.script-quality-checklist article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--muted);
+}
+
+.script-quality-checklist article.done {
+  border-color: rgba(22, 163, 74, 0.18);
+  background: #f4fbf1;
+  color: #285f1c;
+}
+
+.script-quality-checklist span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f2f2f2;
+  color: #111;
+}
+
+.script-quality-checklist article.done span {
+  background: #dff3d7;
+  color: #285f1c;
+}
+
+.script-quality-checklist svg {
+  width: 14px;
+  height: 14px;
+}
+
+.script-quality-checklist strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+}
+
 .prompt-library-panel {
   display: grid;
   gap: 12px;
@@ -8536,6 +8589,7 @@ input[type="file"] {
   .automation-summary,
   .calendar-planner-empty,
   .script-editor-grid,
+  .script-quality-checklist,
   .client-row,
   .client-workspace-summary,
   .agency-service-form,

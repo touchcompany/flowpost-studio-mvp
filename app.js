@@ -5268,8 +5268,14 @@ function selectedCalendarPublication(companyPublications) {
 }
 
 function scriptQuality(publication) {
-  const blocks = [publication.hook, publication.script, publication.cta, publication.notes].filter((value) => (value || "").trim());
-  return Math.min(100, blocks.length * 25);
+  const blocks = [
+    publication.hook,
+    publication.copy || publication.caption,
+    publication.script,
+    publication.cta,
+    publication.referenceNotes || publication.notes,
+  ].filter((value) => (value || "").trim());
+  return Math.min(100, blocks.length * 20);
 }
 
 function publicationReview(publication = {}) {
@@ -5516,9 +5522,37 @@ function renderScriptAssistantBrief(publication, company, prompt, quality) {
         <div class="assistant-brief-chips">
           <span><i data-lucide="target"></i>${escapeHtml(publication.type || "Pieza")}</span>
           <span><i data-lucide="message-circle"></i>${escapeHtml(publication.cta || "CTA pendiente")}</span>
+          <span><i data-lucide="book-open-text"></i>${publication.referenceNotes ? "Con referencias" : "Sin referencias"}</span>
           <span><i data-lucide="notebook-tabs"></i>${quality}% completo</span>
         </div>
       </div>
+    </section>
+  `;
+}
+
+function scriptQualityItems(publication) {
+  return [
+    { label: "Hook claro", done: Boolean((publication.hook || "").trim()), icon: "magnet" },
+    { label: "Copy base", done: Boolean((publication.copy || publication.caption || "").trim()), icon: "captions" },
+    { label: "Guion completo", done: Boolean((publication.script || "").trim()), icon: "notebook-pen" },
+    { label: "CTA definido", done: Boolean((publication.cta || "").trim()), icon: "message-circle" },
+    { label: "Referencias", done: Boolean((publication.referenceNotes || publication.notes || "").trim()), icon: "book-open-text" },
+  ];
+}
+
+function renderScriptQualityChecklist(publication) {
+  return `
+    <section class="script-quality-checklist">
+      ${scriptQualityItems(publication)
+        .map(
+          (item) => `
+            <article class="${item.done ? "done" : ""}">
+              <span><i data-lucide="${item.done ? "check" : item.icon}"></i></span>
+              <strong>${escapeHtml(item.label)}</strong>
+            </article>
+          `
+        )
+        .join("")}
     </section>
   `;
 }
@@ -5701,6 +5735,7 @@ function renderCalendarPlanner(companyPublications) {
         </header>
 
         ${renderScriptAssistantBrief(publication, company, prompt, quality)}
+        ${renderScriptQualityChecklist(publication)}
 
         <div class="script-editor-grid">
           <label class="field compact">
@@ -5728,6 +5763,14 @@ function renderCalendarPlanner(companyPublications) {
           <label class="field compact wide">
             <span>Copy base</span>
             <textarea data-calendar-script-field="copy" rows="3" placeholder="Caption, idea o mensaje principal antes de convertirlo en guion" ${lockedAttr}>${escapeHtml(publication.copy || publication.caption || "")}</textarea>
+          </label>
+          <label class="field compact wide">
+            <span>Fuentes y referencias</span>
+            <textarea data-calendar-script-field="referenceNotes" rows="3" placeholder="Links, notas del cliente, videos de referencia, insights, objeciones o datos que la IA debe tener presentes" ${lockedAttr}>${escapeHtml(publication.referenceNotes || "")}</textarea>
+          </label>
+          <label class="field compact wide">
+            <span>Criterios de aprobación</span>
+            <textarea data-calendar-script-field="approvalCriteria" rows="3" placeholder="Qué debe revisar el cliente: tono, oferta, fechas, claims, precio, tomas obligatorias" ${lockedAttr}>${escapeHtml(publication.approvalCriteria || "")}</textarea>
           </label>
           <label class="field compact wide">
             <span>Guion</span>
@@ -6850,13 +6893,19 @@ async function generateCalendarScript(publicationId) {
   const prompt = selectedPrompt();
   const hook = publication.hook || `Esto es lo nuevo de ${company.name}`;
   const cta = publication.cta || "Escríbenos para recibir más información.";
+  const copyBase = publication.copy || publication.caption || "";
+  const referenceNotes = publication.referenceNotes || "";
+  const approvalCriteria = publication.approvalCriteria || "";
   let script = [
     `Hook: ${hook}.`,
+    copyBase ? `Contexto: ${copyBase}` : "",
+    referenceNotes ? `Referencia: ${referenceNotes}` : "",
     `Escena 1: muestra el resultado final en los primeros 2 segundos.`,
     `Escena 2: presenta el proceso o beneficio principal con una toma cercana.`,
     `Escena 3: agrega prueba social, detalle del producto o antes/despues.`,
+    approvalCriteria ? `Control de calidad: ${approvalCriteria}` : "",
     `Cierre: ${cta}`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
   let mode = "mock-local";
 
   try {
@@ -6865,7 +6914,7 @@ async function generateCalendarScript(publicationId) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         company,
-        publication: { ...publication, hook, cta },
+        publication: { ...publication, hook, cta, copy: copyBase, referenceNotes, approvalCriteria },
         profile: currentSession(),
         strategy: scriptStrategyForPublication(publication, company, prompt),
         provider: selectedAiProvider === "auto" ? "" : selectedAiProvider,
