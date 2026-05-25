@@ -1924,6 +1924,10 @@ function authGoogleClientSecret() {
   return envFirst(["AUTH_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"]);
 }
 
+function authGoogleScopes() {
+  return process.env.AUTH_GOOGLE_SCOPES || "openid email profile";
+}
+
 function authFacebookAppId() {
   return envFirst(["AUTH_FACEBOOK_APP_ID", "META_APP_ID", "FACEBOOK_APP_ID"]);
 }
@@ -1952,10 +1956,10 @@ function authProviderStatus(req, provider) {
       ...oauthSetupAny("Google Login", groups),
       provider: "google",
       redirectUri: authGoogleRedirectUri(req),
-      scopes: "openid email profile",
+      scopes: authGoogleScopes(),
       startUrl: "/api/auth/google/start",
       consoleUrl: "https://console.cloud.google.com/apis/credentials",
-      acceptedVariables: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_REDIRECT_URI"],
+      acceptedVariables: ["AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_REDIRECT_URI", "AUTH_GOOGLE_SCOPES"],
       acceptedAliases: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
       detectedVariables: detectedEnvNames(groups),
       nextStep: "Crear OAuth Client Web application en Google Cloud y registrar el redirect exacto.",
@@ -3003,7 +3007,7 @@ async function handleApi(req, res, url) {
       sendJson(res, 200, {
         ...setup,
         redirectUri: authGoogleRedirectUri(req),
-        scopes: "openid email profile",
+        scopes: authGoogleScopes(),
         message: "Configura AUTH_GOOGLE_CLIENT_ID/AUTH_GOOGLE_CLIENT_SECRET o GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET para activar login real con Google.",
         demoNext: "/index.html",
       });
@@ -3015,7 +3019,7 @@ async function handleApi(req, res, url) {
     authUrl.searchParams.set("client_id", authGoogleClientId());
     authUrl.searchParams.set("redirect_uri", authGoogleRedirectUri(req));
     authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("scope", "openid email profile");
+    authUrl.searchParams.set("scope", authGoogleScopes());
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("include_granted_scopes", "true");
     authUrl.searchParams.set("prompt", "select_account");
@@ -3025,7 +3029,7 @@ async function handleApi(req, res, url) {
         ready: true,
         provider: "Google Login",
         redirectUri: authGoogleRedirectUri(req),
-        scopes: "openid email profile",
+        scopes: authGoogleScopes(),
         authUrl: authUrl.toString(),
       });
       return;
