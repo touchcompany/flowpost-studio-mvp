@@ -103,6 +103,13 @@ const reviewTitleText = document.querySelector("#reviewTitleText");
 const reviewCopyText = document.querySelector("#reviewCopyText");
 const reviewPlatforms = document.querySelector("#reviewPlatforms");
 const reviewChecklist = document.querySelector("#reviewChecklist");
+const scriptModal = document.querySelector("#scriptModal");
+const closeScriptButton = document.querySelector("#closeScriptButton");
+const saveScriptButton = document.querySelector("#saveScriptButton");
+const copyScriptButton = document.querySelector("#copyScriptButton");
+const scriptModalTitle = document.querySelector("#scriptModalTitle");
+const scriptModalMeta = document.querySelector("#scriptModalMeta");
+const scriptModalText = document.querySelector("#scriptModalText");
 const connectionDot = document.querySelector("#connectionDot");
 const connectionMode = document.querySelector("#connectionMode");
 const connectionDetail = document.querySelector("#connectionDetail");
@@ -299,6 +306,7 @@ let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let selectedAiProvider = "auto";
 let selectedPromptId = "";
+let editingScriptPublicationId = "";
 let promptLibrary = [
   {
     id: "prompt-casa-script",
@@ -980,7 +988,58 @@ function openReviewModal(publication, nextJobs) {
 
 function closeReviewModal() {
   reviewModal.hidden = true;
-  document.body.classList.remove("modal-open");
+  if (scriptModal?.hidden !== false) document.body.classList.remove("modal-open");
+}
+
+function scriptPreviewText(publication) {
+  const script = (publication.script || "").trim();
+  if (script) return script.length > 210 ? `${script.slice(0, 210).trim()}...` : script;
+  return "Aun no hay guion completo. Abre el editor para generarlo o escribirlo con referencias.";
+}
+
+function openScriptModal(publicationId) {
+  const publication = publications.find((item) => item.id === publicationId);
+  if (!publication) return;
+  editingScriptPublicationId = publicationId;
+  scriptModalTitle.textContent = publication.title || "Guion sin titulo";
+  scriptModalMeta.innerHTML = `
+    <span class="pill ${statusClass(publication.status)}">${escapeHtml(publication.status)}</span>
+    <span><i data-lucide="calendar"></i>${escapeHtml(publication.date || "Sin fecha")} ${escapeHtml(publication.time || "")}</span>
+    <span><i data-lucide="target"></i>${escapeHtml(publication.type || "Pieza")}</span>
+    <span><i data-lucide="book-open-text"></i>${publication.referenceNotes ? "Con referencias" : "Sin referencias"}</span>
+  `;
+  scriptModalText.value = publication.script || "";
+  scriptModal.hidden = false;
+  document.body.classList.add("modal-open");
+  renderIcons();
+  setTimeout(() => scriptModalText.focus(), 50);
+}
+
+function closeScriptModal() {
+  scriptModal.hidden = true;
+  editingScriptPublicationId = "";
+  if (reviewModal?.hidden !== false) document.body.classList.remove("modal-open");
+}
+
+function saveScriptModal() {
+  if (!editingScriptPublicationId) return;
+  updateCalendarScript(editingScriptPublicationId, "script", scriptModalText.value, true);
+  closeScriptModal();
+  showToast("Guion guardado.");
+}
+
+async function copyScriptModal() {
+  const text = scriptModalText.value.trim();
+  if (!text) {
+    showToast("No hay guion para copiar.");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Guion copiado.");
+  } catch {
+    showToast("No se pudo copiar el guion.");
+  }
 }
 
 function commitReviewedPublication() {
@@ -3389,6 +3448,136 @@ function saveBillingDocument() {
   showToast(`${billingDraft.documentType} guardada.`);
 }
 
+function currentBillingDocument() {
+  const client = clients.find((item) => item.id === billingDraft.clientId);
+  if (!client) return null;
+  const subtotal = billingDraftSubtotal();
+  return {
+    id: `draft-${client.id}`,
+    agencyId: activeAgencyId,
+    clientId: client.id,
+    companyId: client.companyId,
+    issuerCompanyId: billingDraft.issuerCompanyId,
+    documentType: billingDraft.documentType,
+    concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
+    amount: subtotal,
+    currency: "COP",
+    status: "Pendiente",
+    issueDate: billingDraft.issueDate,
+    dueDate: billingDraft.dueDate,
+    observations: billingDraft.observations,
+    signatureName: billingDraft.signatureName,
+    lines: billingDraft.lines,
+  };
+}
+
+function billingDocumentHtml(documentData = currentBillingDocument()) {
+  if (!documentData) return "";
+  const client = clients.find((item) => item.id === documentData.clientId) || {};
+  const issuer = companies.find((company) => company.id === documentData.issuerCompanyId) || activeCompany();
+  const number = documentData.id.replace(/^invoice-/, "").replace(/^draft-/, "BORRADOR-").slice(0, 24).toUpperCase();
+  const lines = (documentData.lines || []).map((line) => {
+    const service = serviceById(line.serviceId);
+    const quantity = Number(line.quantity || 1);
+    const price = Number(line.price || service.price || 0);
+    return {
+      name: service.name || "Servicio",
+      group: service.group || "Servicio",
+      quantity,
+      price,
+      total: quantity * price,
+    };
+  });
+  const subtotal = lines.reduce((sum, line) => sum + line.total, 0);
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(documentData.documentType)} ${escapeHtml(client.name || "")}</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 38px; color: #111; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; }
+      main { max-width: 860px; margin: 0 auto; padding: 42px; border: 1px solid #e5e5e5; border-radius: 24px; background: #fff; }
+      header { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; padding-bottom: 28px; border-bottom: 1px solid #e8e8e8; }
+      h1, h2, p { margin: 0; }
+      h1 { font-size: 34px; letter-spacing: -0.02em; }
+      h2 { margin-top: 30px; font-size: 16px; text-transform: uppercase; color: #666; }
+      .badge { display: inline-block; margin-bottom: 10px; padding: 7px 10px; border-radius: 999px; background: #111; color: #fff; font-size: 12px; font-weight: 800; }
+      .meta { text-align: right; color: #555; line-height: 1.55; }
+      .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; }
+      .box { padding: 18px; border: 1px solid #ededed; border-radius: 18px; background: #fafafa; }
+      .box span { display: block; margin-bottom: 8px; color: #777; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+      th { color: #666; font-size: 12px; text-align: left; text-transform: uppercase; }
+      th, td { padding: 14px 0; border-bottom: 1px solid #ededed; }
+      td:last-child, th:last-child { text-align: right; }
+      .total { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 2px solid #111; font-size: 24px; font-weight: 900; }
+      .notes { margin-top: 28px; color: #444; line-height: 1.55; }
+      footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 44px; color: #666; font-size: 13px; }
+      @media print { body { padding: 0; background: #fff; } main { border: 0; border-radius: 0; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <span class="badge">${escapeHtml(documentData.documentType || "Cuenta de cobro")}</span>
+          <h1>${escapeHtml(documentData.concept || "Servicios contratados")}</h1>
+        </div>
+        <div class="meta">
+          <strong>No. ${escapeHtml(number)}</strong><br />
+          Emision: ${escapeHtml(documentData.issueDate || "")}<br />
+          Vence: ${escapeHtml(documentData.dueDate || "")}
+        </div>
+      </header>
+      <section class="parties">
+        <div class="box">
+          <span>Emisor</span>
+          <strong>${escapeHtml(issuer.name || "Emisor")}</strong>
+          <p>${escapeHtml(issuer.description || issuer.handle || "")}</p>
+        </div>
+        <div class="box">
+          <span>Cliente</span>
+          <strong>${escapeHtml(client.name || "Cliente")}</strong>
+          <p>${escapeHtml(client.email || client.contact || "")}</p>
+        </div>
+      </section>
+      <h2>Detalle</h2>
+      <table>
+        <thead><tr><th>Servicio</th><th>Cant.</th><th>Valor</th><th>Total</th></tr></thead>
+        <tbody>
+          ${lines.map((line) => `<tr><td><strong>${escapeHtml(line.name)}</strong><br /><small>${escapeHtml(line.group)}</small></td><td>${line.quantity}</td><td>${formatMoney(line.price, "COP")}</td><td>${formatMoney(line.total, "COP")}</td></tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
+      ${documentData.observations ? `<p class="notes">${escapeHtml(documentData.observations)}</p>` : ""}
+      <footer>
+        <span>${escapeHtml(issuer.name || "Flowpost Studio")}</span>
+        <span>${escapeHtml(documentData.signatureName || "Documento generado por Flowpost Studio")}</span>
+      </footer>
+    </main>
+    <script>window.addEventListener("load", () => setTimeout(() => window.print(), 250));</script>
+  </body>
+</html>`;
+}
+
+function openBillingPdf() {
+  const html = billingDocumentHtml();
+  if (!html) {
+    showToast("Selecciona un cliente para generar el PDF.");
+    return;
+  }
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    showToast("Activa ventanas emergentes para abrir el PDF.");
+    return;
+  }
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+  showToast("Vista PDF abierta. Usa Guardar como PDF.");
+}
+
 function updateBillingLine(index, field, value) {
   billingDraft.lines = billingDraft.lines.map((line, lineIndex) => {
     if (lineIndex !== index) return line;
@@ -3407,13 +3596,18 @@ function documentAction(action) {
   const client = clients.find((item) => item.id === billingDraft.clientId);
   const message = `${billingDraft.documentType} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
   if (action === "pdf") {
-    showToast("PDF preparado. Luego conectamos generacion real en servidor.");
+    openBillingPdf();
     return;
   }
   if (action === "email") {
+    const subject = encodeURIComponent(message);
+    const body = encodeURIComponent(`Hola ${client?.contact || client?.name || ""},\n\nTe comparto ${message}.\n\nPuedes guardar el PDF desde la vista del documento en Flowpost Studio.\n\nGracias.`);
+    window.location.href = `mailto:${client?.email || ""}?subject=${subject}&body=${body}`;
     showToast(`Correo preparado: ${message}`);
     return;
   }
+  const whatsappText = encodeURIComponent(`Hola ${client?.name || ""}, te comparto ${message}.`);
+  window.open(`https://wa.me/?text=${whatsappText}`, "_blank", "noopener,noreferrer");
   showToast(`WhatsApp preparado: ${message}`);
 }
 
@@ -5774,7 +5968,23 @@ function renderCalendarPlanner(companyPublications) {
           </label>
           <label class="field compact wide">
             <span>Guion</span>
-            <textarea class="script-main-textarea" data-calendar-script-field="script" rows="12" placeholder="Hook...\nInsight...\nEscena 1...\nEscena 2...\nEscena 3...\nCierre...\nCaption..." ${lockedAttr}>${escapeHtml(publication.script || "")}</textarea>
+            <article class="script-preview-card">
+              <div>
+                <strong>${(publication.script || "").trim() ? "Guion guardado" : "Sin guion completo"}</strong>
+                <p>${escapeHtml(scriptPreviewText(publication))}</p>
+              </div>
+              ${
+                clientReadOnly
+                  ? `<button class="secondary-button icon-text-button" type="button" data-open-script-modal="${publication.id}">
+                      <i data-lucide="eye"></i>
+                      Ver guion
+                    </button>`
+                  : `<button class="primary-button icon-text-button" type="button" data-open-script-modal="${publication.id}">
+                      <i data-lucide="panel-right-open"></i>
+                      Abrir editor
+                    </button>`
+              }
+            </article>
           </label>
           <label class="field compact wide">
             <span>Notas de produccion</span>
@@ -7186,6 +7396,12 @@ calendarPlannerPanel.addEventListener("click", (event) => {
     return;
   }
 
+  const openScriptButton = event.target.closest("[data-open-script-modal]");
+  if (openScriptButton) {
+    openScriptModal(openScriptButton.dataset.openScriptModal);
+    return;
+  }
+
   const reviewButton = event.target.closest("[data-calendar-review]");
   if (reviewButton) {
     reviewCalendarPublication(reviewButton.dataset.publicationId, reviewButton.dataset.calendarReview);
@@ -8220,6 +8436,14 @@ confirmReviewButton.addEventListener("click", commitReviewedPublication);
 reviewModal.addEventListener("click", (event) => {
   if (event.target.matches("[data-close-review]")) {
     closeReviewModal();
+  }
+});
+closeScriptButton.addEventListener("click", closeScriptModal);
+saveScriptButton.addEventListener("click", saveScriptModal);
+copyScriptButton.addEventListener("click", copyScriptModal);
+scriptModal.addEventListener("click", (event) => {
+  if (event.target.matches("[data-close-script]")) {
+    closeScriptModal();
   }
 });
 

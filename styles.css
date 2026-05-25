@@ -3441,6 +3441,36 @@ input[type="file"]:focus {
   line-height: 1.55;
 }
 
+.script-preview-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 149, 246, 0.08), transparent 34%),
+    #fff;
+}
+
+.script-preview-card strong,
+.script-preview-card p {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+
+.script-preview-card p {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
 .script-quality-checklist {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -5273,6 +5303,10 @@ input[type="file"]:focus {
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.18);
 }
 
+.review-dialog.script-dialog {
+  width: min(920px, 100%);
+}
+
 .review-dialog > header,
 .review-dialog > footer {
   display: flex;
@@ -5283,6 +5317,43 @@ input[type="file"]:focus {
 
 .review-dialog h2 {
   margin: 0;
+}
+
+.script-modal-body {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.script-modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.script-modal-meta span:not(.pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fafafa;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+.script-modal-meta svg {
+  width: 14px;
+  height: 14px;
+}
+
+#scriptModalText {
+  min-height: min(52svh, 520px);
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .review-content {
@@ -8590,6 +8661,7 @@ input[type="file"] {
   .calendar-planner-empty,
   .script-editor-grid,
   .script-quality-checklist,
+  .script-preview-card,
   .client-row,
   .client-workspace-summary,
   .agency-service-form,

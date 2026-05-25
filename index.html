@@ -808,6 +808,40 @@
       </section>
     </div>
 
+    <div class="review-modal" id="scriptModal" hidden>
+      <div class="review-backdrop" data-close-script></div>
+      <section class="review-dialog script-dialog" role="dialog" aria-modal="true" aria-labelledby="scriptModalTitle">
+        <header>
+          <div>
+            <p class="workspace-label">Guion editorial</p>
+            <h2 id="scriptModalTitle">Guion</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeScriptButton" aria-label="Cerrar guion">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+
+        <div class="script-modal-body">
+          <div class="script-modal-meta" id="scriptModalMeta"></div>
+          <label class="field compact">
+            <span>Guion completo</span>
+            <textarea id="scriptModalText" rows="16" placeholder="Escribe o genera el guion completo"></textarea>
+          </label>
+        </div>
+
+        <footer>
+          <button class="secondary-button icon-text-button" type="button" id="copyScriptButton">
+            <i data-lucide="copy"></i>
+            Copiar
+          </button>
+          <button class="primary-button icon-text-button" type="button" id="saveScriptButton">
+            <i data-lucide="save"></i>
+            Guardar guion
+          </button>
+        </footer>
+      </section>
+    </div>
+
     <script src="./app.js"></script>
   </body>
 </html>
