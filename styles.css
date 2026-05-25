@@ -601,6 +601,22 @@ body.modal-open {
   background: #3b67c8;
 }
 
+.status-dot.muted {
+  background: #a3a3a3;
+}
+
+.status-dot.ready {
+  background: #0095f6;
+}
+
+.status-dot.done {
+  background: #16a34a;
+}
+
+.status-dot.warning {
+  background: #f59e0b;
+}
+
 .status-dot.approved {
   background: #0f766e;
 }
@@ -3196,8 +3212,9 @@ input[type="file"]:focus {
 }
 
 .calendar-planner {
-  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 0.38fr) minmax(0, 1fr);
   align-items: start;
+  background: #f7f7f8;
 }
 
 .calendar-planner-empty {
@@ -3218,6 +3235,10 @@ input[type="file"]:focus {
 .planner-summary {
   display: grid;
   gap: 12px;
+  align-self: start;
+  max-height: calc(100svh - 180px);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .planner-stats {
@@ -3288,13 +3309,145 @@ input[type="file"]:focus {
   background: #111;
 }
 
+.script-notebook-panel,
+.script-assistant-brief {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.script-notebook-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.script-notebook-panel header,
+.script-assistant-brief,
+.script-assistant-brief header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.script-notebook-panel h3,
+.script-notebook-panel p,
+.script-assistant-brief p {
+  margin: 0;
+}
+
+.script-notebook-panel p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.script-notebook-list {
+  display: grid;
+  gap: 7px;
+}
+
+.script-notebook-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #f8f8f8;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.script-notebook-list button.selected {
+  border-color: #111;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+.script-notebook-list strong,
+.script-notebook-list small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.script-notebook-list small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 760;
+}
+
+.script-assistant-brief {
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 14px;
+  border-color: rgba(0, 149, 246, 0.2);
+  background:
+    radial-gradient(circle at 0 0, rgba(0, 149, 246, 0.1), transparent 34%),
+    #fff;
+}
+
+.assistant-avatar {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+}
+
+.script-assistant-brief header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.script-assistant-brief p {
+  margin-top: 6px;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.assistant-brief-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.assistant-brief-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.script-main-textarea {
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
 .prompt-library-panel {
   display: grid;
   gap: 12px;
   padding: 12px;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: linear-gradient(135deg, #fff, #fafafa);
+  border-radius: 16px;
+  background: #fff;
 }
 
 .prompt-library-panel header {
@@ -3348,10 +3501,29 @@ input[type="file"]:focus {
 }
 
 .prompt-list strong,
-.prompt-list p {
+.prompt-list p,
+.prompt-list small {
   display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.prompt-list small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.prompt-form {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafafa;
 }
 
 .prompt-form select,

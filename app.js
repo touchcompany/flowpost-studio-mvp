@@ -5496,16 +5496,81 @@ function renderScriptAiMeta(publication) {
   `;
 }
 
+function renderScriptAssistantBrief(publication, company, prompt, quality) {
+  const session = currentSession();
+  const persona = company?.onboardingProfile?.persona || session.metadata?.onboarding?.persona || session.roleLabel || "Marca";
+  const platforms = Array.isArray(publication.platforms) && publication.platforms.length ? publication.platforms.join(" · ") : "Sin plataformas";
+  const readiness = quality >= 90 ? "Listo para revisar" : quality >= 60 ? "Buen avance" : "Necesita estructura";
+  return `
+    <section class="script-assistant-brief">
+      <span class="assistant-avatar"><i data-lucide="sparkles"></i></span>
+      <div>
+        <header>
+          <strong>Asistente de guion</strong>
+          <span class="pill ${quality >= 90 ? "done" : quality >= 60 ? "ready" : "muted"}">${readiness}</span>
+        </header>
+        <p>
+          Estoy usando el tono de <strong>${escapeHtml(company.name)}</strong>, perfil <strong>${escapeHtml(persona)}</strong>,
+          ${escapeHtml(platforms)} y ${prompt ? `el prompt "${escapeHtml(prompt.title)}"` : "la estrategia base de Flowpost"}.
+        </p>
+        <div class="assistant-brief-chips">
+          <span><i data-lucide="target"></i>${escapeHtml(publication.type || "Pieza")}</span>
+          <span><i data-lucide="message-circle"></i>${escapeHtml(publication.cta || "CTA pendiente")}</span>
+          <span><i data-lucide="notebook-tabs"></i>${quality}% completo</span>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderScriptNotebook(companyPublications) {
+  const selected = selectedCalendarPublicationId;
+  const sorted = [...companyPublications].sort((a, b) => `${a.date || "9999-99-99"} ${a.time || ""}`.localeCompare(`${b.date || "9999-99-99"} ${b.time || ""}`));
+  return `
+    <article class="script-notebook-panel">
+      <header>
+        <span class="status-icon"><i data-lucide="notebook-tabs"></i></span>
+        <div>
+          <h3>Notebook de guiones</h3>
+          <p>Ideas, guiones y aprobaciones de esta empresa.</p>
+        </div>
+      </header>
+      <div class="script-notebook-list">
+        ${
+          sorted.length
+            ? sorted
+                .map((publication) => {
+                  const isSelected = selected === publication.id;
+                  const quality = scriptQuality(publication);
+                  return `
+                    <button class="${isSelected ? "selected" : ""}" type="button" data-publication-id="${escapeHtml(publication.id)}">
+                      <span class="status-dot ${statusClass(publication.status)}"></span>
+                      <span>
+                        <strong>${escapeHtml(publication.title || "Sin titulo")}</strong>
+                        <small>${escapeHtml(publication.status)} · ${quality}% · ${escapeHtml(publication.date || "Sin fecha")}</small>
+                      </span>
+                      <i data-lucide="chevron-right"></i>
+                    </button>
+                  `;
+                })
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin guiones</strong><p>Crea una pieza para empezar el notebook.</p></div>`
+        }
+      </div>
+    </article>
+  `;
+}
+
 function renderPromptLibraryPanel() {
   const prompts = activeCompanyPrompts();
   const selected = selectedPrompt();
   return `
     <article class="prompt-library-panel">
       <header>
-        <span class="status-icon"><i data-lucide="sparkles"></i></span>
+        <span class="status-icon"><i data-lucide="library-big"></i></span>
         <div>
-          <h3>Prompts guardados</h3>
-          <p>Guarda prompts por empresa para guiones, imagenes o videos y elige con que IA generar.</p>
+          <h3>Biblioteca tipo notebook</h3>
+          <p>Prompts reutilizables por empresa para revisar rapido y generar con mejor contexto.</p>
         </div>
         <label>
           <span>IA</span>
@@ -5532,7 +5597,8 @@ function renderPromptLibraryPanel() {
                       <span class="status-icon small"><i data-lucide="${type.icon}"></i></span>
                       <div>
                         <strong>${escapeHtml(prompt.title)}</strong>
-                        <p>${escapeHtml(type.label)} · ${escapeHtml(promptProviderLabel(prompt.provider))} · ${escapeHtml(prompt.body)}</p>
+                        <p>${escapeHtml(type.label)} · ${escapeHtml(promptProviderLabel(prompt.provider))}</p>
+                        <small>${escapeHtml(prompt.body)}</small>
                       </div>
                       <button class="secondary-button icon-button compact" type="button" data-prompt-use="${escapeHtml(prompt.id)}" aria-label="Usar prompt">
                         <i data-lucide="${isSelected ? "check" : "mouse-pointer-click"}"></i>
@@ -5548,6 +5614,7 @@ function renderPromptLibraryPanel() {
         }
       </div>
       <div class="prompt-form">
+        <strong>Nuevo prompt</strong>
         <select data-prompt-field="type">
           ${Object.entries(promptTypes).map(([key, type]) => `<option value="${key}">${escapeHtml(type.label)}</option>`).join("")}
         </select>
@@ -5599,13 +5666,14 @@ function renderCalendarPlanner(companyPublications) {
   const quality = scriptQuality(publication);
   const clientReadOnly = isClientPortalSession();
   const lockedAttr = clientReadOnly ? "disabled" : "";
+  const prompt = selectedPrompt();
   selectedCalendarPublicationId = publication.id;
   calendarPlannerPanel.innerHTML = `
     <section class="calendar-planner">
       <aside class="planner-summary">
         <div class="section-heading small">
-          <h2>Planner de ${escapeHtml(company.name)}</h2>
-          <p>Guiones, prompts y control editorial aislados para esta empresa.</p>
+          <h2>${escapeHtml(company.name)}</h2>
+          <p>Centro editorial con guiones, prompts, notas y aprobaciones.</p>
         </div>
         <div class="planner-stats">
           <article><strong>${companyPublications.length}</strong><span>Piezas</span></article>
@@ -5618,6 +5686,7 @@ function renderCalendarPlanner(companyPublications) {
           <strong>${quality}%</strong>
           <div><i style="width: ${quality}%"></i></div>
         </div>
+        ${renderScriptNotebook(companyPublications)}
         ${renderPromptLibraryPanel()}
       </aside>
 
@@ -5630,6 +5699,8 @@ function renderCalendarPlanner(companyPublications) {
           </div>
           <span class="pill ${statusClass(publication.status)}">${escapeHtml(publication.status)}</span>
         </header>
+
+        ${renderScriptAssistantBrief(publication, company, prompt, quality)}
 
         <div class="script-editor-grid">
           <label class="field compact">
@@ -5655,8 +5726,12 @@ function renderCalendarPlanner(companyPublications) {
             <input data-calendar-script-field="hook" type="text" value="${escapeHtml(publication.hook || "")}" placeholder="La primera frase o escena que abre el video" ${lockedAttr} />
           </label>
           <label class="field compact wide">
+            <span>Copy base</span>
+            <textarea data-calendar-script-field="copy" rows="3" placeholder="Caption, idea o mensaje principal antes de convertirlo en guion" ${lockedAttr}>${escapeHtml(publication.copy || publication.caption || "")}</textarea>
+          </label>
+          <label class="field compact wide">
             <span>Guion</span>
-            <textarea data-calendar-script-field="script" rows="7" placeholder="Escena 1...\nEscena 2...\nCierre..." ${lockedAttr}>${escapeHtml(publication.script || "")}</textarea>
+            <textarea class="script-main-textarea" data-calendar-script-field="script" rows="12" placeholder="Hook...\nInsight...\nEscena 1...\nEscena 2...\nEscena 3...\nCierre...\nCaption..." ${lockedAttr}>${escapeHtml(publication.script || "")}</textarea>
           </label>
           <label class="field compact wide">
             <span>Notas de produccion</span>
@@ -6991,6 +7066,13 @@ calendarPlannerPanel.addEventListener("click", (event) => {
     resetComposer();
     setView("compose");
     postTitleInput.focus();
+    return;
+  }
+
+  const notebookPublicationButton = event.target.closest(".script-notebook-list [data-publication-id]");
+  if (notebookPublicationButton) {
+    selectedCalendarPublicationId = notebookPublicationButton.dataset.publicationId;
+    renderCalendar();
     return;
   }
 
