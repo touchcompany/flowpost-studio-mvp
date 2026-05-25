@@ -1984,7 +1984,13 @@ function authProviderStatus(req, provider) {
   };
 }
 
-function authSuccessUrl() {
+function authSuccessUrl(session = {}) {
+  const hasOnboarding = Boolean(session.metadata?.onboarding?.completedAt);
+  const skipOnboarding = session.role === "super_admin" || session.role === "client_user";
+  if (!hasOnboarding && !skipOnboarding) {
+    const provider = encodeURIComponent(session.provider || "social");
+    return `/onboarding.html?mode=register&provider=${provider}`;
+  }
   return "/index.html#dashboard";
 }
 
@@ -2051,14 +2057,27 @@ async function saveAuthSession(provider, profile) {
   const isGoogle = provider === "google";
   const providerLabel = isGoogle ? "google" : "facebook";
   const providerId = isGoogle ? profile.sub : profile.id;
+  const sessionId = `auth-${providerLabel}-${providerId || slugify(profile.email || profile.name || Date.now())}`;
+  const existing = store.getSession ? await store.getSession(sessionId) : null;
   const session = normalizeSession({
-    id: `auth-${providerLabel}-${providerId || slugify(profile.email || profile.name || Date.now())}`,
-    name: profile.name || (isGoogle ? "Usuario Google" : "Usuario Facebook"),
-    email: profile.email || "",
+    ...(existing || {}),
+    id: sessionId,
+    name: profile.name || existing?.name || (isGoogle ? "Usuario Google" : "Usuario Facebook"),
+    email: profile.email || existing?.email || "",
     provider: providerLabel,
-    plan: "starter",
-    status: "active",
-    role: "business_owner",
+    plan: existing?.plan || "starter",
+    status: existing?.status || "active",
+    role: existing?.role || "business_owner",
+    roleLabel: existing?.roleLabel || "",
+    companyAccess: existing?.companyAccess || [],
+    metadata: {
+      ...(existing?.metadata || {}),
+      auth: {
+        ...(existing?.metadata?.auth || {}),
+        provider: providerLabel,
+        lastLoginAt: new Date().toISOString(),
+      },
+    },
   });
   return store.saveSession(session);
 }
@@ -3055,7 +3074,7 @@ async function handleApi(req, res, url) {
       const profile = await fetchGoogleAuthProfile(tokens.access_token);
       const session = await saveAuthSession("google", profile);
       setSessionCookie(res, session.id);
-      redirect(res, authSuccessUrl());
+      redirect(res, authSuccessUrl(session));
     } catch (error) {
       sendOAuthCallbackPage(res, {
         ok: false,
@@ -3138,7 +3157,7 @@ async function handleApi(req, res, url) {
       const profile = await fetchFacebookAuthProfile(tokens.access_token);
       const session = await saveAuthSession("facebook", profile);
       setSessionCookie(res, session.id);
-      redirect(res, authSuccessUrl());
+      redirect(res, authSuccessUrl(session));
     } catch (error) {
       sendOAuthCallbackPage(res, {
         ok: false,
