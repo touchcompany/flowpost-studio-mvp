@@ -3447,6 +3447,10 @@ input[type="file"]:focus {
   line-height: 1.35;
 }
 
+.script-ai-meta .script-ai-warning {
+  color: #b45309;
+}
+
 .script-editor-card footer {
   justify-content: flex-end;
   flex-wrap: wrap;

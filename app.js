@@ -5320,6 +5320,43 @@ function selectedPrompt() {
   return promptLibrary.find((prompt) => prompt.id === selectedPromptId) || null;
 }
 
+function scriptStrategyForPublication(publication, company, prompt) {
+  const persona = company?.onboardingProfile?.persona || currentSession().metadata?.onboarding?.persona || "business";
+  const platformList = Array.isArray(publication.platforms) ? publication.platforms : [];
+  const type = String(publication.type || "").toLowerCase();
+  const hasVideo = type.includes("video") || type.includes("reel") || type.includes("historia");
+  const primaryPlatform = platformList[0] || "Instagram";
+  const baseAudience =
+    persona === "agency"
+      ? "duenos de negocio o responsables de marca que necesitan ver avance y confianza"
+      : persona === "creator"
+        ? "personas que conectan con una voz experta, cercana y constante"
+        : persona === "entrepreneur"
+          ? "personas que aun no entienden por que deberian comprar esta oferta"
+          : "clientes potenciales que necesitan entender el valor sin sentirse presionados";
+  return {
+    persona,
+    audience: baseAudience,
+    angle: prompt?.title
+      ? `usar el prompt guardado "${prompt.title}" como direccion creativa principal`
+      : hasVideo
+        ? "abrir con resultado visual y cerrar con una razon clara para escribir"
+        : "educar rapido, resolver una objecion y dejar un siguiente paso simple",
+    objection:
+      persona === "agency"
+        ? "no saber si el contenido tiene estrategia o solo se ve bonito"
+        : persona === "creator"
+          ? "sentir que el contenido constante toma demasiado tiempo"
+          : persona === "entrepreneur"
+            ? "no entender rapido el beneficio o desconfiar de la oferta"
+            : "no saber por que elegir esta marca frente a otra",
+    proof: company?.videos?.length
+      ? `usar recursos disponibles de ${company.videos.slice(0, 2).map((video) => video.title || "video").join(", ")}`
+      : "usar una prueba simple: proceso, antes/despues, detalle cercano o testimonio",
+    salesIntent: primaryPlatform === "Facebook" ? "explicativo y confiable" : "directo, visual y de baja friccion",
+  };
+}
+
 function promptProviderLabel(value = "auto") {
   return {
     auto: "Auto",
@@ -5446,12 +5483,14 @@ function renderScriptAiMeta(publication) {
   const provider = promptProviderLabel(meta.mode);
   const model = meta.model || "sin modelo";
   const promptTitle = meta.promptTitle || "sin prompt guardado";
+  const warning = meta.warning ? `<p class="script-ai-warning">${escapeHtml(meta.warning)}</p>` : "";
   return `
     <div class="script-ai-meta">
       <span class="status-icon small"><i data-lucide="${meta.mode === "openai" || meta.mode === "gemini" ? "sparkles" : "triangle-alert"}"></i></span>
       <div>
         <strong>${escapeHtml(provider)} · ${escapeHtml(model)}</strong>
         <p>Generado ${escapeHtml(generatedAt)} · Prompt: ${escapeHtml(promptTitle)}</p>
+        ${warning}
       </div>
     </div>
   `;
@@ -6753,6 +6792,7 @@ async function generateCalendarScript(publicationId) {
         company,
         publication: { ...publication, hook, cta },
         profile: currentSession(),
+        strategy: scriptStrategyForPublication(publication, company, prompt),
         provider: selectedAiProvider === "auto" ? "" : selectedAiProvider,
         promptTemplate: prompt?.body || "",
       }),

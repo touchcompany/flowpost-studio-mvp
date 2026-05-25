@@ -2114,15 +2114,18 @@ function scriptFallback(payload = {}) {
   const company = payload.company || {};
   const publication = payload.publication || payload;
   const profile = payload.profile || {};
+  const strategy = payload.strategy || {};
   const brand = company.name || "la marca";
   const voice = company.voice || "claro, cercano y comercial";
   const description = company.description || "una oferta para clientes reales";
   const hook = publication.hook || publication.title || `Una idea potente de ${brand}`;
   const cta = publication.cta || "Escríbenos para recibir más información.";
   const role = profile.roleLabel || profile.role || "negocio";
+  const angle = strategy.angle || "resolver una objecion concreta antes de vender";
+  const audience = strategy.audience || "personas que necesitan entender rapido el valor";
   return [
     `Hook: ${hook}.`,
-    `Insight: este contenido debe ayudar a ${role} a entender por que ${brand} es una opcion clara para ${description}, usando un tono ${voice}.`,
+    `Insight: este contenido debe ayudar a ${audience} a entender por que ${brand} es una opcion clara para ${description}, usando un tono ${voice}. Enfoque: ${angle}.`,
     "Escena 1: accion visual: muestra el resultado final en los primeros 2 segundos. Texto en pantalla: el beneficio principal. Voz: di el hook en una frase corta. Duracion: 0-2s.",
     "Escena 2: accion visual: enseña una prueba concreta del proceso, producto o servicio. Texto en pantalla: mira este detalle. Voz: explica por que importa ahora. Duracion: 2-6s.",
     "Escena 3: accion visual: resuelve una objecion real con evidencia simple: antes/despues, dato, testimonio o detalle visual. Texto en pantalla: lo que pocos muestran. Voz: aterriza el beneficio. Duracion: 6-11s.",
@@ -2181,20 +2184,27 @@ function aiPromptForScript(payload = {}) {
   const company = payload.company || {};
   const publication = payload.publication || payload;
   const profile = payload.profile || {};
+  const strategy = payload.strategy || {};
   const promptTemplate = payload.promptTemplate || "";
   const role = profile.role || profile.roleLabel || "pyme, marca personal o agencia";
   const channels = Array.isArray(publication.platforms) && publication.platforms.length ? publication.platforms.join(", ") : "Instagram, Facebook y TikTok";
   const networks = Array.isArray(company.socialNetworks) && company.socialNetworks.length ? company.socialNetworks.join(", ") : channels;
   const resources = Array.isArray(company.videos) && company.videos.length
-    ? company.videos.slice(0, 4).map((video) => `${video.name || "video"} (${video.duration || "sin duracion"})`).join("; ")
+    ? company.videos.slice(0, 4).map((video) => `${video.title || video.name || "video"} (${video.duration || "sin duracion"}, ${video.provider || "sin proveedor"})`).join("; ")
     : "sin recursos cargados";
   const objective = company.objective || publication.objective || "atraer clientes reales y explicar la oferta con claridad";
+  const persona = company.onboardingProfile?.persona || profile.metadata?.onboarding?.persona || "sin persona definida";
+  const onboardingGoal = company.onboardingProfile?.goal || profile.metadata?.onboarding?.goal || "";
+  const clientCount = company.onboardingProfile?.clientCount || profile.metadata?.onboarding?.clientCount || "";
   return [
     "Actua como estratega senior de contenido para Instagram, Facebook y TikTok.",
     "Escribe en español natural, directo, actual y facil de grabar.",
     "Crea un guion premium para video vertical que una persona real pueda producir sin equipo complejo.",
     "Piensa como una agencia que necesita que el cliente apruebe rapido y que el contenido tenga intencion comercial.",
     `Tipo de usuario: ${role}.`,
+    `Persona de onboarding: ${persona}.`,
+    onboardingGoal ? `Objetivo del onboarding: ${onboardingGoal}.` : "Objetivo del onboarding: no definido.",
+    clientCount ? `Tamano o cantidad administrada: ${clientCount}.` : "Tamano o cantidad administrada: no definido.",
     `Marca: ${company.name || "marca"}.`,
     `Tono de voz: ${company.voice || "claro, cercano y comercial"}.`,
     `Descripcion: ${company.description || "sin descripcion"}.`,
@@ -2206,16 +2216,21 @@ function aiPromptForScript(payload = {}) {
     `Tipo: ${publication.type || "Video / Reel"}.`,
     `Estado editorial: ${publication.status || "Idea"}.`,
     `Hook base: ${publication.hook || publication.copy || "crear una apertura fuerte"}.`,
+    `Copy o caption actual: ${publication.copy || publication.caption || "sin copy"}.`,
     `CTA: ${publication.cta || "invitar a escribir o comprar"}.`,
     `Notas: ${publication.notes || "sin notas"}.`,
+    `Angulo estrategico sugerido: ${strategy.angle || "no definido"}.`,
+    `Audiencia especifica: ${strategy.audience || "no definida"}.`,
+    `Objecion a resolver: ${strategy.objection || "no definida"}.`,
+    `Prueba o evidencia disponible: ${strategy.proof || "no definida"}.`,
+    `Nivel de venta: ${strategy.salesIntent || "educativo con CTA natural"}.`,
     promptTemplate ? `Prompt guardado por el usuario: ${promptTemplate}.` : "Prompt guardado por el usuario: no hay prompt adicional.",
-    "Entrega exactamente estas secciones: Hook, Insight, Escena 1, Escena 2, Escena 3, Cierre, Caption sugerido, Checklist de produccion.",
+    "Entrega exactamente estas secciones: Hook, Variante de hook, Insight, Escena 1, Escena 2, Escena 3, Cierre, Caption corto, Caption Facebook, Checklist de produccion, Pregunta para aprobacion del cliente.",
     "Cada escena debe incluir: accion visual, texto en pantalla, frase de voz y duracion sugerida.",
     "El Hook debe tener maximo 12 palabras y no debe ser generico.",
     "El Insight debe explicar por que esta pieza puede funcionar para la audiencia.",
     "El Caption debe tener 2 versiones: corta para Instagram/TikTok y una un poco mas informativa para Facebook.",
     "El Checklist debe listar recursos necesarios, toma principal, toma de apoyo y detalle que no se debe olvidar.",
-    "Incluye una variante de hook alternativa al final si mejora la pieza.",
     "No uses markdown complejo, tablas ni numeraciones largas. Debe poder copiarse directo al equipo de produccion.",
     "Evita promesas exageradas, frases infladas, lenguaje dificil de grabar y claims que no se puedan probar.",
     "Incluye una promesa clara, especifica y creible para pymes, marcas personales, agencias o negocios locales.",
