@@ -5971,8 +5971,8 @@ function renderCreativeOutputs(publication) {
       <header>
         <span class="status-icon"><i data-lucide="sparkles"></i></span>
         <div>
-          <h3>Creaciones guardadas</h3>
-          <p>Guiones, prompts visuales, carruseles e ideas de video generadas para esta pieza.</p>
+          <h3>Historial IA (${assets.length})</h3>
+          <p>Cada respuesta queda guardada para abrir, copiar, insertar o aplicar sin perder el contexto.</p>
         </div>
       </header>
       <div class="creative-output-list">
@@ -5996,6 +5996,9 @@ function renderCreativeOutputs(publication) {
                 </button>
                 <button class="secondary-button icon-button compact" type="button" data-open-creative-output="${escapeHtml(asset.id)}" aria-label="Abrir creacion">
                   <i data-lucide="panel-right-open"></i>
+                </button>
+                <button class="secondary-button icon-button compact" type="button" data-insert-creative-output="${escapeHtml(asset.id)}" aria-label="Insertar en guion">
+                  <i data-lucide="corner-down-left"></i>
                 </button>
                 <button class="connect-button icon-button compact" type="button" data-use-creative-output="${escapeHtml(asset.id)}" aria-label="Usar en publicacion">
                   <i data-lucide="send"></i>
@@ -8248,6 +8251,32 @@ function applyCreativeAssetToPublication(assetId, openComposer = true) {
   showToast("Creacion aplicada a la publicacion.");
 }
 
+function insertCreativeAssetIntoScript(assetId) {
+  const { publication, asset } = selectedCreativeAsset(assetId);
+  if (!publication || !asset) return;
+  const text = (asset.text || asset.imageUrl || asset.imageDataUrl || asset.videoJob?.id || "").trim();
+  if (!text) {
+    showToast("Esta creacion no tiene texto para insertar.");
+    return;
+  }
+  const currentScript = (publication.script || "").trim();
+  const nextScript = currentScript ? `${currentScript}\n\n---\n${text}` : text;
+  const nextPublication = {
+    ...publication,
+    script: nextScript,
+    notes: [publication.notes, `Insertado desde historial IA: ${promptTypes[asset.type]?.label || asset.type}.`].filter(Boolean).join("\n"),
+  };
+  publications = publications.map((item) => (item.id === publication.id ? nextPublication : item));
+  jobs = [...createJobs(nextPublication), ...jobs.filter((job) => job.publicationId !== publication.id)];
+  persistState();
+  renderQueue();
+  renderCalendar();
+  renderScriptsWorkspace();
+  const scriptField = scriptsWorkspacePanel?.querySelector(`[data-script-editor="${publication.id}"] [data-script-field="script"]`);
+  scriptField?.focus();
+  showToast("Creacion insertada en el guion.");
+}
+
 function resetComposer() {
   editingPublicationId = null;
   postTitleInput.value = "";
@@ -8706,6 +8735,12 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
   const openCreativeButton = event.target.closest("[data-open-creative-output]");
   if (openCreativeButton) {
     openCreativeAssetModal(openCreativeButton.dataset.openCreativeOutput);
+    return;
+  }
+
+  const insertCreativeButton = event.target.closest("[data-insert-creative-output]");
+  if (insertCreativeButton) {
+    insertCreativeAssetIntoScript(insertCreativeButton.dataset.insertCreativeOutput);
     return;
   }
 

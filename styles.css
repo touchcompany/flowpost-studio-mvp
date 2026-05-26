@@ -5976,7 +5976,7 @@ input[type="file"]:focus {
 }
 
 .creative-output-list article {
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
 }
 
 .character-avatar {
