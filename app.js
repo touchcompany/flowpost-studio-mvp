@@ -5982,49 +5982,51 @@ function renderScriptsWorkspaceAiStatus(publication) {
 function renderCreativeOutputs(publication) {
   const assets = publication?.cover?.creativeAssets || [];
   if (!assets.length) return "";
+  const visibleAssets = assets.slice(0, 8);
   return `
     <section class="creative-output-panel">
       <header>
-        <span class="status-icon"><i data-lucide="sparkles"></i></span>
+        <span class="status-icon"><i data-lucide="library-big"></i></span>
         <div>
-          <h3>Historial IA (${assets.length})</h3>
-          <p>Cada respuesta queda guardada para abrir, copiar, insertar o aplicar sin perder el contexto.</p>
+          <h3>Notebook IA</h3>
+          <p>${assets.length} creaciones guardadas para esta pieza.</p>
         </div>
       </header>
       <div class="creative-output-list">
-        ${assets
-          .slice(0, 6)
+        ${visibleAssets
           .map(
-            (asset) => `
-              <article>
-                <span class="status-icon small"><i data-lucide="${asset.type === "image" ? "image" : asset.type === "video" ? "clapperboard" : asset.type === "carousel" ? "gallery-horizontal" : "notebook-pen"}"></i></span>
-                <div>
-                  <strong>${escapeHtml(promptTypes[asset.type]?.label || asset.type || "Pieza")}</strong>
-                  <p>${escapeHtml(promptProviderLabel(asset.mode))}${asset.model ? ` · ${escapeHtml(asset.model)}` : ""} · ${escapeHtml(asset.generatedAt ? new Date(asset.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "sin fecha")}</p>
-                  ${asset.imageDataUrl || asset.imageUrl ? `<img src="${escapeHtml(asset.imageDataUrl || asset.imageUrl)}" alt="Imagen generada" />` : ""}
-                  <small>${escapeHtml((asset.text || "").slice(0, 420))}</small>
-                  ${renderCreativeBlocks(asset)}
-                  ${asset.type === "carousel" ? renderCarouselSlides(asset) : ""}
-                  ${asset.videoJob?.id ? `<code>Video job: ${escapeHtml(asset.videoJob.id)} · ${escapeHtml(asset.videoJob.status || "creado")}</code>` : ""}
-                  ${asset.warning ? `<em>${escapeHtml(asset.warning)}</em>` : ""}
+            (asset, index) => `
+              <article class="creative-output-card">
+                <button class="creative-output-main" type="button" data-open-creative-output="${escapeHtml(asset.id)}">
+                  <span class="status-icon small"><i data-lucide="${asset.type === "image" ? "image" : asset.type === "video" ? "clapperboard" : asset.type === "carousel" ? "gallery-horizontal" : "notebook-pen"}"></i></span>
+                  <span>
+                    <strong>${escapeHtml(promptTypes[asset.type]?.label || asset.type || "Pieza")}${index === 0 ? " · reciente" : ""}</strong>
+                    <p>${escapeHtml(promptProviderLabel(asset.mode))}${asset.model ? ` · ${escapeHtml(asset.model)}` : ""}</p>
+                    <small>${escapeHtml((asset.text || asset.userPrompt || asset.imageUrl || asset.videoJob?.id || "Sin texto visible. Abre para revisar el detalle.").slice(0, 130))}</small>
+                  </span>
+                </button>
+                ${asset.imageDataUrl || asset.imageUrl ? `<img src="${escapeHtml(asset.imageDataUrl || asset.imageUrl)}" alt="Imagen generada" />` : ""}
+                <div class="creative-output-tools">
+                  <button class="secondary-button icon-button compact" type="button" data-copy-creative-output="${escapeHtml(asset.id)}" aria-label="Copiar creacion">
+                    <i data-lucide="copy"></i>
+                  </button>
+                  <button class="secondary-button icon-button compact" type="button" data-insert-creative-output="${escapeHtml(asset.id)}" aria-label="Insertar en guion">
+                    <i data-lucide="corner-down-left"></i>
+                  </button>
+                  <button class="connect-button icon-button compact" type="button" data-use-creative-output="${escapeHtml(asset.id)}" aria-label="Usar en publicacion">
+                    <i data-lucide="send"></i>
+                  </button>
                 </div>
-                <button class="secondary-button icon-button compact" type="button" data-copy-creative-output="${escapeHtml(asset.id)}" aria-label="Copiar creacion">
-                  <i data-lucide="copy"></i>
-                </button>
-                <button class="secondary-button icon-button compact" type="button" data-open-creative-output="${escapeHtml(asset.id)}" aria-label="Abrir creacion">
-                  <i data-lucide="panel-right-open"></i>
-                </button>
-                <button class="secondary-button icon-button compact" type="button" data-insert-creative-output="${escapeHtml(asset.id)}" aria-label="Insertar en guion">
-                  <i data-lucide="corner-down-left"></i>
-                </button>
-                <button class="connect-button icon-button compact" type="button" data-use-creative-output="${escapeHtml(asset.id)}" aria-label="Usar en publicacion">
-                  <i data-lucide="send"></i>
-                </button>
+                ${renderCreativeBlocks(asset)}
+                ${asset.type === "carousel" ? renderCarouselSlides(asset) : ""}
+                ${asset.videoJob?.id ? `<code>Video job: ${escapeHtml(asset.videoJob.id)} · ${escapeHtml(asset.videoJob.status || "creado")}</code>` : ""}
+                ${asset.warning ? `<em>${escapeHtml(asset.warning)}</em>` : ""}
               </article>
             `
           )
           .join("")}
       </div>
+      ${assets.length > visibleAssets.length ? `<small class="creative-output-more">Mostrando ${visibleAssets.length} de ${assets.length}. Las anteriores siguen guardadas en esta pieza.</small>` : ""}
     </section>
   `;
 }
