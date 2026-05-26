@@ -305,6 +305,8 @@ let deletedCompanies = [];
 let deletedUsers = [];
 let activeUsers = [];
 let calendarView = "week";
+let scriptsSearchTerm = "";
+let scriptsStatusFilter = "Todos";
 let selectedCalendarPublicationId = "";
 let selectedAiProvider = "auto";
 let selectedPromptId = "";
@@ -805,10 +807,14 @@ function restoreUiState() {
     sidebarCollapsed = Boolean(stored.sidebarCollapsed);
     queueCollapsed = Boolean(stored.queueCollapsed);
     calendarView = stored.calendarView || "week";
+    scriptsSearchTerm = stored.scriptsSearchTerm || "";
+    scriptsStatusFilter = stored.scriptsStatusFilter || "Todos";
   } catch {
     sidebarCollapsed = false;
     queueCollapsed = false;
     calendarView = "week";
+    scriptsSearchTerm = "";
+    scriptsStatusFilter = "Todos";
   }
   applyPanelState();
 }
@@ -821,6 +827,8 @@ function persistUiState() {
         sidebarCollapsed,
         queueCollapsed,
         calendarView,
+        scriptsSearchTerm,
+        scriptsStatusFilter,
       })
     );
   } catch {
@@ -6743,6 +6751,16 @@ function renderScriptsWorkspace() {
   if (selectedPublication && selectedCalendarPublicationId !== selectedPublication.id) {
     selectedCalendarPublicationId = selectedPublication.id;
   }
+  const normalizedSearch = scriptsSearchTerm.trim().toLowerCase();
+  const filteredCompanyScripts = companyScripts.filter((publication) => {
+    const matchesStatus = scriptsStatusFilter === "Todos" || publication.status === scriptsStatusFilter;
+    const searchable = [publication.title, publication.hook, publication.copy, publication.script, publication.referenceNotes, publication.notes]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    const matchesSearch = !normalizedSearch || searchable.includes(normalizedSearch);
+    return matchesStatus && matchesSearch;
+  });
   const readyScripts = companyScripts.filter((publication) => (publication.script || "").trim()).length;
   const pendingScripts = companyScripts.length - readyScripts;
   const scheduledScripts = companyScripts.filter((publication) => ["Programado", "Aprobado"].includes(publication.status)).length;
@@ -6775,10 +6793,19 @@ function renderScriptsWorkspace() {
             <p>Solo ves contenido de ${escapeHtml(company.name)}.</p>
           </div>
         </header>
+        <div class="scripts-list-tools">
+          <label>
+            <i data-lucide="search"></i>
+            <input data-script-search type="search" value="${escapeHtml(scriptsSearchTerm)}" placeholder="Buscar guion" />
+          </label>
+          <select data-script-status-filter aria-label="Filtrar guiones por estado">
+            ${["Todos", ...editorialStatuses].map((status) => `<option value="${escapeHtml(status)}" ${scriptsStatusFilter === status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("")}
+          </select>
+        </div>
         <div class="scripts-card-list">
           ${
-            companyScripts.length
-              ? companyScripts
+            filteredCompanyScripts.length
+              ? filteredCompanyScripts
                   .map(
                     (publication) => `
                       <article class="${publication.id === selectedPublication?.id ? "selected" : ""}">
@@ -6794,7 +6821,9 @@ function renderScriptsWorkspace() {
                     `
                   )
                   .join("")
-              : `<div class="empty-state compact"><strong>Sin guiones</strong><p>Crea el primer guion para ${escapeHtml(company.name)} desde el boton superior.</p></div>`
+              : companyScripts.length
+                ? `<div class="empty-state compact"><strong>Sin resultados</strong><p>Cambia la busqueda o el filtro para ver mas guiones de ${escapeHtml(company.name)}.</p></div>`
+                : `<div class="empty-state compact"><strong>Sin guiones</strong><p>Crea el primer guion para ${escapeHtml(company.name)} desde el boton superior.</p></div>`
           }
         </div>
       </aside>
@@ -8811,6 +8840,19 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 });
 
 scriptsWorkspacePanel?.addEventListener("input", (event) => {
+  const searchInput = event.target.closest("[data-script-search]");
+  if (searchInput) {
+    scriptsSearchTerm = searchInput.value;
+    persistUiState();
+    renderScriptsWorkspace();
+    const restored = scriptsWorkspacePanel?.querySelector("[data-script-search]");
+    if (restored) {
+      restored.focus();
+      restored.setSelectionRange(restored.value.length, restored.value.length);
+    }
+    return;
+  }
+
   const field = event.target.closest("[data-script-field]");
   if (!field) return;
   const editor = field.closest("[data-script-editor]");
@@ -8819,6 +8861,14 @@ scriptsWorkspacePanel?.addEventListener("input", (event) => {
 });
 
 scriptsWorkspacePanel?.addEventListener("change", (event) => {
+  const statusFilter = event.target.closest("[data-script-status-filter]");
+  if (statusFilter) {
+    scriptsStatusFilter = statusFilter.value || "Todos";
+    persistUiState();
+    renderScriptsWorkspace();
+    return;
+  }
+
   const field = event.target.closest("[data-script-field]");
   if (!field) return;
   const editor = field.closest("[data-script-editor]");
