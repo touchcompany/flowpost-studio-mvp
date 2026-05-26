@@ -8634,7 +8634,12 @@ input[type="file"] {
   grid-column: 1 / -1;
 }
 
-.document-actions button:last-child {
+.document-actions button {
+  min-width: 0;
+  justify-content: center;
+}
+
+.document-actions button:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 

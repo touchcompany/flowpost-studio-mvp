@@ -2198,6 +2198,7 @@ function renderBillingDocumentEditor() {
           <strong>${formatMoney(subtotal, "COP")}</strong>
           <p>${escapeHtml(billingDraft.description || "Servicios contratados")}</p>
           <small>${escapeHtml(issuer?.name || "Emisor")} -> ${escapeHtml(client?.name || "Cliente")}</small>
+          <small>${escapeHtml(billingDraft.issueDate || "Sin emision")} · vence ${escapeHtml(billingDraft.dueDate || "sin fecha")}</small>
         </section>
 
         <section class="document-card document-actions">
@@ -2205,6 +2206,14 @@ function renderBillingDocumentEditor() {
           <button class="secondary-button icon-text-button" type="button" data-document-action="pdf">
             <i data-lucide="download"></i>
             PDF
+          </button>
+          <button class="secondary-button icon-text-button" type="button" data-document-action="download">
+            <i data-lucide="file-down"></i>
+            Descargar
+          </button>
+          <button class="secondary-button icon-text-button" type="button" data-document-action="copy">
+            <i data-lucide="copy"></i>
+            Copiar
           </button>
           <button class="secondary-button icon-text-button" type="button" data-document-action="email">
             <i data-lucide="send"></i>
@@ -3618,11 +3627,27 @@ function currentBillingDocument() {
   };
 }
 
+function billingDocumentNumber(documentData = {}) {
+  return String(documentData.id || "draft")
+    .replace(/^invoice-/, "")
+    .replace(/^draft-/, "BORRADOR-")
+    .slice(0, 24)
+    .toUpperCase();
+}
+
+function billingDocumentFileName(documentData = currentBillingDocument()) {
+  const client = clients.find((item) => item.id === documentData?.clientId);
+  const label = slugify(documentData?.documentType || "documento") || "documento";
+  const clientName = slugify(client?.name || "cliente") || "cliente";
+  const number = slugify(billingDocumentNumber(documentData).toLowerCase()) || Date.now();
+  return `${label}-${clientName}-${number}.html`;
+}
+
 function billingDocumentHtml(documentData = currentBillingDocument()) {
   if (!documentData) return "";
   const client = clients.find((item) => item.id === documentData.clientId) || {};
   const issuer = companies.find((company) => company.id === documentData.issuerCompanyId) || activeCompany();
-  const number = documentData.id.replace(/^invoice-/, "").replace(/^draft-/, "BORRADOR-").slice(0, 24).toUpperCase();
+  const number = billingDocumentNumber(documentData);
   const lines = (documentData.lines || []).map((line) => {
     const service = serviceById(line.serviceId);
     const quantity = Number(line.quantity || 1);
@@ -3708,6 +3733,25 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
 </html>`;
 }
 
+function downloadBillingDocumentHtml() {
+  const documentData = currentBillingDocument();
+  const html = billingDocumentHtml(documentData);
+  if (!html) {
+    showToast("Selecciona un cliente para descargar el documento.");
+    return;
+  }
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = billingDocumentFileName(documentData);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("Documento descargado. Puedes abrirlo e imprimirlo como PDF.");
+}
+
 function openBillingPdf() {
   const html = billingDocumentHtml();
   if (!html) {
@@ -3744,6 +3788,18 @@ function documentAction(action) {
   const message = `${billingDraft.documentType} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
   if (action === "pdf") {
     openBillingPdf();
+    return;
+  }
+  if (action === "download") {
+    downloadBillingDocumentHtml();
+    return;
+  }
+  if (action === "copy") {
+    const lines = billingDraft.lines
+      .map((line) => `${serviceById(line.serviceId).name} x${line.quantity || 1}: ${formatMoney(Number(line.price || 0) * Number(line.quantity || 1), "COP")}`)
+      .join("\n");
+    navigator.clipboard?.writeText(`${message}\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, "COP")}`);
+    showToast("Resumen del documento copiado.");
     return;
   }
   if (action === "email") {
