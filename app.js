@@ -6774,6 +6774,10 @@ function renderScriptsWorkspace() {
   const readyScripts = companyScripts.filter((publication) => (publication.script || "").trim()).length;
   const pendingScripts = companyScripts.length - readyScripts;
   const scheduledScripts = companyScripts.filter((publication) => ["Programado", "Aprobado"].includes(publication.status)).length;
+  const statusBuckets = ["Todos", "Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"].map((status) => ({
+    status,
+    count: status === "Todos" ? companyScripts.length : companyScripts.filter((publication) => publication.status === status).length,
+  }));
   scriptsWorkspacePanel.innerHTML = `
     <section class="scripts-workspace scripts-focused-workspace">
       <header class="scripts-company-header">
@@ -6812,23 +6816,45 @@ function renderScriptsWorkspace() {
             ${["Todos", ...editorialStatuses].map((status) => `<option value="${escapeHtml(status)}" ${scriptsStatusFilter === status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("")}
           </select>
         </div>
+        <div class="scripts-status-strip" aria-label="Estados de guiones">
+          ${statusBuckets
+            .map(
+              ({ status, count }) => `
+                <button class="${scriptsStatusFilter === status ? "active" : ""}" type="button" data-script-status-chip="${escapeHtml(status)}">
+                  <span>${escapeHtml(status)}</span>
+                  <strong>${count}</strong>
+                </button>
+              `
+            )
+            .join("")}
+        </div>
         <div class="scripts-card-list">
           ${
             filteredCompanyScripts.length
               ? filteredCompanyScripts
                   .map(
-                    (publication) => `
-                      <article class="${publication.id === selectedPublication?.id ? "selected" : ""}">
+                    (publication) => {
+                      const aiAssets = publication.cover?.creativeAssets?.length || 0;
+                      const isReady = Boolean((publication.script || "").trim());
+                      const fromCalendar = publication.createdFrom === "calendar" || publication.calendarOrigin?.source === "calendar" || publication.cover?.calendarOrigin?.source === "calendar";
+                      return `
+                      <article class="${publication.id === selectedPublication?.id ? "selected" : ""} ${isReady ? "ready" : "draft"}">
                         <button type="button" data-script-select="${escapeHtml(publication.id)}">
                           <span class="status-dot ${statusClass(publication.status)}"></span>
                           <span>
                             <strong>${escapeHtml(publication.title || "Sin titulo")}</strong>
                             <small>${escapeHtml(publication.status)} · ${scriptQuality(publication)}% · ${escapeHtml(publication.date || "Sin fecha")} ${escapeHtml(publication.time || "")}</small>
                             <p>${escapeHtml(scriptPreviewText(publication))}</p>
+                            <span class="script-card-tags">
+                              <em><i data-lucide="${isReady ? "check-circle-2" : "circle-dashed"}"></i>${isReady ? "Guion listo" : "Borrador"}</em>
+                              ${fromCalendar ? `<em><i data-lucide="calendar-check"></i>Calendario</em>` : ""}
+                              ${aiAssets ? `<em><i data-lucide="sparkles"></i>${aiAssets} IA</em>` : ""}
+                            </span>
                           </span>
                         </button>
                       </article>
-                    `
+                    `;
+                    }
                   )
                   .join("")
               : companyScripts.length
@@ -6898,6 +6924,7 @@ function renderScriptsWorkspace() {
       </aside>
     </section>
   `;
+  renderIcons();
 }
 
 function renderScriptsWorkspaceEditor(publication) {
@@ -8671,6 +8698,14 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
   const selectButton = event.target.closest("[data-script-select]");
   if (selectButton) {
     selectedCalendarPublicationId = selectButton.dataset.scriptSelect;
+    renderScriptsWorkspace();
+    return;
+  }
+
+  const statusChip = event.target.closest("[data-script-status-chip]");
+  if (statusChip) {
+    scriptsStatusFilter = statusChip.dataset.scriptStatusChip || "Todos";
+    persistUiState();
     renderScriptsWorkspace();
     return;
   }
