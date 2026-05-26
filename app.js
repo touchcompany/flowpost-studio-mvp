@@ -5918,17 +5918,25 @@ function renderScriptsWorkspaceContext(publication, company) {
       </section>
     `;
   }
+  const calendarOrigin = publication.calendarOrigin || publication.cover?.calendarOrigin || {};
+  const fromCalendar = calendarOrigin.source === "calendar" || publication.createdFrom === "calendar";
+  const originDate = calendarOrigin.date || publication.date || "";
+  const originTime = calendarOrigin.time || publication.time || "";
   const platforms = Array.isArray(publication.platforms) && publication.platforms.length
     ? publication.platforms.map((platform) => platformLabels[platform] || platform).join(" · ")
     : "Sin red";
   return `
-    <section class="scripts-context-card">
-      <span class="status-icon"><i data-lucide="notebook-pen"></i></span>
+    <section class="scripts-context-card ${fromCalendar ? "from-calendar" : ""}">
+      <span class="status-icon"><i data-lucide="${fromCalendar ? "calendar-check" : "notebook-pen"}"></i></span>
       <div>
         <strong>${escapeHtml(publication.title || "Guion sin titulo")}</strong>
         <p>${escapeHtml(publication.date || "Sin fecha")} ${escapeHtml(publication.time || "")} · ${escapeHtml(publication.status || "Idea")} · ${escapeHtml(platforms)}</p>
+        ${fromCalendar ? `<small>Creado desde calendario · ${escapeHtml(shortDateLabel(originDate))} ${escapeHtml(originTime)}</small>` : ""}
       </div>
-      <span class="pill ${statusClass(publication.status || "Idea")}">${scriptQuality(publication)}%</span>
+      <div class="scripts-context-actions">
+        <span class="pill ${statusClass(publication.status || "Idea")}">${scriptQuality(publication)}%</span>
+        ${fromCalendar ? `<button class="icon-button compact" type="button" data-back-to-calendar title="Volver al calendario"><i data-lucide="calendar-days"></i></button>` : ""}
+      </div>
     </section>
   `;
 }
@@ -8245,12 +8253,18 @@ function openScriptsPromptForPublication(publicationId, promptText = "") {
 
 function createScriptDraftFromCalendar(date, time = "09:00") {
   const company = activeCompany();
+  const calendarOrigin = {
+    source: "calendar",
+    date,
+    time,
+    createdAt: new Date().toISOString(),
+  };
   const publication = {
     id: `pub-${Date.now()}`,
     companyId: activeCompanyId,
     platforms: company.socialNetworks?.length ? company.socialNetworks.map(platformKey).filter(Boolean) : ["instagram"],
     type: "Video / Reel",
-    title: "Nuevo guion",
+    title: `Nuevo guion · ${shortDateLabel(date)}`,
     copy: "",
     notes: "Borrador creado desde calendario.",
     hook: "",
@@ -8263,9 +8277,18 @@ function createScriptDraftFromCalendar(date, time = "09:00") {
     status: "Idea",
     mediaProvider: "",
     mediaSource: "",
+    createdFrom: "calendar",
+    calendarOrigin,
+    cover: {
+      calendarOrigin,
+    },
   };
   publications = [publication, ...publications];
   selectedCalendarPublicationId = publication.id;
+  scriptsSearchTerm = "";
+  scriptsStatusFilter = "Todos";
+  selectedCreativeType = "script";
+  persistUiState();
   persistState();
   renderCalendar();
   openScriptsPromptForPublication(
@@ -8499,7 +8522,8 @@ calendarGrid.addEventListener("click", (event) => {
   if (!card) return;
   selectedCalendarPublicationId = card.dataset.publicationId;
   openScriptsPromptForPublication(card.dataset.publicationId);
-  openScriptModal(card.dataset.publicationId);
+  const publication = publications.find((item) => item.id === card.dataset.publicationId);
+  showToast(`Abierto en guiones de ${activeCompany().name}: ${publication?.title || "pieza seleccionada"}.`);
 });
 
 calendarPlannerPanel.addEventListener("click", (event) => {
@@ -8631,6 +8655,14 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     selectedCalendarPublicationId = openButton.dataset.scriptOpen;
     openScriptModal(openButton.dataset.scriptOpen);
     renderScriptsWorkspace();
+    return;
+  }
+
+  const backToCalendarButton = event.target.closest("[data-back-to-calendar]");
+  if (backToCalendarButton) {
+    renderCalendar();
+    setView("calendar");
+    showToast("Volviste al calendario editorial.");
     return;
   }
 

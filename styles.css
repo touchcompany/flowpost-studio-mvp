@@ -5744,6 +5744,32 @@ input[type="file"]:focus {
   background: #fafafa;
 }
 
+.scripts-context-card.from-calendar {
+  border-color: rgba(0, 149, 246, 0.24);
+  background:
+    radial-gradient(circle at top left, rgba(0, 149, 246, 0.11), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f7fbff);
+}
+
+.scripts-context-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.scripts-context-actions .pill {
+  white-space: nowrap;
+}
+
+.icon-button.compact {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 12px;
+}
+
 .scripts-ai-status {
   grid-template-columns: auto minmax(0, 1fr);
   border-color: #d8efe0;
@@ -5757,6 +5783,7 @@ input[type="file"]:focus {
 
 .scripts-context-card strong,
 .scripts-context-card p,
+.scripts-context-card small,
 .scripts-ai-status strong,
 .scripts-ai-status p,
 .scripts-ai-status small {
@@ -5768,11 +5795,17 @@ input[type="file"]:focus {
 }
 
 .scripts-context-card p,
+.scripts-context-card small,
 .scripts-ai-status p,
 .scripts-ai-status small {
   margin-top: 2px;
   color: var(--muted);
   line-height: 1.35;
+}
+
+.scripts-context-card small {
+  font-weight: 760;
+  color: #1478ba;
 }
 
 .scripts-ai-status small {
