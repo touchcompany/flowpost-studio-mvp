@@ -6029,6 +6029,48 @@ input[type="file"]:focus {
   background: #fff;
 }
 
+.creative-block-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.creative-block-list button {
+  display: grid;
+  gap: 2px;
+  max-width: 210px;
+  min-width: 128px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.creative-block-list button:hover {
+  border-color: #111;
+}
+
+.creative-block-list strong,
+.creative-block-list small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creative-block-list strong {
+  font-size: 0.76rem;
+}
+
+.creative-block-list small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
 .carousel-slide-preview {
   display: grid;
   grid-auto-flow: column;

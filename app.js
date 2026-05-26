@@ -5987,6 +5987,7 @@ function renderCreativeOutputs(publication) {
                   <p>${escapeHtml(promptProviderLabel(asset.mode))}${asset.model ? ` · ${escapeHtml(asset.model)}` : ""} · ${escapeHtml(asset.generatedAt ? new Date(asset.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "sin fecha")}</p>
                   ${asset.imageDataUrl || asset.imageUrl ? `<img src="${escapeHtml(asset.imageDataUrl || asset.imageUrl)}" alt="Imagen generada" />` : ""}
                   <small>${escapeHtml((asset.text || "").slice(0, 420))}</small>
+                  ${renderCreativeBlocks(asset)}
                   ${asset.type === "carousel" ? renderCarouselSlides(asset) : ""}
                   ${asset.videoJob?.id ? `<code>Video job: ${escapeHtml(asset.videoJob.id)} · ${escapeHtml(asset.videoJob.status || "creado")}</code>` : ""}
                   ${asset.warning ? `<em>${escapeHtml(asset.warning)}</em>` : ""}
@@ -6009,6 +6010,44 @@ function renderCreativeOutputs(publication) {
           .join("")}
       </div>
     </section>
+  `;
+}
+
+function parseCreativeBlocks(text = "") {
+  const clean = String(text || "").replace(/\r/g, "").trim();
+  if (!clean) return [];
+  const labels = ["Hook", "Variante de hook", "Insight", "Escena", "Cierre", "Caption", "Caption corto", "Caption Facebook", "Checklist", "Prompt", "Visual", "Slide"];
+  const pattern = new RegExp(`(^|\\n)((${labels.join("|")})(?:\\s+\\d+)?\\s*[:.-])`, "gi");
+  const matches = [...clean.matchAll(pattern)];
+  if (!matches.length) {
+    return [{ title: "Respuesta completa", body: clean }];
+  }
+  return matches.slice(0, 10).map((match, index) => {
+    const start = (match.index || 0) + match[1].length;
+    const end = index + 1 < matches.length ? matches[index + 1].index || clean.length : clean.length;
+    const chunk = clean.slice(start, end).trim();
+    const title = chunk.split("\n")[0].replace(/[:.-]\s*$/, "").trim() || `Bloque ${index + 1}`;
+    const body = chunk.replace(chunk.split("\n")[0], "").trim() || chunk;
+    return { title, body };
+  });
+}
+
+function renderCreativeBlocks(asset) {
+  const blocks = parseCreativeBlocks(asset.text).slice(0, 6);
+  if (!blocks.length || (blocks.length === 1 && blocks[0].title === "Respuesta completa")) return "";
+  return `
+    <div class="creative-block-list">
+      ${blocks
+        .map(
+          (block, index) => `
+            <button type="button" data-insert-creative-block="${escapeHtml(asset.id)}:${index}" aria-label="Insertar ${escapeHtml(block.title)}">
+              <strong>${escapeHtml(block.title)}</strong>
+              <small>${escapeHtml(block.body.slice(0, 120))}</small>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
   `;
 }
 
@@ -8259,8 +8298,19 @@ function insertCreativeAssetIntoScript(assetId) {
     showToast("Esta creacion no tiene texto para insertar.");
     return;
   }
+  insertCreativeTextIntoScript(assetId, text);
+}
+
+function insertCreativeTextIntoScript(assetId, text) {
+  const { publication, asset } = selectedCreativeAsset(assetId);
+  if (!publication || !asset) return;
+  const cleanText = String(text || "").trim();
+  if (!cleanText) {
+    showToast("Esta creacion no tiene texto para insertar.");
+    return;
+  }
   const currentScript = (publication.script || "").trim();
-  const nextScript = currentScript ? `${currentScript}\n\n---\n${text}` : text;
+  const nextScript = currentScript ? `${currentScript}\n\n---\n${cleanText}` : cleanText;
   const nextPublication = {
     ...publication,
     script: nextScript,
@@ -8729,6 +8779,16 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     if (!slide) return;
     navigator.clipboard?.writeText(`Slide ${slide.index}: ${slide.title}\n${slide.body}`);
     showToast(`Slide ${slide.index} copiado.`);
+    return;
+  }
+
+  const insertBlockButton = event.target.closest("[data-insert-creative-block]");
+  if (insertBlockButton) {
+    const [assetId, indexText] = String(insertBlockButton.dataset.insertCreativeBlock || "").split(":");
+    const { asset } = selectedCreativeAsset(assetId);
+    const block = parseCreativeBlocks(asset?.text)[Number(indexText)];
+    if (!asset || !block) return;
+    insertCreativeTextIntoScript(assetId, `${block.title}\n${block.body}`);
     return;
   }
 
