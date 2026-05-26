@@ -194,9 +194,9 @@ cp .env.example .env
 Para guiones con IA desde backend:
 
 - `OPENAI_API_KEY` + `OPENAI_MODEL` activa ChatGPT/OpenAI.
-- `GEMINI_API_KEY` + `GEMINI_MODEL` activa Gemini como respaldo o como proveedor principal.
+- `GEMINI_API_KEY` + `GEMINI_MODEL` activa Gemini como respaldo o como proveedor principal. Modelo recomendado: `gemini-2.0-flash`.
 - `AI_PROVIDER=openai` o `AI_PROVIDER=gemini` define que proveedor se intenta primero.
-- Sin llaves, `/api/ai/script` responde en modo mock editable para no romper calendario.
+- Si un proveedor falla por cuota, modelo o billing, `/api/ai/script` y `/api/ai/creative` devuelven fallback editable con aviso claro para no romper calendario ni guiones.
 
 ## Supabase
 

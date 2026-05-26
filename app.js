@@ -5880,6 +5880,7 @@ function promptProviderLabel(value = "auto") {
     openai: "ChatGPT",
     gemini: "Gemini",
     mock: "Fallback",
+    fallback: "Asistente editable",
     "mock-local": "Fallback local",
     "mock-after-error": "Fallback",
   }[value] || "Auto";

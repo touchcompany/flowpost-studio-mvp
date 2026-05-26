@@ -2153,7 +2153,7 @@ function aiProviderStatus() {
   const gemini = {
     ...oauthSetupAny("Gemini", geminiGroups),
     provider: "gemini",
-    model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+    model: geminiModel(),
     acceptedVariables: ["GEMINI_API_KEY", "GEMINI_MODEL"],
     detectedVariables: detectedEnvNames(geminiGroups),
     nextStep: "Guardar GEMINI_API_KEY solo como variable de entorno del servidor.",
@@ -2200,6 +2200,37 @@ function aiProviderStatus() {
       ? `IA lista. Proveedor preferido: ${preferred}.`
       : "Sin llaves de IA; la app seguira generando fallback editable para no fallar.",
   };
+}
+
+function geminiModel() {
+  return process.env.GEMINI_MODEL || "gemini-2.0-flash";
+}
+
+function providerErrorReason(message = "") {
+  const text = String(message || "");
+  if (/quota|billing|hard limit|exceeded/i.test(text)) return "billing";
+  if (/not found|not supported|model/i.test(text)) return "model";
+  if (/api key|permission|unauthorized|forbidden|invalid/i.test(text)) return "auth";
+  return "temporary";
+}
+
+function friendlyProviderError(provider, message = "") {
+  const reason = providerErrorReason(message);
+  if (provider === "gemini" && reason === "model") {
+    return "Gemini no acepto el modelo configurado. Usa GEMINI_MODEL=gemini-2.0-flash o revisa modelos disponibles en Google AI Studio.";
+  }
+  if (provider === "openai" && reason === "billing") {
+    return "OpenAI respondio que la cuenta no tiene cuota o alcanzo el limite de facturacion. Activa billing o sube el limite en OpenAI.";
+  }
+  if (provider === "image" && reason === "billing") {
+    return "La generacion de imagen no se ejecuto porque OpenAI Images alcanzo el limite de facturacion. Se guardo el prompt visual editable.";
+  }
+  if (reason === "auth") return `${provider} necesita una llave valida en variables de entorno.`;
+  return `${provider} no respondio esta vez; se genero una version editable para no bloquear el flujo.`;
+}
+
+function joinWarnings(...warnings) {
+  return warnings.filter(Boolean).join(" ");
 }
 
 function aiPromptForScript(payload = {}) {
@@ -2390,7 +2421,7 @@ async function generateCreativeText(payload, prompt) {
   }
 
   async function withGemini() {
-    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const model = geminiModel();
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2406,10 +2437,10 @@ async function generateCreativeText(payload, prompt) {
       if (provider === "openai" && process.env.OPENAI_API_KEY) return await withOpenAI();
       if (provider === "gemini" && process.env.GEMINI_API_KEY) return await withGemini();
     } catch (error) {
-      errors.push(`${provider}: ${error.message}`);
+      errors.push(friendlyProviderError(provider, error.message));
     }
   }
-  return { mode: "mock", model: "fallback", text: creativeFallback(payload), warning: errors.join(" | ") };
+  return { mode: "fallback", model: "editable", text: creativeFallback(payload), warning: joinWarnings(...errors) };
 }
 
 async function generateOpenAiImage(prompt) {
@@ -2466,7 +2497,7 @@ async function generateAiCreative(payload = {}) {
       const image = await generateOpenAiImage(textResult.text);
       if (image) response.assets.push({ type: "image", ...image });
     } catch (error) {
-      response.warning = [response.warning, `image: ${error.message}`].filter(Boolean).join(" | ");
+      response.warning = joinWarnings(response.warning, friendlyProviderError("image", error.message));
     }
   }
   if (type === "video") {
@@ -2474,7 +2505,7 @@ async function generateAiCreative(payload = {}) {
       const video = await createOpenAiVideoJob(textResult.text);
       if (video) response.assets.push({ type: "video", ...video });
     } catch (error) {
-      response.warning = [response.warning, `video: ${error.message}`].filter(Boolean).join(" | ");
+      response.warning = joinWarnings(response.warning, friendlyProviderError("video", error.message));
     }
   }
   return response;
@@ -2513,7 +2544,7 @@ async function generateAiScript(payload) {
   }
 
   async function generateWithGemini() {
-    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const model = geminiModel();
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2537,15 +2568,15 @@ async function generateAiScript(payload) {
       if (provider === "openai" && process.env.OPENAI_API_KEY) return await generateWithOpenAI();
       if (provider === "gemini" && process.env.GEMINI_API_KEY) return await generateWithGemini();
     } catch (error) {
-      errors.push(`${provider}: ${error.message}`);
+      errors.push(friendlyProviderError(provider, error.message));
     }
   }
 
   return {
-    mode: "mock",
-    model: "fallback",
+    mode: "fallback",
+    model: "editable",
     generatedAt: new Date().toISOString(),
-    warning: errors.join(" | "),
+    warning: joinWarnings(...errors),
     script: scriptFallback(payload),
   };
 }
@@ -3927,9 +3958,11 @@ async function handleApi(req, res, url) {
       sendJson(res, 200, await generateAiScript(payload));
     } catch (error) {
       sendJson(res, 200, {
-        mode: "mock-after-error",
+        mode: "fallback",
+        model: "editable",
+        generatedAt: new Date().toISOString(),
         script: scriptFallback(payload),
-        message: error.message || "No se pudo generar con IA real; se entrego mock editable.",
+        warning: friendlyProviderError("IA", error.message),
       });
     }
     return;
@@ -3942,11 +3975,11 @@ async function handleApi(req, res, url) {
     } catch (error) {
       sendJson(res, 200, {
         type: payload.type || "script",
-        mode: "mock-after-error",
-        model: "fallback",
+        mode: "fallback",
+        model: "editable",
         generatedAt: new Date().toISOString(),
         text: creativeFallback(payload),
-        warning: error.message || "No se pudo generar con IA real; se entrego fallback editable.",
+        warning: friendlyProviderError("IA", error.message),
         assets: [],
       });
     }
