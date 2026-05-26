@@ -5689,6 +5689,85 @@ input[type="file"]:focus {
   flex: 0 0 auto;
 }
 
+.creative-capability-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fafafa;
+}
+
+.creative-capability-panel.ready {
+  border-color: #d8efe0;
+  background: #f6fff8;
+}
+
+.creative-capability-panel.warning {
+  border-color: #f2dfb7;
+  background: #fffbf1;
+}
+
+.creative-capability-panel header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.creative-capability-panel h3,
+.creative-capability-panel p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creative-capability-panel p {
+  margin-top: 2px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.creative-capability-panel > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.creative-capability-panel article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.creative-capability-panel article svg {
+  width: 16px;
+  height: 16px;
+}
+
+.creative-capability-panel article span,
+.creative-capability-panel article strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creative-capability-panel article span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 780;
+}
+
+.creative-capability-panel article strong {
+  font-size: 0.78rem;
+}
+
 .scripts-characters-panel,
 .creative-output-panel {
   display: grid;
@@ -5844,6 +5923,16 @@ input[type="file"]:focus {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.scripts-chat-actions .is-loading svg {
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .scripts-card-list article {
@@ -9225,6 +9314,10 @@ input[type="file"] {
   }
 
   .character-form {
+    grid-template-columns: 1fr;
+  }
+
+  .creative-capability-panel > div {
     grid-template-columns: 1fr;
   }
 

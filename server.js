@@ -2141,6 +2141,7 @@ function scriptFallback(payload = {}) {
 function aiProviderStatus() {
   const openaiGroups = [["OPENAI_API_KEY"]];
   const geminiGroups = [["GEMINI_API_KEY"]];
+  const soraEnabled = process.env.ENABLE_SORA_GENERATION === "true";
   const openai = {
     ...oauthSetupAny("ChatGPT / OpenAI", openaiGroups),
     provider: "openai",
@@ -2175,6 +2176,26 @@ function aiProviderStatus() {
     fallback: "mock",
     openai,
     gemini,
+    image: {
+      ready: openai.ready,
+      provider: "openai",
+      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
+      size: process.env.OPENAI_IMAGE_SIZE || "1024x1536",
+      acceptedVariables: ["OPENAI_API_KEY", "OPENAI_IMAGE_MODEL", "OPENAI_IMAGE_SIZE"],
+      nextStep: openai.ready ? "Listo para generar imagenes desde /api/ai/creative." : "Configura OPENAI_API_KEY para generar imagenes reales.",
+    },
+    video: {
+      ready: openai.ready && soraEnabled,
+      provider: "openai",
+      model: process.env.OPENAI_VIDEO_MODEL || process.env.SORA_MODEL || "sora-2",
+      size: process.env.OPENAI_VIDEO_SIZE || "720x1280",
+      seconds: Number(process.env.OPENAI_VIDEO_SECONDS || 8),
+      enabled: soraEnabled,
+      acceptedVariables: ["OPENAI_API_KEY", "ENABLE_SORA_GENERATION", "OPENAI_VIDEO_MODEL", "OPENAI_VIDEO_SIZE", "OPENAI_VIDEO_SECONDS"],
+      nextStep: soraEnabled
+        ? "Si tu cuenta tiene video API habilitada, se crearan jobs de video desde /api/ai/creative."
+        : "Deja ENABLE_SORA_GENERATION=false hasta confirmar acceso a video API; mientras tanto se guarda el prompt listo para Sora.",
+    },
     message: openai.ready || gemini.ready
       ? `IA lista. Proveedor preferido: ${preferred}.`
       : "Sin llaves de IA; la app seguira generando fallback editable para no fallar.",
