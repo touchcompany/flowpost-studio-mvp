@@ -317,7 +317,7 @@ function readBody(req) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (body.length > 6_000_000) {
         req.destroy();
         reject(new Error("Payload too large"));
       }
@@ -343,7 +343,7 @@ function readRawBody(req) {
     req.setEncoding("utf8");
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (body.length > 6_000_000) {
         req.destroy();
         reject(new Error("Payload too large"));
       }
@@ -418,6 +418,7 @@ function normalizeCompany(payload, existing = {}) {
       connected: Boolean(payload.mediaSource?.connected ?? existing.mediaSource?.connected ?? false),
     },
     videos: Array.isArray(payload.videos) ? payload.videos : existing.videos || [],
+    characters: Array.isArray(payload.characters) ? payload.characters : existing.characters || [],
     accounts: Array.isArray(payload.accounts) ? payload.accounts : existing.accounts || createDefaultAccounts(socialNetworks, handle),
   };
 }
@@ -2240,6 +2241,224 @@ function aiPromptForScript(payload = {}) {
   ].join("\n");
 }
 
+function creativeReferences(company = {}) {
+  const characters = Array.isArray(company.characters) && company.characters.length
+    ? company.characters
+        .slice(0, 6)
+        .map((character) => `${character.name || "personaje"}: ${character.role || "sin rol"}${character.photo ? " con foto de referencia" : ""}${character.notes ? `, notas: ${character.notes}` : ""}`)
+        .join("; ")
+    : "sin personajes cargados";
+  const media = Array.isArray(company.videos) && company.videos.length
+    ? company.videos
+        .slice(0, 6)
+        .map((video) => `${video.title || "recurso"} (${video.provider || "biblioteca"}, ${video.duration || "sin duracion"})`)
+        .join("; ")
+    : "sin recursos de video";
+  return { characters, media };
+}
+
+function creativePrompt(payload = {}) {
+  const company = payload.company || {};
+  const publication = payload.publication || {};
+  const type = payload.type || "script";
+  const promptTemplate = payload.promptTemplate || "";
+  const userPrompt = payload.userPrompt || publication.copy || "";
+  const refs = creativeReferences(company);
+  const base = [
+    "Actua como director creativo senior para contenido de Instagram, Facebook, TikTok y YouTube Shorts.",
+    "Responde en español claro, moderno y accionable. No uses relleno.",
+    `Tipo de pieza solicitada: ${type}.`,
+    `Marca: ${company.name || "marca"}.`,
+    `Descripcion: ${company.description || "sin descripcion"}.`,
+    `Tono: ${company.voice || "claro, simple y comercial"}.`,
+    `Redes: ${Array.isArray(company.socialNetworks) ? company.socialNetworks.join(", ") : "Instagram, Facebook, TikTok"}.`,
+    `Personajes disponibles: ${refs.characters}.`,
+    `Recursos disponibles: ${refs.media}.`,
+    `Titulo o idea: ${publication.title || "contenido nuevo"}.`,
+    `Solicitud del usuario: ${userPrompt || "crear contenido comercial premium"}.`,
+    promptTemplate ? `Prompt guardado de la empresa: ${promptTemplate}.` : "Prompt guardado de la empresa: ninguno.",
+    "Si hay personajes, integrarlos de forma consistente y mencionar como usarlos en toma/escena/imagen.",
+    "Evita promesas exageradas o afirmaciones imposibles de probar.",
+  ];
+  if (type === "image") {
+    base.push(
+      "Entrega un prompt final de imagen vertical premium para un generador visual.",
+      "Debe incluir sujeto, composicion, lente/estilo, luz, fondo, detalles de marca, texto si aplica y formato 1080x1350 o 1080x1920.",
+      "No pidas logos reales si no se han subido como referencia."
+    );
+  } else if (type === "carousel") {
+    base.push(
+      "Crea un carrusel de 6 a 8 slides.",
+      "Para cada slide entrega: titulo corto, texto principal, visual sugerido y nota de diseno.",
+      "Debe tener portada poderosa, desarrollo facil de leer y cierre con CTA."
+    );
+  } else if (type === "video") {
+    base.push(
+      "Crea una direccion de video lista para Sora o generador de video.",
+      "Incluye prompt de video, personajes, escena, camara, movimiento, duracion, estilo, negativos, audio/voz sugerida y CTA final.",
+      "El video debe poder producirse como vertical 9:16."
+    );
+  } else {
+    base.push(
+      "Crea un guion de video con hook, escenas, texto en pantalla, voz, CTA, caption y checklist.",
+      "Debe poder copiarse directo al equipo de produccion."
+    );
+  }
+  return base.join("\n");
+}
+
+function creativeFallback(payload = {}) {
+  const type = payload.type || "script";
+  const company = payload.company || {};
+  const idea = payload.userPrompt || payload.publication?.copy || payload.publication?.title || "idea principal";
+  const refs = creativeReferences(company);
+  if (type === "image") {
+    return [
+      `Prompt de imagen: retrato vertical premium para ${company.name || "la marca"} sobre ${idea}.`,
+      `Personajes/referencias: ${refs.characters}.`,
+      "Composicion: sujeto principal centrado, luz natural suave, fondo limpio, detalle de marca discreto, textura realista.",
+      "Formato: 1080x1350 para feed y adaptable a 1080x1920 para story.",
+      "Negativo: evitar texto ilegible, manos deformes, logos no autorizados, exceso de filtros.",
+    ].join("\n");
+  }
+  if (type === "carousel") {
+    return [
+      `Carrusel para ${company.name || "la marca"}: ${idea}`,
+      "Slide 1: portada con promesa clara y visual protagonista.",
+      "Slide 2: problema o deseo principal del cliente.",
+      "Slide 3: explicacion simple con ejemplo.",
+      "Slide 4: prueba, proceso o antes/despues.",
+      "Slide 5: objecion resuelta.",
+      "Slide 6: CTA directo a mensaje o compra.",
+    ].join("\n");
+  }
+  if (type === "video") {
+    return [
+      `Prompt video vertical: ${idea}.`,
+      `Marca: ${company.name || "marca"}. Personajes: ${refs.characters}. Recursos: ${refs.media}.`,
+      "Escena: apertura con resultado final, corte a proceso, detalle cercano, cierre con CTA.",
+      "Camara: vertical 9:16, movimiento suave, luz natural, estilo premium realista.",
+      "Duracion: 8 a 12 segundos. Negativo: texto excesivo, manos raras, logos no cargados.",
+    ].join("\n");
+  }
+  return scriptFallback(payload);
+}
+
+async function generateCreativeText(payload, prompt) {
+  const preferred = (payload.provider || process.env.AI_PROVIDER || "").toLowerCase();
+  const providers = preferred === "gemini" ? ["gemini", "openai"] : ["openai", "gemini"];
+  const errors = [];
+
+  async function withOpenAI() {
+    const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "Eres un director creativo experto en contenido social, prompts visuales y produccion para marcas reales." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.78,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error?.message || "OpenAI creative generation failed");
+    return { mode: "openai", model, text: result.choices?.[0]?.message?.content?.trim() || creativeFallback(payload) };
+  }
+
+  async function withGemini() {
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.78 } }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error?.message || "Gemini creative generation failed");
+    return { mode: "gemini", model, text: result.candidates?.[0]?.content?.parts?.map((part) => part.text).join("").trim() || creativeFallback(payload) };
+  }
+
+  for (const provider of providers) {
+    try {
+      if (provider === "openai" && process.env.OPENAI_API_KEY) return await withOpenAI();
+      if (provider === "gemini" && process.env.GEMINI_API_KEY) return await withGemini();
+    } catch (error) {
+      errors.push(`${provider}: ${error.message}`);
+    }
+  }
+  return { mode: "mock", model: "fallback", text: creativeFallback(payload), warning: errors.join(" | ") };
+}
+
+async function generateOpenAiImage(prompt) {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
+  const response = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model, prompt, size: process.env.OPENAI_IMAGE_SIZE || "1024x1536", n: 1 }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error?.message || "OpenAI image generation failed");
+  const item = result.data?.[0] || {};
+  return {
+    model,
+    imageUrl: item.url || "",
+    imageDataUrl: item.b64_json ? `data:image/png;base64,${item.b64_json}` : "",
+  };
+}
+
+async function createOpenAiVideoJob(prompt) {
+  if (!process.env.OPENAI_API_KEY || process.env.ENABLE_SORA_GENERATION !== "true") return null;
+  const model = process.env.OPENAI_VIDEO_MODEL || process.env.SORA_MODEL || "sora-2";
+  const response = await fetch("https://api.openai.com/v1/videos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model,
+      prompt,
+      size: process.env.OPENAI_VIDEO_SIZE || "720x1280",
+      seconds: Number(process.env.OPENAI_VIDEO_SECONDS || 8),
+    }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error?.message || "OpenAI video generation failed");
+  return { model, videoJob: result };
+}
+
+async function generateAiCreative(payload = {}) {
+  const type = payload.type || "script";
+  const prompt = creativePrompt(payload);
+  const textResult = await generateCreativeText(payload, prompt);
+  const response = {
+    type,
+    mode: textResult.mode,
+    model: textResult.model,
+    generatedAt: new Date().toISOString(),
+    text: textResult.text,
+    warning: textResult.warning || "",
+    assets: [],
+  };
+  if (type === "image") {
+    try {
+      const image = await generateOpenAiImage(textResult.text);
+      if (image) response.assets.push({ type: "image", ...image });
+    } catch (error) {
+      response.warning = [response.warning, `image: ${error.message}`].filter(Boolean).join(" | ");
+    }
+  }
+  if (type === "video") {
+    try {
+      const video = await createOpenAiVideoJob(textResult.text);
+      if (video) response.assets.push({ type: "video", ...video });
+    } catch (error) {
+      response.warning = [response.warning, `video: ${error.message}`].filter(Boolean).join(" | ");
+    }
+  }
+  return response;
+}
+
 async function generateAiScript(payload) {
   const prompt = aiPromptForScript(payload);
   const preferred = (payload.provider || process.env.AI_PROVIDER || "").toLowerCase();
@@ -3690,6 +3909,24 @@ async function handleApi(req, res, url) {
         mode: "mock-after-error",
         script: scriptFallback(payload),
         message: error.message || "No se pudo generar con IA real; se entrego mock editable.",
+      });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/ai/creative") {
+    const payload = await readBody(req);
+    try {
+      sendJson(res, 200, await generateAiCreative(payload));
+    } catch (error) {
+      sendJson(res, 200, {
+        type: payload.type || "script",
+        mode: "mock-after-error",
+        model: "fallback",
+        generatedAt: new Date().toISOString(),
+        text: creativeFallback(payload),
+        warning: error.message || "No se pudo generar con IA real; se entrego fallback editable.",
+        assets: [],
       });
     }
     return;

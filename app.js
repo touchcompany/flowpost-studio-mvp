@@ -307,6 +307,7 @@ let calendarView = "week";
 let selectedCalendarPublicationId = "";
 let selectedAiProvider = "auto";
 let selectedPromptId = "";
+let selectedCreativeType = "script";
 let editingScriptPublicationId = "";
 let promptLibrary = [
   {
@@ -373,6 +374,8 @@ const fallbackIconPaths = {
   cloud: '<path d="M17.5 19H7a5 5 0 1 1 1.2-9.85A7 7 0 0 1 21 13.5 3.5 3.5 0 0 1 17.5 19Z"/>',
   "folder-open": '<path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 13h18l-2 6H5l-2-6Z"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+  "user-round": '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  "user-plus": '<circle cx="9" cy="8" r="4"/><path d="M16 19a7 7 0 0 0-14 0"/><path d="M19 8v6M16 11h6"/>',
   crown: '<path d="m3 8 4 3 5-7 5 7 4-3-2 11H5L3 8Z"/><path d="M5 19h14"/>',
   receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 12h8M8 17h5"/>',
   "server-cog": '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 8h.01M7 17h.01"/><circle cx="16" cy="17" r="2"/><path d="M16 14v1M16 19v1M13 17h1M18 17h1"/>',
@@ -383,6 +386,8 @@ const fallbackIconPaths = {
   scissors: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
   captions: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h4M13 15h4M7 11h2M11 11h6"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  "image-up": '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/><path d="M17 8V2M14 5l3-3 3 3"/>',
+  "gallery-horizontal": '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6V4h10v2M7 18v2h10v-2"/>',
   "notebook-pen": '<path d="M6 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z"/><path d="M8 2v20M13 14l4-4 2 2-4 4-3 1 1-3Z"/>',
   "credit-card": '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
   "radio-tower": '<path d="M4.9 16.1a10 10 0 0 1 0-8.2M19.1 7.9a10 10 0 0 1 0 8.2M8.5 13a4 4 0 0 1 0-2M15.5 11a4 4 0 0 1 0 2"/><path d="M12 12h.01M12 13v8M9 21h6"/>',
@@ -493,6 +498,17 @@ let companies = [
         source: "https://drive.google.com/file/d/casa-kitchen-demo",
         provider: "Google Drive",
         tone: "mocha",
+      },
+    ],
+    characters: [
+      {
+        id: "char-casa-barista",
+        companyId: "casa-norte",
+        name: "Barista Casa Norte",
+        role: "Rostro principal de preparacion y experiencia en tienda",
+        photo: "",
+        notes: "Usar tono cercano, manos preparando cafe, sonrisa natural y uniforme limpio.",
+        createdAt: new Date().toISOString(),
       },
     ],
     accounts: [
@@ -5836,6 +5852,45 @@ function renderScriptsWorkspaceAiStatus(publication) {
   `;
 }
 
+function renderCreativeOutputs(publication) {
+  const assets = publication?.cover?.creativeAssets || [];
+  if (!assets.length) return "";
+  return `
+    <section class="creative-output-panel">
+      <header>
+        <span class="status-icon"><i data-lucide="sparkles"></i></span>
+        <div>
+          <h3>Creaciones guardadas</h3>
+          <p>Guiones, prompts visuales, carruseles e ideas de video generadas para esta pieza.</p>
+        </div>
+      </header>
+      <div class="creative-output-list">
+        ${assets
+          .slice(0, 6)
+          .map(
+            (asset) => `
+              <article>
+                <span class="status-icon small"><i data-lucide="${asset.type === "image" ? "image" : asset.type === "video" ? "clapperboard" : asset.type === "carousel" ? "gallery-horizontal" : "notebook-pen"}"></i></span>
+                <div>
+                  <strong>${escapeHtml(promptTypes[asset.type]?.label || asset.type || "Pieza")}</strong>
+                  <p>${escapeHtml(promptProviderLabel(asset.mode))}${asset.model ? ` · ${escapeHtml(asset.model)}` : ""} · ${escapeHtml(asset.generatedAt ? new Date(asset.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "sin fecha")}</p>
+                  ${asset.imageDataUrl || asset.imageUrl ? `<img src="${escapeHtml(asset.imageDataUrl || asset.imageUrl)}" alt="Imagen generada" />` : ""}
+                  <small>${escapeHtml((asset.text || "").slice(0, 420))}</small>
+                  ${asset.videoJob?.id ? `<code>Video job: ${escapeHtml(asset.videoJob.id)} · ${escapeHtml(asset.videoJob.status || "creado")}</code>` : ""}
+                  ${asset.warning ? `<em>${escapeHtml(asset.warning)}</em>` : ""}
+                </div>
+                <button class="secondary-button icon-button compact" type="button" data-copy-creative-output="${escapeHtml(asset.id)}" aria-label="Copiar creacion">
+                  <i data-lucide="copy"></i>
+                </button>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderScriptsPromptNotebook() {
   const prompts = activeCompanyPrompts();
   const selected = selectedPrompt();
@@ -5895,6 +5950,59 @@ function renderScriptsPromptNotebook() {
         <button class="secondary-button icon-text-button" type="button" data-script-prompt-save>
           <i data-lucide="save"></i>
           Guardar
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+function renderScriptsCharactersPanel(company) {
+  const characters = Array.isArray(company.characters) ? company.characters : [];
+  return `
+    <section class="scripts-characters-panel">
+      <header>
+        <span class="status-icon"><i data-lucide="user-round"></i></span>
+        <div>
+          <h3>Personajes</h3>
+          <p>Fotos y nombres que la IA debe mantener consistentes al crear imagenes, carruseles y videos.</p>
+        </div>
+      </header>
+      <div class="character-list">
+        ${
+          characters.length
+            ? characters
+                .map(
+                  (character) => `
+                    <article>
+                      <span class="character-avatar">${character.photo ? `<img src="${escapeHtml(character.photo)}" alt="${escapeHtml(character.name)}" />` : `<i data-lucide="user-round"></i>`}</span>
+                      <div>
+                        <strong>${escapeHtml(character.name || "Personaje")}</strong>
+                        <p>${escapeHtml(character.role || "Sin rol")}</p>
+                        <small>${escapeHtml(character.notes || "Sin notas")}</small>
+                      </div>
+                      <button class="secondary-button icon-button compact" type="button" data-character-delete="${escapeHtml(character.id)}" aria-label="Eliminar personaje">
+                        <i data-lucide="trash-2"></i>
+                      </button>
+                    </article>
+                  `
+                )
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin personajes</strong><p>Agrega una foto o referencia para que la IA sepa a quien usar.</p></div>`
+        }
+      </div>
+      <div class="character-form">
+        <strong>Agregar personaje</strong>
+        <input data-character-field="name" type="text" placeholder="Nombre del personaje" />
+        <input data-character-field="role" type="text" placeholder="Rol: fundador, barista, cliente, modelo..." />
+        <textarea data-character-field="notes" rows="2" placeholder="Notas visuales: ropa, estilo, tono, como debe aparecer"></textarea>
+        <label class="character-upload">
+          <i data-lucide="image-up"></i>
+          <span>Subir foto de referencia</span>
+          <input data-character-photo type="file" accept="image/*" hidden />
+        </label>
+        <button class="secondary-button icon-text-button" type="button" data-character-save>
+          <i data-lucide="user-plus"></i>
+          Agregar
         </button>
       </div>
     </section>
@@ -6403,11 +6511,30 @@ function renderScriptsWorkspace() {
           </select>
         </header>
         ${renderScriptsWorkspaceContext(selectedPublication, company)}
+        <div class="creative-type-switch" role="group" aria-label="Tipo de contenido a crear">
+          ${[
+            ["script", "Guion", "notebook-pen"],
+            ["image", "Imagen", "image"],
+            ["carousel", "Carrusel", "gallery-horizontal"],
+            ["video", "Video", "clapperboard"],
+          ]
+            .map(
+              ([type, label, icon], index) => `
+                <button class="${selectedCreativeType === type ? "active" : ""}" type="button" data-script-creative-type="${type}">
+                  <i data-lucide="${icon}"></i>
+                  <span>${label}</span>
+                </button>
+              `
+            )
+            .join("")}
+        </div>
         <label class="field compact">
           <span>Mensaje para la IA</span>
-          <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un guion para un reel de 35 segundos sobre una oferta de hosting para pymes. Quiero que suene premium, simple y con CTA a WhatsApp."></textarea>
+          <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un reel con mi personaje principal explicando una oferta de hosting para pymes. Quiero una version premium, simple y con CTA a WhatsApp."></textarea>
         </label>
         ${renderScriptsWorkspaceAiStatus(selectedPublication)}
+        ${renderCreativeOutputs(selectedPublication)}
+        ${renderScriptsCharactersPanel(company)}
         ${renderScriptsPromptNotebook()}
         <div class="scripts-chat-actions">
           <button class="secondary-button icon-text-button" type="button" data-script-new-draft>
@@ -6416,7 +6543,7 @@ function renderScriptsWorkspace() {
           </button>
           <button class="primary-button icon-text-button" type="button" data-script-chat-generate>
             <i data-lucide="sparkles"></i>
-            Generar con IA
+            Crear pieza
           </button>
         </div>
       </section>
@@ -7635,6 +7762,112 @@ async function generateScriptFromWorkspace() {
   showToast(mode === "openai" ? "Guion generado con ChatGPT." : mode === "gemini" ? "Guion generado con Gemini." : "Guion generado en modo fallback.");
 }
 
+async function generateCreativeFromWorkspace() {
+  const promptInput = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+  const customPrompt = promptInput?.value.trim() || "";
+  if (!customPrompt) {
+    showToast("Escribe que quieres crear.");
+    promptInput?.focus();
+    return;
+  }
+  const company = activeCompany();
+  const prompt = selectedPrompt();
+  const type = selectedCreativeType || "script";
+  const selectedPublication = publications.find((publication) => publication.id === selectedCalendarPublicationId && publication.companyId === activeCompanyId);
+  const publication =
+    selectedPublication ||
+    {
+      id: `pub-${Date.now()}`,
+      companyId: activeCompanyId,
+      platforms: company.socialNetworks?.length ? company.socialNetworks.map(platformKey).filter(Boolean) : ["instagram"],
+      type: type === "image" ? "Imagen" : type === "carousel" ? "Carrusel" : "Video / Reel",
+      title: customPrompt.replace(/\s+/g, " ").slice(0, 58),
+      copy: customPrompt,
+      notes: "Creado desde el generador creativo.",
+      hook: "",
+      script: "",
+      cta: "",
+      referenceNotes: customPrompt,
+      approvalCriteria: "",
+      date: todayISO(),
+      time: "09:00",
+      status: "Idea",
+      mediaProvider: "",
+      mediaSource: "",
+      cover: {},
+    };
+  try {
+    const response = await fetch("/api/ai/creative", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type,
+        company,
+        publication: { ...publication, copy: customPrompt, referenceNotes: publication.referenceNotes || customPrompt },
+        profile: currentSession(),
+        provider: selectedAiProvider === "auto" ? "" : selectedAiProvider,
+        promptTemplate: prompt?.body || "",
+        userPrompt: customPrompt,
+      }),
+    });
+    if (!response.ok) throw new Error("creative ai unavailable");
+    const result = await response.json();
+    const asset = {
+      id: `creative-${publication.id}-${Date.now()}`,
+      publicationId: publication.id,
+      companyId: activeCompanyId,
+      type,
+      text: result.text || "",
+      mode: result.mode || "mock",
+      model: result.model || "",
+      generatedAt: result.generatedAt || new Date().toISOString(),
+      warning: result.warning || "",
+      promptId: prompt?.id || "",
+      promptTitle: prompt?.title || "Prompt libre",
+      userPrompt: customPrompt,
+      imageUrl: result.assets?.find((item) => item.type === "image")?.imageUrl || "",
+      imageDataUrl: result.assets?.find((item) => item.type === "image")?.imageDataUrl || "",
+      videoJob: result.assets?.find((item) => item.type === "video")?.videoJob || null,
+    };
+    const nextPublication = {
+      ...publication,
+      title: !publication.title || publication.title === "Nuevo guion" ? customPrompt.replace(/\s+/g, " ").slice(0, 58) : publication.title,
+      copy: customPrompt,
+      hook: publication.hook || customPrompt.slice(0, 120),
+      script: type === "script" || type === "video" ? result.text || publication.script : publication.script,
+      referenceNotes: publication.referenceNotes || customPrompt,
+      cover: {
+        ...(publication.cover || {}),
+        ai: {
+          mode: result.mode || "mock",
+          model: result.model || "",
+          generatedAt: result.generatedAt || new Date().toISOString(),
+          promptTitle: prompt?.title || "Prompt libre",
+          promptId: prompt?.id || "",
+          userPrompt: customPrompt,
+          warning: result.warning || "",
+        },
+        creativeAssets: [asset, ...((publication.cover || {}).creativeAssets || [])],
+      },
+    };
+    if (selectedPublication) {
+      publications = publications.map((item) => (item.id === nextPublication.id ? nextPublication : item));
+    } else {
+      publications = [nextPublication, ...publications];
+      jobs = [...createJobs(nextPublication), ...jobs];
+      selectedCalendarPublicationId = nextPublication.id;
+    }
+    persistState();
+    renderQueue();
+    renderCalendar();
+    renderScriptsWorkspace();
+    if (type === "script" || type === "video") openScriptModal(nextPublication.id);
+    showToast(`${promptTypes[type]?.label || "Pieza"} creada con ${promptProviderLabel(result.mode)}.`);
+  } catch (error) {
+    showToast(`No se pudo crear la pieza: ${error.message || "error de IA"}.`);
+  }
+}
+
 function openScriptsPromptForPublication(publicationId, promptText = "") {
   selectedCalendarPublicationId = publicationId;
   renderScriptsWorkspace();
@@ -7676,6 +7909,19 @@ function createScriptDraftFromCalendar(date, time = "09:00") {
     `Crea un guion para ${company.name} programado el ${date} a las ${time}. Quiero que sea claro, potente, facil de grabar y con CTA.`
   );
   showToast("Borrador de guion creado. Escribe como en ChatGPT o Gemini.");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("No se pudo leer la imagen."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function resetComposer() {
@@ -7970,7 +8216,15 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 
   const generateButton = event.target.closest("[data-script-chat-generate]");
   if (generateButton) {
-    generateScriptFromWorkspace();
+    generateCreativeFromWorkspace();
+    return;
+  }
+
+  const creativeTypeButton = event.target.closest("[data-script-creative-type]");
+  if (creativeTypeButton) {
+    selectedCreativeType = creativeTypeButton.dataset.scriptCreativeType || "script";
+    renderScriptsWorkspace();
+    scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]")?.focus();
     return;
   }
 
@@ -8025,6 +8279,53 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     persistState();
     renderScriptsWorkspace();
     showToast("Prompt eliminado.");
+    return;
+  }
+
+  const saveCharacterButton = event.target.closest("[data-character-save]");
+  if (saveCharacterButton) {
+    const company = activeCompany();
+    const name = scriptsWorkspacePanel.querySelector('[data-character-field="name"]')?.value.trim();
+    const role = scriptsWorkspacePanel.querySelector('[data-character-field="role"]')?.value.trim();
+    const notes = scriptsWorkspacePanel.querySelector('[data-character-field="notes"]')?.value.trim();
+    const photo = scriptsWorkspacePanel.querySelector("[data-character-photo]")?.dataset.photo || "";
+    if (!name) {
+      showToast("Agrega el nombre del personaje.");
+      return;
+    }
+    const character = {
+      id: `character-${activeCompanyId}-${Date.now()}`,
+      companyId: activeCompanyId,
+      name,
+      role,
+      notes,
+      photo,
+      createdAt: new Date().toISOString(),
+    };
+    company.characters = [character, ...(company.characters || [])];
+    persistState();
+    renderScriptsWorkspace();
+    showToast("Personaje guardado para crear contenido.");
+    return;
+  }
+
+  const deleteCharacterButton = event.target.closest("[data-character-delete]");
+  if (deleteCharacterButton) {
+    const company = activeCompany();
+    company.characters = (company.characters || []).filter((character) => character.id !== deleteCharacterButton.dataset.characterDelete);
+    persistState();
+    renderScriptsWorkspace();
+    showToast("Personaje eliminado.");
+    return;
+  }
+
+  const copyCreativeButton = event.target.closest("[data-copy-creative-output]");
+  if (copyCreativeButton) {
+    const publication = publications.find((item) => item.id === selectedCalendarPublicationId);
+    const asset = publication?.cover?.creativeAssets?.find((item) => item.id === copyCreativeButton.dataset.copyCreativeOutput);
+    if (!asset) return;
+    navigator.clipboard?.writeText(asset.text || asset.imageUrl || asset.videoJob?.id || "");
+    showToast("Creacion copiada.");
   }
 });
 
@@ -8034,6 +8335,17 @@ scriptsWorkspacePanel?.addEventListener("change", (event) => {
   selectedAiProvider = providerSelect.value;
   persistState();
   showToast(`IA seleccionada: ${providerSelect.options[providerSelect.selectedIndex]?.text || "Auto"}.`);
+});
+
+scriptsWorkspacePanel?.addEventListener("change", async (event) => {
+  const photoInput = event.target.closest("[data-character-photo]");
+  if (!photoInput) return;
+  try {
+    photoInput.dataset.photo = await readFileAsDataUrl(photoInput.files?.[0]);
+    showToast("Foto de personaje lista para guardar.");
+  } catch {
+    showToast("No se pudo leer la foto.");
+  }
 });
 
 queueList.addEventListener("click", async (event) => {

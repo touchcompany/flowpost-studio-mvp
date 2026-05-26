@@ -280,6 +280,16 @@ async function run() {
     assert.equal(preflight.ready, false, "preflight should detect missing credentials/account");
     assert.ok(Array.isArray(preflight.blockers), "preflight should include blockers");
 
+    const creative = await postJson("/api/ai/creative", {
+      type: "carousel",
+      company: { name: "Demo", voice: "Claro", characters: [{ name: "Fundador", role: "Vocero" }] },
+      publication: { title: "Oferta web", copy: "Crear carrusel para vender pagina web" },
+      userPrompt: "Crear carrusel para vender pagina web",
+    });
+    assert.equal(creative.type, "carousel", "creative endpoint should return requested type");
+    assert.ok(creative.text, "creative endpoint should return generated text or fallback");
+    assert.ok(Array.isArray(creative.assets), "creative endpoint should include assets array");
+
     const mediaFiles = await getJson("/api/media/files?provider=Google%20Drive");
     assert.equal(mediaFiles.provider, "Google Drive", "media files should report Google Drive");
     assert.ok(Array.isArray(mediaFiles.files), "media files should include files array");
