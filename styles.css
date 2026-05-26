@@ -5579,6 +5579,59 @@ input[type="file"]:focus {
   font-weight: 760;
 }
 
+.scripts-context-card,
+.scripts-ai-status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+}
+
+.scripts-context-card.empty,
+.scripts-ai-status.muted {
+  background: #fafafa;
+}
+
+.scripts-ai-status {
+  grid-template-columns: auto minmax(0, 1fr);
+  border-color: #d8efe0;
+  background: #f5fff7;
+}
+
+.scripts-ai-status.warning {
+  border-color: #f2dfb7;
+  background: #fffbf1;
+}
+
+.scripts-context-card strong,
+.scripts-context-card p,
+.scripts-ai-status strong,
+.scripts-ai-status p,
+.scripts-ai-status small {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scripts-context-card p,
+.scripts-ai-status p,
+.scripts-ai-status small {
+  margin-top: 2px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.scripts-ai-status small {
+  color: #9a6b11;
+  font-weight: 760;
+}
+
 .scripts-chat-panel textarea {
   min-height: 180px;
   font-size: 1rem;
@@ -5633,7 +5686,26 @@ input[type="file"]:focus {
 
 .scripts-card-list article > div {
   display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+.script-provider-mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eef8ff;
+  color: #0474c8;
+  font-size: 0.72rem;
+  font-weight: 860;
+  white-space: nowrap;
+}
+
+.script-provider-mini.warning {
+  background: #fff4d8;
+  color: #8a5b00;
 }
 
 .script-modal-meta {
@@ -8932,6 +9004,19 @@ input[type="file"] {
 
   .studio-controls .secondary-button {
     flex: 1 1 140px;
+  }
+
+  .scripts-chat-panel header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .scripts-chat-panel header select {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .scripts-card-list article {
+    align-items: start;
   }
 }
 

@@ -1001,6 +1001,7 @@ function scriptPreviewText(publication) {
 function openScriptModal(publicationId) {
   const publication = publications.find((item) => item.id === publicationId);
   if (!publication) return;
+  const aiMeta = publication.cover?.ai || {};
   editingScriptPublicationId = publicationId;
   scriptModalTitle.textContent = publication.title || "Guion sin titulo";
   scriptModalMeta.innerHTML = `
@@ -1008,6 +1009,11 @@ function openScriptModal(publicationId) {
     <span><i data-lucide="calendar"></i>${escapeHtml(publication.date || "Sin fecha")} ${escapeHtml(publication.time || "")}</span>
     <span><i data-lucide="target"></i>${escapeHtml(publication.type || "Pieza")}</span>
     <span><i data-lucide="book-open-text"></i>${publication.referenceNotes ? "Con referencias" : "Sin referencias"}</span>
+    ${
+      aiMeta.mode || aiMeta.model
+        ? `<span><i data-lucide="sparkles"></i>${escapeHtml(promptProviderLabel(aiMeta.mode))}${aiMeta.model ? ` · ${escapeHtml(aiMeta.model)}` : ""}</span>`
+        : ""
+    }
   `;
   scriptModalText.value = publication.script || "";
   scriptModal.hidden = false;
@@ -5765,6 +5771,71 @@ function renderScriptAiMeta(publication) {
   `;
 }
 
+function renderScriptsWorkspaceContext(publication, company) {
+  if (!publication) {
+    return `
+      <section class="scripts-context-card empty">
+        <span class="status-icon"><i data-lucide="calendar-plus"></i></span>
+        <div>
+          <strong>Nuevo guion libre</strong>
+          <p>Escribe una instruccion como lo harias en ChatGPT o Gemini. Flowpost lo guarda en ${escapeHtml(company.name)}.</p>
+        </div>
+      </section>
+    `;
+  }
+  const platforms = Array.isArray(publication.platforms) && publication.platforms.length
+    ? publication.platforms.map((platform) => platformLabels[platform] || platform).join(" · ")
+    : "Sin red";
+  return `
+    <section class="scripts-context-card">
+      <span class="status-icon"><i data-lucide="notebook-pen"></i></span>
+      <div>
+        <strong>${escapeHtml(publication.title || "Guion sin titulo")}</strong>
+        <p>${escapeHtml(publication.date || "Sin fecha")} ${escapeHtml(publication.time || "")} · ${escapeHtml(publication.status || "Idea")} · ${escapeHtml(platforms)}</p>
+      </div>
+      <span class="pill ${statusClass(publication.status || "Idea")}">${scriptQuality(publication)}%</span>
+    </section>
+  `;
+}
+
+function renderScriptsWorkspaceAiStatus(publication) {
+  const meta = publication?.cover?.ai || {};
+  if (!publication) {
+    return `
+      <section class="scripts-ai-status">
+        <span class="status-icon"><i data-lucide="sparkles"></i></span>
+        <div>
+          <strong>IA lista para crear</strong>
+          <p>Elige ChatGPT, Gemini o Auto. Si una llave falta, el backend avisa y no rompe el flujo.</p>
+        </div>
+      </section>
+    `;
+  }
+  if (!meta.mode && !publication.script) {
+    return `
+      <section class="scripts-ai-status muted">
+        <span class="status-icon"><i data-lucide="message-square-plus"></i></span>
+        <div>
+          <strong>Sin respuesta todavia</strong>
+          <p>Genera una version completa o abre el guion para escribirlo manualmente.</p>
+        </div>
+      </section>
+    `;
+  }
+  const generatedAt = meta.generatedAt ? new Date(meta.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "sin fecha";
+  const isFallback = String(meta.mode || "").includes("mock") || String(meta.mode || "").includes("fallback");
+  return `
+    <section class="scripts-ai-status ${isFallback ? "warning" : "ready"}">
+      <span class="status-icon"><i data-lucide="${isFallback ? "triangle-alert" : "sparkles"}"></i></span>
+      <div>
+        <strong>${escapeHtml(promptProviderLabel(meta.mode))}${meta.model ? ` · ${escapeHtml(meta.model)}` : ""}</strong>
+        <p>${meta.generatedAt ? `Generado ${escapeHtml(generatedAt)}` : "Guion guardado manualmente"}${meta.userPrompt ? ` · Prompt: ${escapeHtml(meta.userPrompt.slice(0, 82))}` : ""}</p>
+        ${meta.warning ? `<small>${escapeHtml(meta.warning)}</small>` : ""}
+      </div>
+    </section>
+  `;
+}
+
 function renderScriptAssistantBrief(publication, company, prompt, quality) {
   const session = currentSession();
   const persona = company?.onboardingProfile?.persona || session.metadata?.onboarding?.persona || session.roleLabel || "Marca";
@@ -6266,18 +6337,20 @@ function renderScriptsWorkspace() {
             ].map(([value, label]) => `<option value="${value}" ${selectedAiProvider === value ? "selected" : ""}>${label}</option>`).join("")}
           </select>
         </header>
+        ${renderScriptsWorkspaceContext(selectedPublication, company)}
         <label class="field compact">
-          <span>Que quieres crear</span>
+          <span>Mensaje para la IA</span>
           <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un guion para un reel de 35 segundos sobre una oferta de hosting para pymes. Quiero que suene premium, simple y con CTA a WhatsApp."></textarea>
         </label>
+        ${renderScriptsWorkspaceAiStatus(selectedPublication)}
         <div class="scripts-chat-actions">
           <button class="secondary-button icon-text-button" type="button" data-script-new-draft>
             <i data-lucide="file-plus-2"></i>
-            Nuevo borrador
+            Nuevo guion
           </button>
           <button class="primary-button icon-text-button" type="button" data-script-chat-generate>
             <i data-lucide="sparkles"></i>
-            Generar guion
+            Generar con IA
           </button>
         </div>
       </section>
@@ -6306,6 +6379,11 @@ function renderScriptsWorkspace() {
                           </span>
                         </button>
                         <div>
+                          ${
+                            publication.cover?.ai?.mode
+                              ? `<span class="script-provider-mini ${String(publication.cover.ai.mode).includes("mock") || String(publication.cover.ai.mode).includes("fallback") ? "warning" : ""}">${escapeHtml(promptProviderLabel(publication.cover.ai.mode))}</span>`
+                              : ""
+                          }
                           <button class="secondary-button icon-button compact" type="button" data-script-compose="${escapeHtml(publication.id)}" aria-label="Editar publicacion">
                             <i data-lucide="pencil"></i>
                           </button>
@@ -7431,6 +7509,7 @@ async function generateScriptFromWorkspace() {
         model: result.model || "",
         generatedAt: result.generatedAt || new Date().toISOString(),
         promptTitle: "Prompt libre",
+        userPrompt: customPrompt,
         providerSelected: selectedAiProvider || "auto",
         warning: result.warning || result.message || "",
       },
@@ -7451,17 +7530,25 @@ async function generateScriptFromWorkspace() {
         model: "fallback-local",
         generatedAt: new Date().toISOString(),
         promptTitle: "Prompt libre",
+        userPrompt: customPrompt,
         providerSelected: selectedAiProvider || "auto",
         warning: "No se pudo conectar con /api/ai/script.",
       },
     };
   }
 
+  const promptTitle = customPrompt
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 58);
   const nextPublication = {
     ...publication,
+    title: !publication.title || publication.title === "Nuevo guion" ? promptTitle : publication.title,
     copy: customPrompt,
+    hook: publication.hook || customPrompt.slice(0, 120),
     script,
     notes: publication.notes || "Creado desde el workspace de guiones.",
+    referenceNotes: publication.referenceNotes || customPrompt,
   };
   if (selectedPublication) {
     publications = publications.map((item) => (item.id === nextPublication.id ? nextPublication : item));
