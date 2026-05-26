@@ -5836,6 +5836,71 @@ function renderScriptsWorkspaceAiStatus(publication) {
   `;
 }
 
+function renderScriptsPromptNotebook() {
+  const prompts = activeCompanyPrompts();
+  const selected = selectedPrompt();
+  return `
+    <section class="prompt-library-panel scripts-prompt-notebook">
+      <header>
+        <span class="status-icon"><i data-lucide="library-big"></i></span>
+        <div>
+          <h3>Prompts guardados</h3>
+          <p>Guarda instrucciones para guiones, imagenes o videos y reutilizalas con el modelo que prefieras.</p>
+        </div>
+      </header>
+      <div class="prompt-list">
+        ${
+          prompts.length
+            ? prompts
+                .map((prompt) => {
+                  const type = promptTypes[prompt.type] || promptTypes.script;
+                  const isSelected = selected?.id === prompt.id;
+                  return `
+                    <article class="${isSelected ? "selected" : ""}">
+                      <span class="status-icon small"><i data-lucide="${type.icon}"></i></span>
+                      <div>
+                        <strong>${escapeHtml(prompt.title)}</strong>
+                        <p>${escapeHtml(type.label)} · ${escapeHtml(promptProviderLabel(prompt.provider))}</p>
+                        <small>${escapeHtml(prompt.body)}</small>
+                      </div>
+                      <button class="secondary-button icon-button compact" type="button" data-script-prompt-use="${escapeHtml(prompt.id)}" aria-label="Usar prompt">
+                        <i data-lucide="${isSelected ? "check" : "mouse-pointer-click"}"></i>
+                      </button>
+                      <button class="secondary-button icon-button compact" type="button" data-script-prompt-delete="${escapeHtml(prompt.id)}" aria-label="Eliminar prompt">
+                        <i data-lucide="trash-2"></i>
+                      </button>
+                    </article>
+                  `;
+                })
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin prompts</strong><p>Guarda una instruccion base para mantener calidad y tono por empresa.</p></div>`
+        }
+      </div>
+      <div class="prompt-form compact">
+        <strong>Guardar prompt</strong>
+        <select data-script-prompt-field="type" aria-label="Tipo de prompt">
+          ${Object.entries(promptTypes).map(([key, type]) => `<option value="${key}">${escapeHtml(type.label)}</option>`).join("")}
+        </select>
+        <select data-script-prompt-field="provider" aria-label="Modelo preferido">
+          ${[
+            ["auto", "Auto"],
+            ["openai", "ChatGPT"],
+            ["gemini", "Gemini"],
+          ]
+            .map(([value, label]) => `<option value="${value}" ${selectedAiProvider === value ? "selected" : ""}>${label}</option>`)
+            .join("")}
+        </select>
+        <input data-script-prompt-field="title" type="text" placeholder="Nombre del prompt" />
+        <textarea data-script-prompt-field="body" rows="3" placeholder="Ej: crea guiones con hook visual, 3 escenas, objecion resuelta y CTA a WhatsApp."></textarea>
+        <button class="secondary-button icon-text-button" type="button" data-script-prompt-save>
+          <i data-lucide="save"></i>
+          Guardar
+        </button>
+      </div>
+    </section>
+  `;
+}
+
 function renderScriptAssistantBrief(publication, company, prompt, quality) {
   const session = currentSession();
   const persona = company?.onboardingProfile?.persona || session.metadata?.onboarding?.persona || session.roleLabel || "Marca";
@@ -6343,6 +6408,7 @@ function renderScriptsWorkspace() {
           <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un guion para un reel de 35 segundos sobre una oferta de hosting para pymes. Quiero que suene premium, simple y con CTA a WhatsApp."></textarea>
         </label>
         ${renderScriptsWorkspaceAiStatus(selectedPublication)}
+        ${renderScriptsPromptNotebook()}
         <div class="scripts-chat-actions">
           <button class="secondary-button icon-text-button" type="button" data-script-new-draft>
             <i data-lucide="file-plus-2"></i>
@@ -7452,6 +7518,8 @@ async function generateScriptFromWorkspace() {
   }
   const company = activeCompany();
   const selectedPublication = publications.find((publication) => publication.id === selectedCalendarPublicationId && publication.companyId === activeCompanyId);
+  const prompt = selectedPrompt();
+  const promptTemplate = prompt?.body ? `${prompt.body}\n\nSolicitud actual:\n${customPrompt}` : customPrompt;
   const publication =
     selectedPublication ||
     {
@@ -7495,7 +7563,7 @@ async function generateScriptFromWorkspace() {
           audience: "audiencia definida por la instruccion libre del usuario",
         },
         provider: selectedAiProvider === "auto" ? "" : selectedAiProvider,
-        promptTemplate: customPrompt,
+        promptTemplate,
       }),
     });
     if (!response.ok) throw new Error("script ai unavailable");
@@ -7508,7 +7576,8 @@ async function generateScriptFromWorkspace() {
         mode,
         model: result.model || "",
         generatedAt: result.generatedAt || new Date().toISOString(),
-        promptTitle: "Prompt libre",
+        promptTitle: prompt?.title || "Prompt libre",
+        promptId: prompt?.id || "",
         userPrompt: customPrompt,
         providerSelected: selectedAiProvider || "auto",
         warning: result.warning || result.message || "",
@@ -7529,7 +7598,8 @@ async function generateScriptFromWorkspace() {
         mode,
         model: "fallback-local",
         generatedAt: new Date().toISOString(),
-        promptTitle: "Prompt libre",
+        promptTitle: prompt?.title || "Prompt libre",
+        promptId: prompt?.id || "",
         userPrompt: customPrompt,
         providerSelected: selectedAiProvider || "auto",
         warning: "No se pudo conectar con /api/ai/script.",
@@ -7901,6 +7971,60 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
   const generateButton = event.target.closest("[data-script-chat-generate]");
   if (generateButton) {
     generateScriptFromWorkspace();
+    return;
+  }
+
+  const savePromptButton = event.target.closest("[data-script-prompt-save]");
+  if (savePromptButton) {
+    const type = scriptsWorkspacePanel.querySelector('[data-script-prompt-field="type"]')?.value || "script";
+    const provider = scriptsWorkspacePanel.querySelector('[data-script-prompt-field="provider"]')?.value || selectedAiProvider || "auto";
+    const title = scriptsWorkspacePanel.querySelector('[data-script-prompt-field="title"]')?.value.trim();
+    const body = scriptsWorkspacePanel.querySelector('[data-script-prompt-field="body"]')?.value.trim();
+    if (!title || !body) {
+      showToast("Agrega nombre y contenido del prompt.");
+      return;
+    }
+    const prompt = {
+      id: `prompt-${activeCompanyId}-${Date.now()}`,
+      companyId: activeCompanyId,
+      type,
+      title,
+      body,
+      provider,
+      createdAt: new Date().toISOString(),
+    };
+    promptLibrary = [prompt, ...promptLibrary];
+    selectedPromptId = prompt.id;
+    selectedAiProvider = provider;
+    persistState();
+    renderScriptsWorkspace();
+    showToast("Prompt guardado para esta empresa.");
+    return;
+  }
+
+  const usePromptButton = event.target.closest("[data-script-prompt-use]");
+  if (usePromptButton) {
+    selectedPromptId = usePromptButton.dataset.scriptPromptUse;
+    const prompt = selectedPrompt();
+    if (prompt?.provider) selectedAiProvider = prompt.provider;
+    persistState();
+    renderScriptsWorkspace();
+    const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+    if (input && prompt?.body) {
+      input.value = prompt.body;
+      input.focus();
+    }
+    showToast("Prompt listo para generar.");
+    return;
+  }
+
+  const deletePromptButton = event.target.closest("[data-script-prompt-delete]");
+  if (deletePromptButton) {
+    promptLibrary = promptLibrary.filter((prompt) => prompt.id !== deletePromptButton.dataset.scriptPromptDelete);
+    if (selectedPromptId === deletePromptButton.dataset.scriptPromptDelete) selectedPromptId = "";
+    persistState();
+    renderScriptsWorkspace();
+    showToast("Prompt eliminado.");
   }
 });
 

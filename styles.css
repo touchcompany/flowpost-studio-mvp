@@ -3779,6 +3779,30 @@ input[type="file"]:focus {
   resize: vertical;
 }
 
+.scripts-prompt-notebook {
+  background: #fbfbfb;
+}
+
+.scripts-prompt-notebook .prompt-list {
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.scripts-prompt-notebook .prompt-form.compact {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(105px, 0.5fr) minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.scripts-prompt-notebook .prompt-form.compact strong,
+.scripts-prompt-notebook .prompt-form.compact textarea {
+  grid-column: 1 / -1;
+}
+
+.scripts-prompt-notebook .prompt-form.compact .icon-text-button {
+  min-height: 42px;
+}
+
 .script-editor-card {
   display: grid;
   gap: 14px;
@@ -9017,6 +9041,10 @@ input[type="file"] {
 
   .scripts-card-list article {
     align-items: start;
+  }
+
+  .scripts-prompt-notebook .prompt-form.compact {
+    grid-template-columns: 1fr;
   }
 }
 
