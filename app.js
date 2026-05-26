@@ -6698,35 +6698,62 @@ function renderScriptsWorkspace() {
     .filter((publication) => publication.companyId === activeCompanyId)
     .sort((a, b) => `${b.date || ""} ${b.time || ""}`.localeCompare(`${a.date || ""} ${a.time || ""}`));
   const selectedPublication = selectedCalendarPublication(companyScripts);
-  const companiesWithScripts = companies.map((item) => ({
-    company: item,
-    total: publications.filter((publication) => publication.companyId === item.id).length,
-    ready: publications.filter((publication) => publication.companyId === item.id && (publication.script || "").trim()).length,
-  }));
+  if (selectedPublication && selectedCalendarPublicationId !== selectedPublication.id) {
+    selectedCalendarPublicationId = selectedPublication.id;
+  }
+  const readyScripts = companyScripts.filter((publication) => (publication.script || "").trim()).length;
+  const pendingScripts = companyScripts.length - readyScripts;
+  const scheduledScripts = companyScripts.filter((publication) => ["Programado", "Aprobado"].includes(publication.status)).length;
   scriptsWorkspacePanel.innerHTML = `
-    <section class="scripts-workspace">
-      <aside class="scripts-company-rail">
+    <section class="scripts-workspace scripts-focused-workspace">
+      <header class="scripts-company-header">
+        <span class="brand-dot large" style="background:${escapeHtml(company.color || "#111")}"></span>
+        <div>
+          <p>Workspace de guiones</p>
+          <h3>${escapeHtml(company.name)}</h3>
+          <small>${escapeHtml(company.description || company.handle || "Sin descripcion")}</small>
+        </div>
+        <div class="scripts-company-stats">
+          <span><strong>${companyScripts.length}</strong> piezas</span>
+          <span><strong>${readyScripts}</strong> listas</span>
+          <span><strong>${pendingScripts}</strong> pendientes</span>
+          <span><strong>${scheduledScripts}</strong> aprobadas/programadas</span>
+        </div>
+        <button class="primary-button icon-text-button" type="button" data-script-new-draft>
+          <i data-lucide="file-plus-2"></i>
+          Nuevo guion
+        </button>
+      </header>
+
+      <aside class="scripts-list-panel">
         <header>
-          <span class="status-icon"><i data-lucide="building-2"></i></span>
+          <span class="status-icon"><i data-lucide="notebook-tabs"></i></span>
           <div>
-            <h3>Empresas</h3>
-            <p>Guiones separados por marca.</p>
+            <h3>Guiones de esta empresa</h3>
+            <p>Solo ves contenido de ${escapeHtml(company.name)}.</p>
           </div>
         </header>
-        <div class="scripts-company-list">
-          ${companiesWithScripts
-            .map(
-              (item) => `
-                <button class="${item.company.id === activeCompanyId ? "selected" : ""}" type="button" data-script-company="${escapeHtml(item.company.id)}">
-                  <span class="brand-dot" style="background:${escapeHtml(item.company.color || "#111")}"></span>
-                  <span>
-                    <strong>${escapeHtml(item.company.name)}</strong>
-                    <small>${item.ready}/${item.total} con guion</small>
-                  </span>
-                </button>
-              `
-            )
-            .join("")}
+        <div class="scripts-card-list">
+          ${
+            companyScripts.length
+              ? companyScripts
+                  .map(
+                    (publication) => `
+                      <article class="${publication.id === selectedPublication?.id ? "selected" : ""}">
+                        <button type="button" data-script-select="${escapeHtml(publication.id)}">
+                          <span class="status-dot ${statusClass(publication.status)}"></span>
+                          <span>
+                            <strong>${escapeHtml(publication.title || "Sin titulo")}</strong>
+                            <small>${escapeHtml(publication.status)} · ${scriptQuality(publication)}% · ${escapeHtml(publication.date || "Sin fecha")} ${escapeHtml(publication.time || "")}</small>
+                            <p>${escapeHtml(scriptPreviewText(publication))}</p>
+                          </span>
+                        </button>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : `<div class="empty-state compact"><strong>Sin guiones</strong><p>Crea el primer guion para ${escapeHtml(company.name)} desde el boton superior.</p></div>`
+          }
         </div>
       </aside>
 
@@ -6734,8 +6761,8 @@ function renderScriptsWorkspace() {
         <header>
           <span class="assistant-avatar"><i data-lucide="sparkles"></i></span>
           <div>
-            <h3>Crear guion con IA</h3>
-            <p>Escribe libremente lo que necesitas. Flowpost usa ChatGPT o Gemini desde el backend cuando las llaves estan activas.</p>
+            <h3>${selectedPublication ? "Guion seleccionado" : "Crea el primer guion"}</h3>
+            <p>${selectedPublication ? "Edita la pieza y genera contenido sin salir del contexto de esta empresa." : "Empieza con una instruccion libre para crear una pieza de esta empresa."}</p>
           </div>
           <select data-script-provider>
             ${[
@@ -6746,6 +6773,7 @@ function renderScriptsWorkspace() {
           </select>
         </header>
         ${renderScriptsWorkspaceContext(selectedPublication, company)}
+        ${renderScriptsWorkspaceEditor(selectedPublication)}
         <div class="creative-type-switch" role="group" aria-label="Tipo de contenido a crear">
           ${[
             ["script", "Guion", "notebook-pen"],
@@ -6765,70 +6793,78 @@ function renderScriptsWorkspace() {
         </div>
         <label class="field compact">
           <span>Mensaje para la IA</span>
-          <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un reel con mi personaje principal explicando una oferta de hosting para pymes. Quiero una version premium, simple y con CTA a WhatsApp."></textarea>
+          <textarea data-script-chat-prompt rows="5" placeholder="Escribe como en ChatGPT o Gemini: objetivo, producto, cliente ideal, formato, tono, CTA y referencias."></textarea>
         </label>
         ${renderCreativePromptStarters(company, selectedPublication)}
         ${renderCreativeCapabilityPanel()}
         ${renderScriptsWorkspaceAiStatus(selectedPublication)}
-        ${renderCreativeOutputs(selectedPublication)}
-        ${renderScriptsCharactersPanel(company)}
-        ${renderScriptsPromptNotebook()}
         <div class="scripts-chat-actions">
-          <button class="secondary-button icon-text-button" type="button" data-script-new-draft>
-            <i data-lucide="file-plus-2"></i>
-            Nuevo guion
+          <button class="secondary-button icon-text-button" type="button" data-open-script-modal="${escapeHtml(selectedPublication?.id || "")}" ${selectedPublication ? "" : "disabled"}>
+            <i data-lucide="panel-right-open"></i>
+            Ver completo
           </button>
           <button class="primary-button icon-text-button ${isGeneratingCreative ? "is-loading" : ""}" type="button" data-script-chat-generate ${isGeneratingCreative ? "disabled" : ""}>
             <i data-lucide="${isGeneratingCreative ? "loader-2" : "sparkles"}"></i>
-            ${isGeneratingCreative ? "Creando..." : "Crear pieza"}
+            ${isGeneratingCreative ? "Creando..." : "Crear con IA"}
           </button>
         </div>
       </section>
 
-      <aside class="scripts-list-panel">
-        <header>
-          <span class="status-icon"><i data-lucide="notebook-tabs"></i></span>
-          <div>
-            <h3>${escapeHtml(company.name)}</h3>
-            <p>${companyScripts.length} pieza${companyScripts.length === 1 ? "" : "s"} editorial${companyScripts.length === 1 ? "" : "es"}.</p>
-          </div>
-        </header>
-        <div class="scripts-card-list">
-          ${
-            companyScripts.length
-              ? companyScripts
-                  .map(
-                    (publication) => `
-                      <article class="${publication.id === selectedPublication?.id ? "selected" : ""}">
-                        <button type="button" data-script-open="${escapeHtml(publication.id)}">
-                          <span class="status-dot ${statusClass(publication.status)}"></span>
-                          <span>
-                            <strong>${escapeHtml(publication.title || "Sin titulo")}</strong>
-                            <small>${escapeHtml(publication.status)} · ${scriptQuality(publication)}% · ${escapeHtml(publication.date || "Sin fecha")}</small>
-                            <p>${escapeHtml(scriptPreviewText(publication))}</p>
-                          </span>
-                        </button>
-                        <div>
-                          ${
-                            publication.cover?.ai?.mode
-                              ? `<span class="script-provider-mini ${String(publication.cover.ai.mode).includes("mock") || String(publication.cover.ai.mode).includes("fallback") ? "warning" : ""}">${escapeHtml(promptProviderLabel(publication.cover.ai.mode))}</span>`
-                              : ""
-                          }
-                          <button class="secondary-button icon-button compact" type="button" data-script-compose="${escapeHtml(publication.id)}" aria-label="Editar publicacion">
-                            <i data-lucide="pencil"></i>
-                          </button>
-                          <button class="secondary-button icon-button compact" type="button" data-script-open="${escapeHtml(publication.id)}" aria-label="Abrir guion">
-                            <i data-lucide="panel-right-open"></i>
-                          </button>
-                        </div>
-                      </article>
-                    `
-                  )
-                  .join("")
-              : `<div class="empty-state compact"><strong>Sin guiones</strong><p>Escribe una instruccion y genera el primer guion para ${escapeHtml(company.name)}.</p></div>`
-          }
-        </div>
+      <aside class="scripts-resource-panel">
+        ${renderCreativeOutputs(selectedPublication)}
+        ${renderScriptsCharactersPanel(company)}
+        ${renderScriptsPromptNotebook()}
       </aside>
+    </section>
+  `;
+}
+
+function renderScriptsWorkspaceEditor(publication) {
+  if (!publication) {
+    return `
+      <section class="script-live-editor empty">
+        <span class="status-icon large"><i data-lucide="file-plus-2"></i></span>
+        <div>
+          <strong>No hay un guion seleccionado</strong>
+          <p>Crea un guion nuevo o elige una pieza de la lista para editar titulo, fecha, estado, hook y texto completo.</p>
+        </div>
+      </section>
+    `;
+  }
+  return `
+    <section class="script-live-editor" data-script-editor="${escapeHtml(publication.id)}">
+      <div class="script-editor-topline">
+        <label class="field compact">
+          <span>Titulo</span>
+          <input data-script-field="title" type="text" value="${escapeHtml(publication.title || "")}" placeholder="Nombre del guion" />
+        </label>
+        <label class="field compact">
+          <span>Estado</span>
+          <select data-script-field="status">
+            ${editorialStatuses.map((status) => `<option value="${escapeHtml(status)}" ${publication.status === status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field compact">
+          <span>Fecha</span>
+          <input data-script-field="date" type="date" value="${escapeHtml(publication.date || todayISO())}" />
+        </label>
+        <label class="field compact">
+          <span>Hora</span>
+          <input data-script-field="time" type="time" value="${escapeHtml(publication.time || "09:00")}" />
+        </label>
+      </div>
+      <label class="field compact">
+        <span>Hook / idea base</span>
+        <input data-script-field="hook" type="text" value="${escapeHtml(publication.hook || "")}" placeholder="La primera frase o escena" />
+      </label>
+      <label class="field compact">
+        <span>Guion editable</span>
+        <textarea class="script-main-textarea" data-script-field="script" rows="10" placeholder="Aqui queda el guion final aprobado para esta empresa.">${escapeHtml(publication.script || "")}</textarea>
+      </label>
+      <label class="field compact">
+        <span>Notas y referencias</span>
+        <textarea data-script-field="referenceNotes" rows="3" placeholder="Links, videos de referencia, objeciones, datos del cliente o tomas obligatorias.">${escapeHtml(publication.referenceNotes || publication.notes || "")}</textarea>
+      </label>
     </section>
   `;
 }
@@ -8485,6 +8521,13 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     return;
   }
 
+  const selectButton = event.target.closest("[data-script-select]");
+  if (selectButton) {
+    selectedCalendarPublicationId = selectButton.dataset.scriptSelect;
+    renderScriptsWorkspace();
+    return;
+  }
+
   const composeButton = event.target.closest("[data-script-compose]");
   if (composeButton) {
     loadPublication(composeButton.dataset.scriptCompose);
@@ -8665,6 +8708,23 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
   if (useCreativeButton) {
     applyCreativeAssetToPublication(useCreativeButton.dataset.useCreativeOutput, true);
   }
+});
+
+scriptsWorkspacePanel?.addEventListener("input", (event) => {
+  const field = event.target.closest("[data-script-field]");
+  if (!field) return;
+  const editor = field.closest("[data-script-editor]");
+  if (!editor) return;
+  updateCalendarScript(editor.dataset.scriptEditor, field.dataset.scriptField, field.value, false);
+});
+
+scriptsWorkspacePanel?.addEventListener("change", (event) => {
+  const field = event.target.closest("[data-script-field]");
+  if (!field) return;
+  const editor = field.closest("[data-script-editor]");
+  if (!editor) return;
+  updateCalendarScript(editor.dataset.scriptEditor, field.dataset.scriptField, field.value, true);
+  renderScriptsWorkspace();
 });
 
 scriptsWorkspacePanel?.addEventListener("change", (event) => {
