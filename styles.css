@@ -5817,6 +5817,10 @@ input[type="file"]:focus {
   background: #fafafa;
 }
 
+.creative-output-list article {
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+}
+
 .character-avatar {
   display: grid;
   place-items: center;
@@ -9315,6 +9319,14 @@ input[type="file"] {
 
   .character-form {
     grid-template-columns: 1fr;
+  }
+
+  .creative-output-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .creative-output-list article > button {
+    grid-column: span 1;
   }
 
   .creative-capability-panel > div {

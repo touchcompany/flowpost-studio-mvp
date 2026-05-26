@@ -5886,6 +5886,12 @@ function renderCreativeOutputs(publication) {
                 <button class="secondary-button icon-button compact" type="button" data-copy-creative-output="${escapeHtml(asset.id)}" aria-label="Copiar creacion">
                   <i data-lucide="copy"></i>
                 </button>
+                <button class="secondary-button icon-button compact" type="button" data-open-creative-output="${escapeHtml(asset.id)}" aria-label="Abrir creacion">
+                  <i data-lucide="panel-right-open"></i>
+                </button>
+                <button class="connect-button icon-button compact" type="button" data-use-creative-output="${escapeHtml(asset.id)}" aria-label="Usar en publicacion">
+                  <i data-lucide="send"></i>
+                </button>
               </article>
             `
           )
@@ -7545,6 +7551,7 @@ function collectPublication(statusOverride) {
     status: statusOverride || postStatusInput.value,
     mediaProvider: media.valid ? media.provider : "",
     mediaSource: media.valid ? videoSourceInput.value.trim() : "",
+    cover: existing?.cover || {},
   };
 }
 
@@ -8020,6 +8027,37 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function selectedCreativeAsset(assetId) {
+  const publication = publications.find((item) => item.id === selectedCalendarPublicationId);
+  const asset = publication?.cover?.creativeAssets?.find((item) => item.id === assetId);
+  return { publication, asset };
+}
+
+function applyCreativeAssetToPublication(assetId, openComposer = true) {
+  const { publication, asset } = selectedCreativeAsset(assetId);
+  if (!publication || !asset) return;
+  const nextType = asset.type === "image" ? "Imagen" : asset.type === "carousel" ? "Carrusel" : "Video / Reel";
+  const nextPublication = {
+    ...publication,
+    type: nextType,
+    copy: asset.text || publication.copy || "",
+    script: ["script", "video"].includes(asset.type) ? asset.text || publication.script || "" : publication.script || "",
+    referenceNotes: publication.referenceNotes || asset.userPrompt || "",
+    notes: [publication.notes, `Creacion aplicada: ${promptTypes[asset.type]?.label || asset.type} · ${promptProviderLabel(asset.mode)}.`].filter(Boolean).join("\n"),
+    mediaProvider: asset.imageUrl || asset.imageDataUrl ? "OpenAI Images" : publication.mediaProvider || "",
+    mediaSource: asset.imageUrl || asset.imageDataUrl || publication.mediaSource || "",
+    status: publication.status || "Idea",
+  };
+  publications = publications.map((item) => (item.id === publication.id ? nextPublication : item));
+  jobs = [...createJobs(nextPublication), ...jobs.filter((job) => job.publicationId !== publication.id)];
+  persistState();
+  renderQueue();
+  renderCalendar();
+  renderScriptsWorkspace();
+  if (openComposer) loadPublication(nextPublication.id);
+  showToast("Creacion aplicada a la publicacion.");
+}
+
 function resetComposer() {
   editingPublicationId = null;
   postTitleInput.value = "";
@@ -8423,11 +8461,32 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 
   const copyCreativeButton = event.target.closest("[data-copy-creative-output]");
   if (copyCreativeButton) {
-    const publication = publications.find((item) => item.id === selectedCalendarPublicationId);
-    const asset = publication?.cover?.creativeAssets?.find((item) => item.id === copyCreativeButton.dataset.copyCreativeOutput);
+    const { asset } = selectedCreativeAsset(copyCreativeButton.dataset.copyCreativeOutput);
     if (!asset) return;
     navigator.clipboard?.writeText(asset.text || asset.imageUrl || asset.videoJob?.id || "");
     showToast("Creacion copiada.");
+    return;
+  }
+
+  const openCreativeButton = event.target.closest("[data-open-creative-output]");
+  if (openCreativeButton) {
+    const { publication, asset } = selectedCreativeAsset(openCreativeButton.dataset.openCreativeOutput);
+    if (!publication || !asset) return;
+    if (["script", "video"].includes(asset.type)) {
+      const originalScript = publication.script || "";
+      publications = publications.map((item) => (item.id === publication.id ? { ...item, script: asset.text || originalScript } : item));
+      openScriptModal(publication.id);
+      publications = publications.map((item) => (item.id === publication.id ? { ...item, script: originalScript } : item));
+    } else {
+      navigator.clipboard?.writeText(asset.text || asset.imageUrl || asset.imageDataUrl || "");
+      showToast("Prompt creativo copiado para revisar.");
+    }
+    return;
+  }
+
+  const useCreativeButton = event.target.closest("[data-use-creative-output]");
+  if (useCreativeButton) {
+    applyCreativeAssetToPublication(useCreativeButton.dataset.useCreativeOutput, true);
   }
 });
 
