@@ -78,6 +78,7 @@ const statusFilter = document.querySelector("#statusFilter");
 const platformFilter = document.querySelector("#platformFilter");
 const calendarViewButtons = document.querySelectorAll("[data-calendar-view]");
 const calendarPlannerPanel = document.querySelector("#calendarPlannerPanel");
+const scriptsWorkspacePanel = document.querySelector("#scriptsWorkspacePanel");
 const accountsGrid = document.querySelector("#accountsGrid");
 const planPanel = document.querySelector("#planPanel");
 const billingPanel = document.querySelector("#billingPanel");
@@ -1024,6 +1025,7 @@ function closeScriptModal() {
 function saveScriptModal() {
   if (!editingScriptPublicationId) return;
   updateCalendarScript(editingScriptPublicationId, "script", scriptModalText.value, true);
+  renderScriptsWorkspace();
   closeScriptModal();
   showToast("Guion guardado.");
 }
@@ -1141,6 +1143,7 @@ function featureEnabled(feature, session = currentSession()) {
 const viewFeatureMap = {
   compose: "content",
   companies: "content",
+  scripts: "aiScripts",
   clients: "clients",
   store: "store",
   automations: "apiAdmin",
@@ -3914,7 +3917,7 @@ function setView(viewName, options = {}) {
   }
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
-  mobileMoreButton?.classList.toggle("active", ["library", "calendar", "automations", "accounts"].includes(targetView));
+  mobileMoreButton?.classList.toggle("active", ["library", "calendar", "scripts", "automations", "accounts"].includes(targetView));
   sidebar?.classList.remove("more-open");
   mobileMoreButton?.setAttribute("aria-expanded", "false");
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
@@ -4862,6 +4865,7 @@ function renderCalendar() {
     calendarGrid.innerHTML = renderCalendarWeek(companyPublications);
   }
   renderCalendarPlanner(companyPublications);
+  renderScriptsWorkspace();
   renderIcons();
   renderDashboard();
 }
@@ -5370,18 +5374,44 @@ function calendarPost(publication, compact = false) {
 function renderCalendarWeek(companyPublications) {
   const days = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
   const today = todayISO();
-  return days
-    .map((day, index) => {
-      const dayDate = addDaysISO(today, index - weekdayIndex(today));
-      const dayPublications = companyPublications.filter((publication) => publication.date === dayDate);
-      return `
-        <article class="calendar-day">
-          <strong>${day}<span>${shortDateLabel(dayDate)}</span></strong>
-          ${dayPublications.map((publication) => calendarPost(publication, true)).join("") || `<span class="day-empty">Sin piezas</span>`}
-        </article>
-      `;
-    })
-    .join("");
+  const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, "0")}:00`);
+  return `
+    <section class="google-calendar-week">
+      <div class="calendar-time-head"></div>
+      ${days
+        .map((day, index) => {
+          const dayDate = addDaysISO(today, index - weekdayIndex(today));
+          return `
+            <header class="calendar-day-head">
+              <span>${day}</span>
+              <strong>${shortDateLabel(dayDate)}</strong>
+            </header>
+          `;
+        })
+        .join("")}
+      ${hours
+        .map(
+          (hour) => `
+            <div class="calendar-hour-label">${hour}</div>
+            ${days
+              .map((_, index) => {
+                const dayDate = addDaysISO(today, index - weekdayIndex(today));
+                const dayPublications = companyPublications.filter((publication) => publication.date === dayDate && (publication.time || "").slice(0, 2) === hour.slice(0, 2));
+                return `
+                  <div class="calendar-time-slot" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}">
+                    <button class="slot-create-button" type="button" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}" aria-label="Crear pieza ${dayDate} ${hour}">
+                      <i data-lucide="plus"></i>
+                    </button>
+                    ${dayPublications.map((publication) => calendarPost(publication, true)).join("")}
+                  </div>
+                `;
+              })
+              .join("")}
+          `
+        )
+        .join("")}
+    </section>
+  `;
 }
 
 function renderCalendarDay(companyPublications) {
@@ -6141,6 +6171,119 @@ function renderAccounts() {
     }),
   ].join("");
   renderIcons();
+}
+
+function renderScriptsWorkspace() {
+  if (!scriptsWorkspacePanel) return;
+  const company = activeCompany();
+  const companyScripts = publications
+    .filter((publication) => publication.companyId === activeCompanyId)
+    .sort((a, b) => `${b.date || ""} ${b.time || ""}`.localeCompare(`${a.date || ""} ${a.time || ""}`));
+  const selectedPublication = selectedCalendarPublication(companyScripts);
+  const companiesWithScripts = companies.map((item) => ({
+    company: item,
+    total: publications.filter((publication) => publication.companyId === item.id).length,
+    ready: publications.filter((publication) => publication.companyId === item.id && (publication.script || "").trim()).length,
+  }));
+  scriptsWorkspacePanel.innerHTML = `
+    <section class="scripts-workspace">
+      <aside class="scripts-company-rail">
+        <header>
+          <span class="status-icon"><i data-lucide="building-2"></i></span>
+          <div>
+            <h3>Empresas</h3>
+            <p>Guiones separados por marca.</p>
+          </div>
+        </header>
+        <div class="scripts-company-list">
+          ${companiesWithScripts
+            .map(
+              (item) => `
+                <button class="${item.company.id === activeCompanyId ? "selected" : ""}" type="button" data-script-company="${escapeHtml(item.company.id)}">
+                  <span class="brand-dot" style="background:${escapeHtml(item.company.color || "#111")}"></span>
+                  <span>
+                    <strong>${escapeHtml(item.company.name)}</strong>
+                    <small>${item.ready}/${item.total} con guion</small>
+                  </span>
+                </button>
+              `
+            )
+            .join("")}
+        </div>
+      </aside>
+
+      <section class="scripts-chat-panel">
+        <header>
+          <span class="assistant-avatar"><i data-lucide="sparkles"></i></span>
+          <div>
+            <h3>Crear guion con IA</h3>
+            <p>Escribe libremente lo que necesitas. Flowpost usa ChatGPT o Gemini desde el backend cuando las llaves estan activas.</p>
+          </div>
+          <select data-script-provider>
+            ${[
+              ["auto", "Auto"],
+              ["openai", "ChatGPT"],
+              ["gemini", "Gemini"],
+            ].map(([value, label]) => `<option value="${value}" ${selectedAiProvider === value ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </header>
+        <label class="field compact">
+          <span>Que quieres crear</span>
+          <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un guion para un reel de 35 segundos sobre una oferta de hosting para pymes. Quiero que suene premium, simple y con CTA a WhatsApp."></textarea>
+        </label>
+        <div class="scripts-chat-actions">
+          <button class="secondary-button icon-text-button" type="button" data-script-new-draft>
+            <i data-lucide="file-plus-2"></i>
+            Nuevo borrador
+          </button>
+          <button class="primary-button icon-text-button" type="button" data-script-chat-generate>
+            <i data-lucide="sparkles"></i>
+            Generar guion
+          </button>
+        </div>
+      </section>
+
+      <aside class="scripts-list-panel">
+        <header>
+          <span class="status-icon"><i data-lucide="notebook-tabs"></i></span>
+          <div>
+            <h3>${escapeHtml(company.name)}</h3>
+            <p>${companyScripts.length} pieza${companyScripts.length === 1 ? "" : "s"} editorial${companyScripts.length === 1 ? "" : "es"}.</p>
+          </div>
+        </header>
+        <div class="scripts-card-list">
+          ${
+            companyScripts.length
+              ? companyScripts
+                  .map(
+                    (publication) => `
+                      <article class="${publication.id === selectedPublication?.id ? "selected" : ""}">
+                        <button type="button" data-script-open="${escapeHtml(publication.id)}">
+                          <span class="status-dot ${statusClass(publication.status)}"></span>
+                          <span>
+                            <strong>${escapeHtml(publication.title || "Sin titulo")}</strong>
+                            <small>${escapeHtml(publication.status)} · ${scriptQuality(publication)}% · ${escapeHtml(publication.date || "Sin fecha")}</small>
+                            <p>${escapeHtml(scriptPreviewText(publication))}</p>
+                          </span>
+                        </button>
+                        <div>
+                          <button class="secondary-button icon-button compact" type="button" data-script-compose="${escapeHtml(publication.id)}" aria-label="Editar publicacion">
+                            <i data-lucide="pencil"></i>
+                          </button>
+                          <button class="secondary-button icon-button compact" type="button" data-script-open="${escapeHtml(publication.id)}" aria-label="Abrir guion">
+                            <i data-lucide="panel-right-open"></i>
+                          </button>
+                        </div>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : `<div class="empty-state compact"><strong>Sin guiones</strong><p>Escribe una instruccion y genera el primer guion para ${escapeHtml(company.name)}.</p></div>`
+          }
+        </div>
+      </aside>
+    </section>
+  `;
 }
 
 function renderAuthLoginPanel() {
@@ -6998,6 +7141,8 @@ function collectPublication(statusOverride) {
     hook: existing?.hook || "",
     script: existing?.script || "",
     cta: existing?.cta || "",
+    referenceNotes: existing?.referenceNotes || "",
+    approvalCriteria: existing?.approvalCriteria || "",
     date: postDateInput.value || todayISO(),
     time: postTimeInput.value || "09:00",
     status: statusOverride || postStatusInput.value,
@@ -7180,6 +7325,120 @@ async function generateCalendarScript(publicationId) {
   showToast(mode === "openai" ? "Guion generado con ChatGPT." : mode === "gemini" ? "Guion generado con Gemini." : "Guion mock editable generado.");
 }
 
+async function generateScriptFromWorkspace() {
+  const promptInput = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+  const customPrompt = promptInput?.value.trim() || "";
+  if (!customPrompt) {
+    showToast("Escribe que guion quieres crear.");
+    promptInput?.focus();
+    return;
+  }
+  const company = activeCompany();
+  const selectedPublication = publications.find((publication) => publication.id === selectedCalendarPublicationId && publication.companyId === activeCompanyId);
+  const publication =
+    selectedPublication ||
+    {
+      id: `pub-${Date.now()}`,
+      companyId: activeCompanyId,
+      platforms: company.socialNetworks?.length ? company.socialNetworks.map(platformKey).filter(Boolean) : ["instagram"],
+      type: "Video / Reel",
+      title: customPrompt.slice(0, 58),
+      copy: customPrompt,
+      notes: "Creado desde el workspace de guiones.",
+      hook: "",
+      script: "",
+      cta: "",
+      referenceNotes: "",
+      approvalCriteria: "",
+      date: todayISO(),
+      time: "09:00",
+      status: "Idea",
+      mediaProvider: "",
+      mediaSource: "",
+    };
+  let script = "";
+  let mode = "mock-local";
+  try {
+    const response = await fetch("/api/ai/script", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company,
+        publication: {
+          ...publication,
+          copy: customPrompt,
+          hook: publication.hook || customPrompt,
+          cta: publication.cta || "Escríbenos para recibir más información.",
+          referenceNotes: publication.referenceNotes || customPrompt,
+        },
+        profile: currentSession(),
+        strategy: {
+          ...scriptStrategyForPublication(publication, company, selectedPrompt()),
+          angle: customPrompt,
+          audience: "audiencia definida por la instruccion libre del usuario",
+        },
+        provider: selectedAiProvider === "auto" ? "" : selectedAiProvider,
+        promptTemplate: customPrompt,
+      }),
+    });
+    if (!response.ok) throw new Error("script ai unavailable");
+    const result = await response.json();
+    script = result.script || "";
+    mode = result.mode || mode;
+    publication.cover = {
+      ...(publication.cover || {}),
+      ai: {
+        mode,
+        model: result.model || "",
+        generatedAt: result.generatedAt || new Date().toISOString(),
+        promptTitle: "Prompt libre",
+        providerSelected: selectedAiProvider || "auto",
+        warning: result.warning || result.message || "",
+      },
+    };
+  } catch {
+    script = [
+      `Hook: ${customPrompt.slice(0, 80)}`,
+      "Insight: convierte esta idea en una promesa clara y facil de grabar.",
+      "Escena 1: muestra el problema o deseo principal.",
+      "Escena 2: presenta la solucion con un ejemplo concreto.",
+      "Escena 3: agrega prueba, detalle o comparacion.",
+      "Cierre: invita a escribir para recibir mas informacion.",
+    ].join("\n");
+    publication.cover = {
+      ...(publication.cover || {}),
+      ai: {
+        mode,
+        model: "fallback-local",
+        generatedAt: new Date().toISOString(),
+        promptTitle: "Prompt libre",
+        providerSelected: selectedAiProvider || "auto",
+        warning: "No se pudo conectar con /api/ai/script.",
+      },
+    };
+  }
+
+  const nextPublication = {
+    ...publication,
+    copy: customPrompt,
+    script,
+    notes: publication.notes || "Creado desde el workspace de guiones.",
+  };
+  if (selectedPublication) {
+    publications = publications.map((item) => (item.id === nextPublication.id ? nextPublication : item));
+  } else {
+    publications = [nextPublication, ...publications];
+    jobs = [...createJobs(nextPublication), ...jobs];
+    selectedCalendarPublicationId = nextPublication.id;
+  }
+  persistState();
+  renderQueue();
+  renderCalendar();
+  renderScriptsWorkspace();
+  openScriptModal(nextPublication.id);
+  showToast(mode === "openai" ? "Guion generado con ChatGPT." : mode === "gemini" ? "Guion generado con Gemini." : "Guion generado en modo fallback.");
+}
+
 function resetComposer() {
   editingPublicationId = null;
   postTitleInput.value = "";
@@ -7313,10 +7572,23 @@ document.querySelectorAll("[data-cover-format-button]").forEach((button) => {
 googlePickerButton.addEventListener("click", openGooglePicker);
 
 calendarGrid.addEventListener("click", (event) => {
+  const slotButton = event.target.closest("[data-calendar-create-slot]");
+  if (slotButton && !event.target.closest("[data-publication-id]")) {
+    resetComposer();
+    postDateInput.value = slotButton.dataset.calendarCreateSlot || todayISO();
+    postTimeInput.value = slotButton.dataset.calendarCreateTime || "09:00";
+    postStatusInput.value = "Idea";
+    updatePreview();
+    setView("compose");
+    postTitleInput.focus();
+    showToast("Hora seleccionada. Crea el guion, guarda borrador o programa la publicacion.");
+    return;
+  }
+
   const card = event.target.closest("[data-publication-id]");
   if (!card) return;
   selectedCalendarPublicationId = card.dataset.publicationId;
-  renderCalendar();
+  loadPublication(card.dataset.publicationId);
 });
 
 calendarPlannerPanel.addEventListener("click", (event) => {
@@ -7432,6 +7704,51 @@ calendarPlannerPanel.addEventListener("change", (event) => {
     persistState();
     showToast(`IA seleccionada: ${providerSelect.options[providerSelect.selectedIndex]?.text || "Auto"}.`);
   }
+});
+
+scriptsWorkspacePanel?.addEventListener("click", (event) => {
+  const companyButton = event.target.closest("[data-script-company]");
+  if (companyButton) {
+    activeCompanyId = companyButton.dataset.scriptCompany;
+    refreshCompanyContext();
+    setView("scripts");
+    return;
+  }
+
+  const openButton = event.target.closest("[data-script-open]");
+  if (openButton) {
+    selectedCalendarPublicationId = openButton.dataset.scriptOpen;
+    openScriptModal(openButton.dataset.scriptOpen);
+    renderScriptsWorkspace();
+    return;
+  }
+
+  const composeButton = event.target.closest("[data-script-compose]");
+  if (composeButton) {
+    loadPublication(composeButton.dataset.scriptCompose);
+    return;
+  }
+
+  const newDraftButton = event.target.closest("[data-script-new-draft]");
+  if (newDraftButton) {
+    resetComposer();
+    setView("compose");
+    postTitleInput.focus();
+    return;
+  }
+
+  const generateButton = event.target.closest("[data-script-chat-generate]");
+  if (generateButton) {
+    generateScriptFromWorkspace();
+  }
+});
+
+scriptsWorkspacePanel?.addEventListener("change", (event) => {
+  const providerSelect = event.target.closest("[data-script-provider]");
+  if (!providerSelect) return;
+  selectedAiProvider = providerSelect.value;
+  persistState();
+  showToast(`IA seleccionada: ${providerSelect.options[providerSelect.selectedIndex]?.text || "Auto"}.`);
 });
 
 queueList.addEventListener("click", async (event) => {
