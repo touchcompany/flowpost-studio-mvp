@@ -8088,6 +8088,86 @@ input[type="file"] {
   gap: 16px;
 }
 
+.client-switcher {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.client-switcher header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.client-switcher h3,
+.client-switcher span,
+.client-switcher strong {
+  margin: 0;
+}
+
+.client-switcher header > strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+}
+
+.client-switcher-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(190px, 0.32fr);
+  gap: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.client-switcher-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #fafafa;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.client-switcher-list button.active {
+  border-color: #111;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #111;
+}
+
+.client-switcher-list strong,
+.client-switcher-list small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-switcher-list small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+}
+
 .client-command-center {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(120px, auto) minmax(260px, 0.85fr);
@@ -8259,6 +8339,45 @@ input[type="file"] {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.client-command-modules {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.client-command-modules span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 820;
+}
+
+.client-command-modules span.enabled {
+  border-color: rgba(18, 163, 74, 0.18);
+  background: #f3fff6;
+  color: #18723d;
+}
+
+.client-command-modules span.locked {
+  opacity: 0.72;
+}
+
+.client-command-modules svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
 }
 
 .agency-services-manager {

@@ -2306,6 +2306,56 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
           Comprar servicios
         </button>
       </div>
+      <div class="client-command-modules">
+        ${clientPortalModules(selectedClient)
+          .slice(0, 6)
+          .map(
+            ({ service, enabled: isEnabled, meta }) => `
+              <span class="${isEnabled ? "enabled" : "locked"}">
+                <i data-lucide="${isEnabled ? meta.icon : "lock"}"></i>
+                ${escapeHtml(service.name)}
+              </span>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderClientSwitcher(activeClients, pendingInvoices) {
+  if (!activeClients.length) return "";
+  const selectedClient = clients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
+  return `
+    <section class="client-switcher" aria-label="Clientes de la agencia">
+      <header>
+        <div>
+          <span class="workspace-label">Cuentas de la agencia</span>
+          <h3>Elige un cliente para administrar</h3>
+        </div>
+        <strong>${activeClients.length}</strong>
+      </header>
+      <div class="client-switcher-list">
+        ${activeClients
+          .map((client) => {
+            const company = companies.find((item) => item.id === client.companyId);
+            const invoice = pendingInvoices.find((item) => item.clientId === client.id);
+            const orders = clientServiceOrders(client.id);
+            const score = clientHealthScore(client, company, orders, invoice);
+            return `
+              <button class="${client.id === selectedClient.id ? "active" : ""}" type="button" data-client-switch="${escapeHtml(client.id)}">
+                <span class="company-avatar small" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
+                  <i data-lucide="briefcase"></i>
+                </span>
+                <span>
+                  <strong>${escapeHtml(client.name)}</strong>
+                  <small>${score}% · ${orders.length} servicios · ${invoice ? "por cobrar" : "al dia"}</small>
+                </span>
+              </button>
+            `;
+          })
+          .join("")}
+      </div>
     </section>
   `;
 }
@@ -2379,6 +2429,7 @@ function renderClientBillingPanel() {
   if (clientWorkspacePanel) {
     clientWorkspacePanel.innerHTML = `
       <section class="client-workspace">
+        ${renderClientSwitcher(activeClients, pendingInvoices)}
         ${renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)}
         ${renderAgencyServicesManager()}
         ${renderBillingDocumentEditor()}
@@ -9490,6 +9541,22 @@ clientBillingPanel.addEventListener("click", (event) => {
 });
 
 clientWorkspacePanel.addEventListener("click", (event) => {
+  const switchClientButton = event.target.closest("[data-client-switch]");
+  if (switchClientButton) {
+    billingDraft.clientId = switchClientButton.dataset.clientSwitch;
+    const client = clients.find((item) => item.id === billingDraft.clientId);
+    if (client) {
+      activeCompanyId = client.companyId;
+      billingDraft.companyId = client.companyId;
+      if (!billingDraft.description) billingDraft.description = serviceById(client.serviceId).name || client.plan || "";
+      refreshCompanyContext();
+    }
+    persistState();
+    renderClientBillingPanel();
+    showToast(`Cliente activo: ${client?.name || "cuenta seleccionada"}.`);
+    return;
+  }
+
   const addServiceButton = event.target.closest("[data-add-agency-service]");
   if (addServiceButton) {
     const name = clientWorkspacePanel.querySelector('[data-new-service-field="name"]')?.value.trim();
