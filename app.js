@@ -6117,12 +6117,19 @@ function renderCreativeOutputs(publication) {
                 <div class="creative-output-tools">
                   <button class="secondary-button icon-button compact" type="button" data-copy-creative-output="${escapeHtml(asset.id)}" aria-label="Copiar creacion">
                     <i data-lucide="copy"></i>
+                    <span>Copiar</span>
                   </button>
                   <button class="secondary-button icon-button compact" type="button" data-insert-creative-output="${escapeHtml(asset.id)}" aria-label="Insertar en guion">
                     <i data-lucide="corner-down-left"></i>
+                    <span>Insertar</span>
+                  </button>
+                  <button class="secondary-button icon-button compact" type="button" data-edit-creative-output="${escapeHtml(asset.id)}" aria-label="Enviar a editor">
+                    <i data-lucide="square-pen"></i>
+                    <span>Editar</span>
                   </button>
                   <button class="connect-button icon-button compact" type="button" data-use-creative-output="${escapeHtml(asset.id)}" aria-label="Usar en publicacion">
                     <i data-lucide="send"></i>
+                    <span>Usar</span>
                   </button>
                 </div>
                 ${renderCreativeBlocks(asset)}
@@ -8564,6 +8571,29 @@ function insertCreativeTextIntoScript(assetId, text) {
   showToast("Creacion insertada en el guion.");
 }
 
+function editCreativeAssetInWorkspace(assetId) {
+  const { publication, asset } = selectedCreativeAsset(assetId);
+  if (!publication || !asset) return;
+  selectedCalendarPublicationId = publication.id;
+  const promptInput = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+  const editPrompt = [
+    `Mejora esta creacion para ${activeCompany().name}.`,
+    "Hazla mas clara, premium, facil de producir y con CTA.",
+    "",
+    asset.text || asset.userPrompt || asset.imageUrl || asset.videoJob?.id || "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  selectedCreativeType = asset.type || "script";
+  renderScriptsWorkspace();
+  const nextInput = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]") || promptInput;
+  if (nextInput) {
+    nextInput.value = editPrompt;
+    nextInput.focus();
+  }
+  showToast("Creacion lista para editar con IA.");
+}
+
 function resetComposer() {
   editingPublicationId = null;
   postTitleInput.value = "";
@@ -9049,6 +9079,12 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
   const openCreativeButton = event.target.closest("[data-open-creative-output]");
   if (openCreativeButton) {
     openCreativeAssetModal(openCreativeButton.dataset.openCreativeOutput);
+    return;
+  }
+
+  const editCreativeButton = event.target.closest("[data-edit-creative-output]");
+  if (editCreativeButton) {
+    editCreativeAssetInWorkspace(editCreativeButton.dataset.editCreativeOutput);
     return;
   }
 

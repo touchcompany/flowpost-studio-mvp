@@ -6154,9 +6154,35 @@ input[type="file"]:focus {
 }
 
 .creative-output-tools {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
+}
+
+.creative-output-tools .icon-button {
+  display: grid;
+  width: 100%;
+  height: auto;
+  min-height: 42px;
+  justify-items: center;
+  gap: 2px;
+  padding: 7px 5px;
+}
+
+.creative-output-tools .icon-button span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.62rem;
+  font-weight: 820;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creative-output-tools .icon-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .character-avatar {
