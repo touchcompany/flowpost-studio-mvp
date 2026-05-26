@@ -6262,6 +6262,40 @@ function renderCreativeCapabilityPanel() {
     { type: "image", icon: "image", title: "Imagenes", capability: creativeCapabilityForType("image") },
     { type: "video", icon: "clapperboard", title: "Video/Sora", capability: creativeCapabilityForType("video") },
   ];
+  const providers = [
+    {
+      key: "openai",
+      title: "ChatGPT",
+      icon: "sparkles",
+      ready: Boolean(aiCapabilityStatus?.openai?.ready),
+      model: aiCapabilityStatus?.openai?.model || "OPENAI_MODEL",
+      detail: aiCapabilityStatus?.openai?.ready ? "Texto real" : "Revisa cuota/API key",
+    },
+    {
+      key: "gemini",
+      title: "Gemini",
+      icon: "gem",
+      ready: Boolean(aiCapabilityStatus?.gemini?.ready),
+      model: aiCapabilityStatus?.gemini?.model || "gemini-2.0-flash",
+      detail: aiCapabilityStatus?.gemini?.ready ? "Texto real" : "Revisa GEMINI_API_KEY",
+    },
+    {
+      key: "image",
+      title: "Imagen",
+      icon: "image",
+      ready: Boolean(aiCapabilityStatus?.image?.ready),
+      model: aiCapabilityStatus?.image?.model || "gpt-image-1",
+      detail: aiCapabilityStatus?.image?.ready ? "Imagen real" : "Prompt editable",
+    },
+    {
+      key: "video",
+      title: "Video",
+      icon: "clapperboard",
+      ready: Boolean(aiCapabilityStatus?.video?.ready),
+      model: aiCapabilityStatus?.video?.model || "sora-2",
+      detail: aiCapabilityStatus?.video?.ready ? "Job real" : "Prompt Sora",
+    },
+  ];
   return `
     <section class="creative-capability-panel ${current.className}">
       <header>
@@ -6282,6 +6316,20 @@ function renderCreativeCapabilityPanel() {
                 <i data-lucide="${item.icon}"></i>
                 <span>${escapeHtml(item.title)}</span>
                 <strong>${item.capability.ready ? "Real" : "Prompt"}</strong>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="creative-provider-grid">
+        ${providers
+          .map(
+            (provider) => `
+              <article class="${provider.ready ? "ready" : "pending"}">
+                <i data-lucide="${provider.ready ? provider.icon : "circle-alert"}"></i>
+                <span>${escapeHtml(provider.title)}</span>
+                <strong>${escapeHtml(provider.model)}</strong>
+                <small>${escapeHtml(provider.detail)}</small>
               </article>
             `
           )
