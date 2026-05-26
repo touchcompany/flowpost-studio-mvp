@@ -7699,7 +7699,7 @@ function refreshCompanyContext() {
 }
 
 function createJobs(publication) {
-  const media = detectMediaSource(videoSourceInput.value);
+  const media = detectMediaSource(publication.mediaSource || "");
   const time = publication.date && publication.time ? `${publication.date} ${publication.time}` : "Ahora";
 
   return publication.platforms.map((platform) => ({
@@ -8028,6 +8028,7 @@ async function generateScriptFromWorkspace() {
   };
   if (selectedPublication) {
     publications = publications.map((item) => (item.id === nextPublication.id ? nextPublication : item));
+    jobs = [...createJobs(nextPublication), ...jobs.filter((job) => job.publicationId !== nextPublication.id)];
   } else {
     publications = [nextPublication, ...publications];
     jobs = [...createJobs(nextPublication), ...jobs];
@@ -8135,6 +8136,7 @@ async function generateCreativeFromWorkspace() {
     };
     if (selectedPublication) {
       publications = publications.map((item) => (item.id === nextPublication.id ? nextPublication : item));
+      jobs = [...createJobs(nextPublication), ...jobs.filter((job) => job.publicationId !== nextPublication.id)];
     } else {
       publications = [nextPublication, ...publications];
       jobs = [...createJobs(nextPublication), ...jobs];
@@ -8144,8 +8146,11 @@ async function generateCreativeFromWorkspace() {
     renderQueue();
     renderCalendar();
     renderScriptsWorkspace();
-    if (type === "script" || type === "video") openScriptModal(nextPublication.id);
-    showToast(`${promptTypes[type]?.label || "Pieza"} creada con ${promptProviderLabel(result.mode)}.`);
+    if (type === "script" || type === "video") {
+      const scriptField = scriptsWorkspacePanel?.querySelector(`[data-script-editor="${nextPublication.id}"] [data-script-field="script"]`);
+      scriptField?.focus();
+    }
+    showToast(`${promptTypes[type]?.label || "Pieza"} creada y guardada en ${company.name}.`);
   } catch (error) {
     showToast(`No se pudo crear la pieza: ${error.message || "error de IA"}.`);
   } finally {
@@ -8706,7 +8711,7 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 
   const useCreativeButton = event.target.closest("[data-use-creative-output]");
   if (useCreativeButton) {
-    applyCreativeAssetToPublication(useCreativeButton.dataset.useCreativeOutput, true);
+    applyCreativeAssetToPublication(useCreativeButton.dataset.useCreativeOutput, false);
   }
 });
 
