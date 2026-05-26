@@ -2914,7 +2914,8 @@ input[type="file"]:focus {
   grid-template-columns: repeat(7, minmax(110px, 1fr));
 }
 
-.calendar-grid.calendar-week {
+.calendar-grid.calendar-week,
+.calendar-grid.calendar-month {
   display: block;
   overflow-x: auto;
 }
@@ -3009,6 +3010,66 @@ input[type="file"]:focus {
   height: 13px;
 }
 
+.calendar-month-view {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  min-width: 980px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.month-weekday {
+  padding: 12px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.calendar-month-cell {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 142px;
+  padding: 9px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  transition: background 160ms ease;
+}
+
+.calendar-month-cell:hover {
+  background: #f8fbff;
+}
+
+.calendar-month-cell.outside {
+  background: #fafafa;
+  color: #a3a3a3;
+}
+
+.calendar-month-cell header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 26px;
+}
+
+.slot-create-button.visible {
+  position: static;
+  opacity: 1;
+}
+
+.month-more {
+  display: inline-flex;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3048,7 +3109,7 @@ input[type="file"]:focus {
 
 .calendar-view-tabs {
   display: inline-grid;
-  grid-template-columns: repeat(4, minmax(92px, 1fr));
+  grid-template-columns: repeat(5, minmax(86px, 1fr));
   gap: 6px;
   margin: 0 0 14px;
   padding: 5px;
@@ -3293,7 +3354,7 @@ input[type="file"]:focus {
 }
 
 .calendar-planner-panel {
-  margin-top: 16px;
+  display: none;
 }
 
 .calendar-planner,

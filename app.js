@@ -4855,7 +4855,9 @@ function renderCalendar() {
   });
   calendarGrid.className = `calendar-grid calendar-${calendarView}`;
 
-  if (calendarView === "day") {
+  if (calendarView === "month") {
+    calendarGrid.innerHTML = renderCalendarMonth(companyPublications);
+  } else if (calendarView === "day") {
     calendarGrid.innerHTML = renderCalendarDay(companyPublications);
   } else if (calendarView === "list") {
     calendarGrid.innerHTML = renderCalendarList(companyPublications);
@@ -4864,7 +4866,7 @@ function renderCalendar() {
   } else {
     calendarGrid.innerHTML = renderCalendarWeek(companyPublications);
   }
-  renderCalendarPlanner(companyPublications);
+  if (calendarPlannerPanel) calendarPlannerPanel.innerHTML = "";
   renderScriptsWorkspace();
   renderIcons();
   renderDashboard();
@@ -5410,6 +5412,43 @@ function renderCalendarWeek(companyPublications) {
           `
         )
         .join("")}
+    </section>
+  `;
+}
+
+function renderCalendarMonth(companyPublications) {
+  const today = todayISO();
+  const current = new Date(`${today}T00:00:00`);
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - startOffset);
+  const cells = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    const iso = date.toISOString().slice(0, 10);
+    const dayPublications = companyPublications.filter((publication) => publication.date === iso);
+    const outside = date.getMonth() !== month;
+    return `
+      <article class="calendar-month-cell ${outside ? "outside" : ""}" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00">
+        <header>
+          <strong>${date.getDate()}</strong>
+          <button class="slot-create-button visible" type="button" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00" aria-label="Crear guion ${iso}">
+            <i data-lucide="plus"></i>
+          </button>
+        </header>
+        <div>
+          ${dayPublications.slice(0, 4).map((publication) => calendarPost(publication, true)).join("")}
+          ${dayPublications.length > 4 ? `<span class="month-more">+${dayPublications.length - 4} mas</span>` : ""}
+        </div>
+      </article>
+    `;
+  });
+  return `
+    <section class="calendar-month-view">
+      ${["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"].map((day) => `<strong class="month-weekday">${day}</strong>`).join("")}
+      ${cells.join("")}
     </section>
   `;
 }
@@ -7439,6 +7478,49 @@ async function generateScriptFromWorkspace() {
   showToast(mode === "openai" ? "Guion generado con ChatGPT." : mode === "gemini" ? "Guion generado con Gemini." : "Guion generado en modo fallback.");
 }
 
+function openScriptsPromptForPublication(publicationId, promptText = "") {
+  selectedCalendarPublicationId = publicationId;
+  renderScriptsWorkspace();
+  setView("scripts");
+  setTimeout(() => {
+    const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+    if (input && promptText) input.value = promptText;
+    input?.focus();
+  }, 50);
+}
+
+function createScriptDraftFromCalendar(date, time = "09:00") {
+  const company = activeCompany();
+  const publication = {
+    id: `pub-${Date.now()}`,
+    companyId: activeCompanyId,
+    platforms: company.socialNetworks?.length ? company.socialNetworks.map(platformKey).filter(Boolean) : ["instagram"],
+    type: "Video / Reel",
+    title: "Nuevo guion",
+    copy: "",
+    notes: "Borrador creado desde calendario.",
+    hook: "",
+    script: "",
+    cta: "",
+    referenceNotes: "",
+    approvalCriteria: "",
+    date,
+    time,
+    status: "Idea",
+    mediaProvider: "",
+    mediaSource: "",
+  };
+  publications = [publication, ...publications];
+  selectedCalendarPublicationId = publication.id;
+  persistState();
+  renderCalendar();
+  openScriptsPromptForPublication(
+    publication.id,
+    `Crea un guion para ${company.name} programado el ${date} a las ${time}. Quiero que sea claro, potente, facil de grabar y con CTA.`
+  );
+  showToast("Borrador de guion creado. Escribe como en ChatGPT o Gemini.");
+}
+
 function resetComposer() {
   editingPublicationId = null;
   postTitleInput.value = "";
@@ -7574,21 +7656,15 @@ googlePickerButton.addEventListener("click", openGooglePicker);
 calendarGrid.addEventListener("click", (event) => {
   const slotButton = event.target.closest("[data-calendar-create-slot]");
   if (slotButton && !event.target.closest("[data-publication-id]")) {
-    resetComposer();
-    postDateInput.value = slotButton.dataset.calendarCreateSlot || todayISO();
-    postTimeInput.value = slotButton.dataset.calendarCreateTime || "09:00";
-    postStatusInput.value = "Idea";
-    updatePreview();
-    setView("compose");
-    postTitleInput.focus();
-    showToast("Hora seleccionada. Crea el guion, guarda borrador o programa la publicacion.");
+    createScriptDraftFromCalendar(slotButton.dataset.calendarCreateSlot || todayISO(), slotButton.dataset.calendarCreateTime || "09:00");
     return;
   }
 
   const card = event.target.closest("[data-publication-id]");
   if (!card) return;
   selectedCalendarPublicationId = card.dataset.publicationId;
-  loadPublication(card.dataset.publicationId);
+  openScriptsPromptForPublication(card.dataset.publicationId);
+  openScriptModal(card.dataset.publicationId);
 });
 
 calendarPlannerPanel.addEventListener("click", (event) => {
@@ -7731,9 +7807,7 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 
   const newDraftButton = event.target.closest("[data-script-new-draft]");
   if (newDraftButton) {
-    resetComposer();
-    setView("compose");
-    postTitleInput.focus();
+    createScriptDraftFromCalendar(todayISO(), "09:00");
     return;
   }
 
