@@ -310,6 +310,7 @@ let selectedAiProvider = "auto";
 let selectedPromptId = "";
 let selectedCreativeType = "script";
 let editingScriptPublicationId = "";
+let editingCreativeAssetId = "";
 let isGeneratingCreative = false;
 let promptLibrary = [
   {
@@ -1023,6 +1024,7 @@ function openScriptModal(publicationId) {
   if (!publication) return;
   const aiMeta = publication.cover?.ai || {};
   editingScriptPublicationId = publicationId;
+  editingCreativeAssetId = "";
   scriptModalTitle.textContent = publication.title || "Guion sin titulo";
   scriptModalMeta.innerHTML = `
     <span class="pill ${statusClass(publication.status)}">${escapeHtml(publication.status)}</span>
@@ -1036,6 +1038,29 @@ function openScriptModal(publicationId) {
     }
   `;
   scriptModalText.value = publication.script || "";
+  saveScriptButton.innerHTML = `<i data-lucide="save"></i> Guardar guion`;
+  scriptModal.hidden = false;
+  document.body.classList.add("modal-open");
+  renderIcons();
+  setTimeout(() => scriptModalText.focus(), 50);
+}
+
+function openCreativeAssetModal(assetId) {
+  const { publication, asset } = selectedCreativeAsset(assetId);
+  if (!publication || !asset) return;
+  editingScriptPublicationId = "";
+  editingCreativeAssetId = assetId;
+  const type = promptTypes[asset.type] || promptTypes.script;
+  scriptModalTitle.textContent = `${type.label}: ${publication.title || "Pieza sin titulo"}`;
+  scriptModalMeta.innerHTML = `
+    <span class="pill ${statusClass(publication.status)}">${escapeHtml(publication.status)}</span>
+    <span><i data-lucide="${type.icon}"></i>${escapeHtml(type.label)}</span>
+    <span><i data-lucide="sparkles"></i>${escapeHtml(promptProviderLabel(asset.mode))}${asset.model ? ` · ${escapeHtml(asset.model)}` : ""}</span>
+    <span><i data-lucide="calendar"></i>${escapeHtml(asset.generatedAt ? new Date(asset.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "Sin fecha")}</span>
+    ${asset.promptTitle ? `<span><i data-lucide="book-marked"></i>${escapeHtml(asset.promptTitle)}</span>` : ""}
+  `;
+  scriptModalText.value = asset.text || asset.imageUrl || asset.imageDataUrl || asset.videoJob?.id || "";
+  saveScriptButton.innerHTML = `<i data-lucide="save"></i> Guardar creacion`;
   scriptModal.hidden = false;
   document.body.classList.add("modal-open");
   renderIcons();
@@ -1045,15 +1070,49 @@ function openScriptModal(publicationId) {
 function closeScriptModal() {
   scriptModal.hidden = true;
   editingScriptPublicationId = "";
+  editingCreativeAssetId = "";
   if (reviewModal?.hidden !== false) document.body.classList.remove("modal-open");
 }
 
 function saveScriptModal() {
+  if (editingCreativeAssetId) {
+    saveCreativeAssetModal();
+    return;
+  }
   if (!editingScriptPublicationId) return;
   updateCalendarScript(editingScriptPublicationId, "script", scriptModalText.value, true);
   renderScriptsWorkspace();
   closeScriptModal();
   showToast("Guion guardado.");
+}
+
+function saveCreativeAssetModal() {
+  if (!editingCreativeAssetId) return;
+  const text = scriptModalText.value;
+  publications = publications.map((publication) => {
+    const assets = publication.cover?.creativeAssets || [];
+    if (!assets.some((asset) => asset.id === editingCreativeAssetId)) return publication;
+    return {
+      ...publication,
+      cover: {
+        ...(publication.cover || {}),
+        creativeAssets: assets.map((asset) =>
+          asset.id === editingCreativeAssetId
+            ? {
+                ...asset,
+                text,
+                updatedAt: new Date().toISOString(),
+              }
+            : asset
+        ),
+      },
+    };
+  });
+  persistState();
+  renderCalendar();
+  renderScriptsWorkspace();
+  closeScriptModal();
+  showToast("Creacion guardada.");
 }
 
 async function copyScriptModal() {
@@ -5380,6 +5439,54 @@ function renderApiEventPanel(networks) {
   `;
 }
 
+function creativePromptStarters(company, publication) {
+  const brand = company?.name || "esta marca";
+  const idea = publication?.title && publication.title !== "Nuevo guion" ? publication.title : "una idea nueva";
+  return [
+    {
+      type: "script",
+      icon: "clapperboard",
+      title: "Reel con escenas",
+      prompt: `Crea un guion vertical para ${brand} sobre ${idea}. Quiero hook fuerte, 3 escenas faciles de grabar, texto en pantalla, voz sugerida, CTA y checklist de produccion.`,
+    },
+    {
+      type: "carousel",
+      icon: "gallery-horizontal",
+      title: "Carrusel educativo",
+      prompt: `Crea un carrusel de 7 slides para ${brand}. Debe tener portada poderosa, desarrollo muy claro, visual sugerido por slide, nota de diseno y CTA final.`,
+    },
+    {
+      type: "image",
+      icon: "image",
+      title: "Imagen premium",
+      prompt: `Crea un prompt de imagen vertical premium para ${brand}. Usa el tono de la marca, personajes disponibles si existen, composicion limpia, luz realista y formato adaptable a feed e historias.`,
+    },
+    {
+      type: "video",
+      icon: "sparkles",
+      title: "Prompt Sora",
+      prompt: `Crea un prompt de video vertical para ${brand}. Incluye personajes, escena, camara, movimiento, estilo visual, duracion, negativos y CTA final.`,
+    },
+  ];
+}
+
+function renderCreativePromptStarters(company, publication) {
+  return `
+    <div class="creative-prompt-starters" aria-label="Ideas rapidas para IA">
+      ${creativePromptStarters(company, publication)
+        .map(
+          (starter, index) => `
+            <button type="button" data-prompt-starter="${index}" data-prompt-starter-type="${starter.type}">
+              <i data-lucide="${starter.icon}"></i>
+              <span>${escapeHtml(starter.title)}</span>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function calendarPost(publication, compact = false) {
   const scriptReady = Boolean((publication.script || "").trim());
   const isSelected = selectedCalendarPublicationId === publication.id;
@@ -6105,6 +6212,9 @@ function renderScriptsCharactersPanel(company) {
                         <p>${escapeHtml(character.role || "Sin rol")}</p>
                         <small>${escapeHtml(character.notes || "Sin notas")}</small>
                       </div>
+                      <button class="secondary-button icon-button compact" type="button" data-character-use="${escapeHtml(character.id)}" aria-label="Usar personaje en prompt">
+                        <i data-lucide="at-sign"></i>
+                      </button>
                       <button class="secondary-button icon-button compact" type="button" data-character-delete="${escapeHtml(character.id)}" aria-label="Eliminar personaje">
                         <i data-lucide="trash-2"></i>
                       </button>
@@ -6657,6 +6767,7 @@ function renderScriptsWorkspace() {
           <span>Mensaje para la IA</span>
           <textarea data-script-chat-prompt rows="6" placeholder="Ej: Crea un reel con mi personaje principal explicando una oferta de hosting para pymes. Quiero una version premium, simple y con CTA a WhatsApp."></textarea>
         </label>
+        ${renderCreativePromptStarters(company, selectedPublication)}
         ${renderCreativeCapabilityPanel()}
         ${renderScriptsWorkspaceAiStatus(selectedPublication)}
         ${renderCreativeOutputs(selectedPublication)}
@@ -8406,6 +8517,21 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     return;
   }
 
+  const starterButton = event.target.closest("[data-prompt-starter]");
+  if (starterButton) {
+    const selectedPublication = publications.find((publication) => publication.id === selectedCalendarPublicationId && publication.companyId === activeCompanyId);
+    const starter = creativePromptStarters(activeCompany(), selectedPublication)[Number(starterButton.dataset.promptStarter || 0)];
+    if (!starter) return;
+    selectedCreativeType = starterButton.dataset.promptStarterType || starter.type || selectedCreativeType;
+    renderScriptsWorkspace();
+    const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+    if (input) {
+      input.value = starter.prompt;
+      input.focus();
+    }
+    return;
+  }
+
   const savePromptButton = event.target.closest("[data-script-prompt-save]");
   if (savePromptButton) {
     const type = scriptsWorkspacePanel.querySelector('[data-script-prompt-field="type"]')?.value || "script";
@@ -8487,6 +8613,18 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     return;
   }
 
+  const useCharacterButton = event.target.closest("[data-character-use]");
+  if (useCharacterButton) {
+    const character = (activeCompany().characters || []).find((item) => item.id === useCharacterButton.dataset.characterUse);
+    const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+    if (!character || !input) return;
+    const mention = `Usa a ${character.name || "este personaje"} (${character.role || "personaje"}) como referencia visual. ${character.notes || ""}`.trim();
+    input.value = [input.value.trim(), mention].filter(Boolean).join("\n\n");
+    input.focus();
+    showToast("Personaje agregado al prompt.");
+    return;
+  }
+
   const deleteCharacterButton = event.target.closest("[data-character-delete]");
   if (deleteCharacterButton) {
     const company = activeCompany();
@@ -8519,17 +8657,7 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 
   const openCreativeButton = event.target.closest("[data-open-creative-output]");
   if (openCreativeButton) {
-    const { publication, asset } = selectedCreativeAsset(openCreativeButton.dataset.openCreativeOutput);
-    if (!publication || !asset) return;
-    if (["script", "video"].includes(asset.type)) {
-      const originalScript = publication.script || "";
-      publications = publications.map((item) => (item.id === publication.id ? { ...item, script: asset.text || originalScript } : item));
-      openScriptModal(publication.id);
-      publications = publications.map((item) => (item.id === publication.id ? { ...item, script: originalScript } : item));
-    } else {
-      navigator.clipboard?.writeText(asset.text || asset.imageUrl || asset.imageDataUrl || "");
-      showToast("Prompt creativo copiado para revisar.");
-    }
+    openCreativeAssetModal(openCreativeButton.dataset.openCreativeOutput);
     return;
   }
 
