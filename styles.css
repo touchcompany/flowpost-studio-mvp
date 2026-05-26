@@ -5871,6 +5871,67 @@ input[type="file"]:focus {
   background: #fff;
 }
 
+.carousel-slide-preview {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(150px, 0.72fr);
+  gap: 8px;
+  max-width: 100%;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.carousel-slide-preview button {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 6px;
+  min-height: 132px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.carousel-slide-preview button:hover {
+  border-color: #111;
+}
+
+.carousel-slide-preview span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.carousel-slide-preview strong,
+.carousel-slide-preview small {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+}
+
+.carousel-slide-preview strong {
+  -webkit-line-clamp: 2;
+  line-height: 1.15;
+}
+
+.carousel-slide-preview small {
+  color: var(--muted);
+  -webkit-line-clamp: 4;
+  line-height: 1.3;
+}
+
 .creative-output-list em {
   color: #9a6b11;
   font-style: normal;

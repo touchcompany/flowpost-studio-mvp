@@ -5880,6 +5880,7 @@ function renderCreativeOutputs(publication) {
                   <p>${escapeHtml(promptProviderLabel(asset.mode))}${asset.model ? ` · ${escapeHtml(asset.model)}` : ""} · ${escapeHtml(asset.generatedAt ? new Date(asset.generatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "sin fecha")}</p>
                   ${asset.imageDataUrl || asset.imageUrl ? `<img src="${escapeHtml(asset.imageDataUrl || asset.imageUrl)}" alt="Imagen generada" />` : ""}
                   <small>${escapeHtml((asset.text || "").slice(0, 420))}</small>
+                  ${asset.type === "carousel" ? renderCarouselSlides(asset) : ""}
                   ${asset.videoJob?.id ? `<code>Video job: ${escapeHtml(asset.videoJob.id)} · ${escapeHtml(asset.videoJob.status || "creado")}</code>` : ""}
                   ${asset.warning ? `<em>${escapeHtml(asset.warning)}</em>` : ""}
                 </div>
@@ -5898,6 +5899,43 @@ function renderCreativeOutputs(publication) {
           .join("")}
       </div>
     </section>
+  `;
+}
+
+function parseCarouselSlides(text = "") {
+  const clean = String(text || "").replace(/\r/g, "").trim();
+  if (!clean) return [];
+  const chunks = clean
+    .split(/\n(?=(?:slide|diapositiva|lámina|lamina)\s*\d+[:.)-]?)/i)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  const source = chunks.length > 1 ? chunks : clean.split(/\n{2,}/).map((chunk) => chunk.trim()).filter(Boolean);
+  return source.slice(0, 10).map((chunk, index) => {
+    const lines = chunk.split("\n").map((line) => line.trim()).filter(Boolean);
+    const first = lines[0] || `Slide ${index + 1}`;
+    const title = first.replace(/^(slide|diapositiva|lámina|lamina)\s*\d+[:.)-]?\s*/i, "").trim() || `Slide ${index + 1}`;
+    const body = lines.slice(1).join(" ").trim() || chunk.replace(first, "").trim();
+    return { index: index + 1, title, body };
+  });
+}
+
+function renderCarouselSlides(asset) {
+  const slides = parseCarouselSlides(asset.text);
+  if (!slides.length) return "";
+  return `
+    <div class="carousel-slide-preview">
+      ${slides
+        .map(
+          (slide) => `
+            <button type="button" data-copy-carousel-slide="${escapeHtml(asset.id)}:${slide.index}" aria-label="Copiar slide ${slide.index}">
+              <span>${slide.index}</span>
+              <strong>${escapeHtml(slide.title)}</strong>
+              <small>${escapeHtml(slide.body || "Visual sugerido pendiente.")}</small>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
   `;
 }
 
@@ -8465,6 +8503,17 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
     if (!asset) return;
     navigator.clipboard?.writeText(asset.text || asset.imageUrl || asset.videoJob?.id || "");
     showToast("Creacion copiada.");
+    return;
+  }
+
+  const copySlideButton = event.target.closest("[data-copy-carousel-slide]");
+  if (copySlideButton) {
+    const [assetId, indexText] = String(copySlideButton.dataset.copyCarouselSlide || "").split(":");
+    const { asset } = selectedCreativeAsset(assetId);
+    const slide = parseCarouselSlides(asset?.text).find((item) => String(item.index) === indexText);
+    if (!slide) return;
+    navigator.clipboard?.writeText(`Slide ${slide.index}: ${slide.title}\n${slide.body}`);
+    showToast(`Slide ${slide.index} copiado.`);
     return;
   }
 
