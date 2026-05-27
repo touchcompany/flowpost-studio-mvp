@@ -4282,7 +4282,7 @@ function setView(viewName, options = {}) {
   }
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
-  mobileMoreButton?.classList.toggle("active", ["library", "calendar", "scripts", "automations", "accounts"].includes(targetView));
+  mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "automations", "accounts"].includes(targetView));
   sidebar?.classList.remove("more-open");
   mobileMoreButton?.setAttribute("aria-expanded", "false");
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
