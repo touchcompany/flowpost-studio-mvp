@@ -785,6 +785,8 @@ let financeFilters = {
   month: "all",
   year: String(new Date().getFullYear()),
   companyId: "all",
+  documentStatus: "all",
+  transactionType: "all",
 };
 let billingDraft = {
   documentType: "Cuenta de cobro",
@@ -2936,11 +2938,21 @@ function financeYearOptions() {
 }
 
 function financeFilteredInvoices() {
-  return invoices.filter((invoice) => financeCompanyMatches(invoice.companyId) && financeDateMatches(invoice.issueDate || invoice.dueDate));
+  return invoices.filter(
+    (invoice) =>
+      financeCompanyMatches(invoice.companyId) &&
+      financeDateMatches(invoice.issueDate || invoice.dueDate) &&
+      (financeFilters.documentStatus === "all" || (invoice.status || "Pendiente") === financeFilters.documentStatus)
+  );
 }
 
 function financeFilteredTransactions() {
-  return financeTransactions.filter((transaction) => financeCompanyMatches(transaction.companyId) && financeDateMatches(transaction.date));
+  return financeTransactions.filter(
+    (transaction) =>
+      financeCompanyMatches(transaction.companyId) &&
+      financeDateMatches(transaction.date) &&
+      (financeFilters.transactionType === "all" || transaction.type === financeFilters.transactionType)
+  );
 }
 
 function financeFilteredProviders() {
@@ -2996,6 +3008,18 @@ function renderFinancePanel() {
           <select data-finance-filter="companyId">
             <option value="all" ${financeFilters.companyId === "all" ? "selected" : ""}>Todas</option>
             ${visibleCompanies.map((company) => `<option value="${company.id}" ${financeFilters.companyId === company.id ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span>Documento</span>
+          <select data-finance-filter="documentStatus">
+            ${["all", "Pendiente", "Pagada", "Vencida"].map((status) => `<option value="${status}" ${financeFilters.documentStatus === status ? "selected" : ""}>${status === "all" ? "Todos" : status}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span>Movimiento</span>
+          <select data-finance-filter="transactionType">
+            ${["all", "Ingreso", "Egreso"].map((type) => `<option value="${type}" ${financeFilters.transactionType === type ? "selected" : ""}>${type === "all" ? "Todos" : type}</option>`).join("")}
           </select>
         </label>
       </div>
@@ -3076,8 +3100,9 @@ function renderFinancePanel() {
                           <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
                           <span class="pill ${invoice.status === "Pagada" ? "done" : "warning"}">${escapeHtml(invoice.status || "Pendiente")}</span>
                           <div class="finance-row-actions">
-                            <button class="secondary-button icon-button compact" type="button" data-finance-invoice-paid="${escapeHtml(invoice.clientId)}" aria-label="Marcar pagada"><i data-lucide="check"></i></button>
+                            <button class="secondary-button icon-button compact" type="button" data-finance-invoice-paid="${escapeHtml(invoice.id)}" aria-label="Marcar pagada"><i data-lucide="check"></i></button>
                             <button class="secondary-button icon-button compact" type="button" data-finance-whatsapp="${escapeHtml(invoice.id)}" aria-label="Enviar por WhatsApp"><i data-lucide="send"></i></button>
+                            <button class="secondary-button icon-button compact danger" type="button" data-finance-invoice-delete="${escapeHtml(invoice.id)}" aria-label="Eliminar documento"><i data-lucide="trash-2"></i></button>
                           </div>
                         </article>
                       `;
@@ -3096,6 +3121,34 @@ function renderFinancePanel() {
             </div>
             <span class="pill muted">${filteredTransactions.length}</span>
           </header>
+          <div class="finance-form-grid transaction-form">
+            <label class="field compact">
+              <span>Tipo</span>
+              <select data-transaction-new="type">
+                <option>Ingreso</option>
+                <option>Egreso</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Empresa</span>
+              <select data-transaction-new="companyId">
+                ${visibleCompanies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("")}
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Concepto</span>
+              <input data-transaction-new="concept" placeholder="Pago, pauta, software" />
+            </label>
+            <label class="field compact">
+              <span>Valor</span>
+              <input data-transaction-new="amount" type="number" min="0" placeholder="120000" />
+            </label>
+            <label class="field compact">
+              <span>Fecha</span>
+              <input data-transaction-new="date" type="date" value="${escapeHtml(todayISO())}" />
+            </label>
+            <button class="secondary-button icon-text-button" type="button" data-transaction-create><i data-lucide="plus"></i>Agregar</button>
+          </div>
           <div class="finance-list">
             ${
               filteredTransactions.length
@@ -4243,6 +4296,34 @@ function createMonthlyProvider() {
   showToast("Proveedor mensual agregado.");
 }
 
+function createManualTransaction() {
+  const type = financePanel?.querySelector('[data-transaction-new="type"]')?.value || "Ingreso";
+  const companyId = financePanel?.querySelector('[data-transaction-new="companyId"]')?.value || activeCompanyId;
+  const concept = financePanel?.querySelector('[data-transaction-new="concept"]')?.value.trim();
+  const amount = Number(financePanel?.querySelector('[data-transaction-new="amount"]')?.value || 0);
+  const date = financePanel?.querySelector('[data-transaction-new="date"]')?.value || todayISO();
+  if (!concept || !amount) {
+    showToast("Agrega concepto y valor de la transacción.");
+    return;
+  }
+  financeTransactions = [
+    {
+      id: `txn-manual-${Date.now()}`,
+      type,
+      companyId,
+      concept,
+      amount,
+      currency: "COP",
+      date,
+      status: "Confirmado",
+    },
+    ...financeTransactions,
+  ];
+  persistState();
+  renderFinancePanel();
+  showToast(`${type} registrado.`);
+}
+
 function registerProviderPayment(providerId) {
   const provider = monthlyProviders.find((item) => item.id === providerId);
   if (!provider) return;
@@ -4264,6 +4345,46 @@ function registerProviderPayment(providerId) {
   persistState();
   renderFinancePanel();
   showToast("Egreso registrado y próximo pago actualizado.");
+}
+
+function markInvoicePaid(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId);
+  if (!invoice || invoice.status === "Pagada") {
+    showToast("Ese documento no tiene cobro pendiente.");
+    return;
+  }
+  invoices = invoices.map((item) => (item.id === invoiceId ? { ...item, status: "Pagada", paidAt: new Date().toISOString() } : item));
+  financeTransactions = [
+    {
+      id: `txn-${invoice.id}-${Date.now()}`,
+      type: "Ingreso",
+      companyId: invoice.companyId,
+      clientId: invoice.clientId,
+      invoiceId: invoice.id,
+      concept: `${invoice.documentType || "Cuenta"} ${invoice.number || billingDocumentNumber(invoice)}`,
+      amount: Number(invoice.amount || 0),
+      currency: invoice.currency || "COP",
+      date: todayISO(),
+      status: "Confirmado",
+    },
+    ...financeTransactions,
+  ];
+  addActivity("billing", "Cobro pagado", "Se marco un documento como pagado.", { companyId: invoice.companyId, clientId: invoice.clientId });
+  persistState();
+  renderClientBillingPanel();
+  renderFinancePanel();
+  showToast("Documento marcado como pagado.");
+}
+
+function deleteFinanceInvoice(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId);
+  if (!invoice) return;
+  invoices = invoices.filter((item) => item.id !== invoiceId);
+  financeTransactions = financeTransactions.filter((item) => item.invoiceId !== invoiceId);
+  persistState();
+  renderFinancePanel();
+  renderClientBillingPanel();
+  showToast("Documento eliminado.");
 }
 
 function prepareFinanceWhatsapp(invoiceId) {
@@ -9015,6 +9136,20 @@ function renderCompanies() {
         <div class="company-networks">
           ${(active.socialNetworks || active.accounts.map((account) => account.platform)).map((network) => networkPill(network)).join("")}
         </div>
+        <div class="company-detail-actions">
+          <button class="secondary-button icon-text-button" type="button" data-company-jump="calendar">
+            <i data-lucide="calendar-days"></i>
+            Calendario
+          </button>
+          <button class="secondary-button icon-text-button" type="button" data-company-jump="finances">
+            <i data-lucide="wallet-cards"></i>
+            Cuentas
+          </button>
+          <button class="secondary-button icon-text-button" type="button" data-company-jump="scripts">
+            <i data-lucide="notebook-pen"></i>
+            Guiones
+          </button>
+        </div>
       </div>
       <div class="company-detail-stats">
         <article><strong>${publications.filter((post) => post.companyId === active.id).length}</strong><span>Posts</span></article>
@@ -10839,13 +10974,25 @@ financePanel?.addEventListener("click", (event) => {
 
   const paidButton = event.target.closest("[data-finance-invoice-paid]");
   if (paidButton) {
-    markClientInvoicePaid(paidButton.dataset.financeInvoicePaid);
+    markInvoicePaid(paidButton.dataset.financeInvoicePaid);
     return;
   }
 
   const whatsappButton = event.target.closest("[data-finance-whatsapp]");
   if (whatsappButton) {
     prepareFinanceWhatsapp(whatsappButton.dataset.financeWhatsapp);
+    return;
+  }
+
+  const deleteInvoiceButton = event.target.closest("[data-finance-invoice-delete]");
+  if (deleteInvoiceButton) {
+    deleteFinanceInvoice(deleteInvoiceButton.dataset.financeInvoiceDelete);
+    return;
+  }
+
+  const transactionButton = event.target.closest("[data-transaction-create]");
+  if (transactionButton) {
+    createManualTransaction();
     return;
   }
 
@@ -11437,6 +11584,12 @@ activeCompanySelect.addEventListener("change", () => {
 });
 
 companiesGrid.addEventListener("click", (event) => {
+  const jumpButton = event.target.closest("[data-company-jump]");
+  if (jumpButton) {
+    setView(jumpButton.dataset.companyJump);
+    return;
+  }
+
   const editButton = event.target.closest("[data-edit-company-id]");
   if (editButton) {
     const company = companies.find((item) => item.id === editButton.dataset.editCompanyId);

@@ -147,7 +147,7 @@
 
 .finance-filter-bar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   padding: 12px;
   border: 1px solid rgba(17, 17, 17, 0.08);
@@ -2466,6 +2466,18 @@ input[type="file"]:focus {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.company-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.company-detail-actions .secondary-button {
+  min-height: 38px;
+  padding-inline: 12px;
 }
 
 .company-detail-stats article {
