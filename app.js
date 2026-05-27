@@ -2114,6 +2114,14 @@ function renderBillingDocumentEditor() {
   const documentClients = activeAgencyClients();
   const subtotal = billingDraftSubtotal();
   const documentLabel = billingDraft.documentType === "Factura" ? "Factura" : "Cuenta de cobro";
+  const mailReady = Boolean(mailStatus?.ready);
+  const mailMissing = mailStatus?.missing?.length ? mailStatus.missing.join(", ") : "SMTP_HOST, SMTP_USER, SMTP_PASS";
+  const emailReady = mailReady && Boolean(client?.email);
+  const emailDetail = emailReady
+    ? `Listo para enviar a ${client.email}.`
+    : mailReady
+      ? "Agrega email al cliente para enviar desde Touch Note."
+      : `Configura SMTP para envio real: ${mailMissing}.`;
 
   return `
     <section class="billing-document-editor">
@@ -2232,6 +2240,10 @@ function renderBillingDocumentEditor() {
 
         <section class="document-card document-actions">
           <h3>Acciones</h3>
+          <div class="document-delivery-status ${emailReady ? "ready" : "pending"}">
+            <span class="status-icon tiny"><i data-lucide="${emailReady ? "mail-check" : "mail-warning"}"></i></span>
+            <p>${escapeHtml(emailDetail)}</p>
+          </div>
           <button class="secondary-button icon-text-button" type="button" data-document-action="pdf">
             <i data-lucide="download"></i>
             PDF
@@ -3874,15 +3886,32 @@ async function documentAction(action) {
     return;
   }
   if (action === "email") {
-    const html = billingDocumentHtml();
+    const documentData = currentBillingDocument();
+    const html = billingDocumentHtml(documentData);
     const emailSubject = `${message}`;
     const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\nTotal: ${formatMoney(subtotal, "COP")}`;
+    if (window.location.protocol !== "file:" && !mailStatus) {
+      try {
+        const statusResponse = await fetch("/api/mail/status", { headers: { Accept: "application/json" } });
+        mailStatus = statusResponse.ok ? await statusResponse.json() : null;
+      } catch {
+        mailStatus = null;
+      }
+    }
     if (window.location.protocol !== "file:" && client?.email) {
       try {
         const response = await fetch("/api/billing/send-document", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ to: client.email, subject: emailSubject, text, html }),
+          body: JSON.stringify({
+            to: client.email,
+            subject: emailSubject,
+            text,
+            html,
+            clientId: documentData?.clientId || client.id,
+            companyId: documentData?.companyId || client.companyId,
+            documentId: documentData?.id || "",
+          }),
         });
         const result = await response.json();
         if (response.ok && result.ok) {
@@ -3898,6 +3927,7 @@ async function documentAction(action) {
     const body = encodeURIComponent(`Hola ${client?.contact || client?.name || ""},\n\nTe comparto ${message}.\n\nPuedes guardar el PDF desde la vista del documento en Touch Note.\n\nGracias.`);
     window.location.href = `mailto:${client?.email || ""}?subject=${subject}&body=${body}`;
     showToast(`Correo preparado: ${message}`);
+    renderClientBillingPanel();
     return;
   }
   const whatsappText = encodeURIComponent(`Hola ${client?.name || ""}, te comparto ${message}.`);

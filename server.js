@@ -3349,6 +3349,24 @@ async function handleApi(req, res, url) {
       sendError(res, 400, "email is required");
       return;
     }
+    const db = await store.getState();
+    const scopedDb = filterStateForSession(db, session);
+    const clientId = String(payload.clientId || "").trim();
+    const companyId = String(payload.companyId || "").trim();
+    const client = clientId ? (scopedDb.clients || []).find((item) => item.id === clientId) : null;
+    const companyAllowed = companyId ? (scopedDb.companies || []).some((company) => company.id === companyId) : Boolean(client);
+    if (clientId && !client) {
+      sendError(res, 403, "client not available for this account");
+      return;
+    }
+    if (companyId && !companyAllowed) {
+      sendError(res, 403, "company not available for this account");
+      return;
+    }
+    if (client?.email && client.email.toLowerCase() !== to.toLowerCase()) {
+      sendError(res, 403, "recipient does not match client email");
+      return;
+    }
     const setup = mailDeliveryStatus();
     if (!setup.ready) {
       sendJson(res, 501, { ok: false, ...setup, message: `SMTP pendiente: ${setup.missing.join(", ")}` });
