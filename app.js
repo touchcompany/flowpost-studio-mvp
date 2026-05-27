@@ -2942,7 +2942,7 @@ function financeFilteredInvoices() {
     (invoice) =>
       financeCompanyMatches(invoice.companyId) &&
       financeDateMatches(invoice.issueDate || invoice.dueDate) &&
-      (financeFilters.documentStatus === "all" || (invoice.status || "Pendiente") === financeFilters.documentStatus)
+      (financeFilters.documentStatus === "all" || financeInvoiceStatus(invoice) === financeFilters.documentStatus)
   );
 }
 
@@ -2963,6 +2963,46 @@ function transactionSignedAmount(transaction) {
   return transaction.type === "Egreso" ? -Math.abs(Number(transaction.amount || 0)) : Number(transaction.amount || 0);
 }
 
+function financeInvoiceStatus(invoice) {
+  if (invoice?.status === "Pagada") return "Pagada";
+  const dueDate = String(invoice?.dueDate || "").slice(0, 10);
+  if (dueDate && dueDate < todayISO()) return "Vencida";
+  return invoice?.status || "Pendiente";
+}
+
+function financeInvoiceStatusClass(status) {
+  if (status === "Pagada") return "done";
+  if (status === "Vencida") return "danger";
+  return "warning";
+}
+
+function financeDocumentFromInvoice(invoice) {
+  if (!invoice) return null;
+  const client = clients.find((item) => item.id === invoice.clientId);
+  const issuerCompanyId = invoice.issuerCompanyId || billingDraft.issuerCompanyId || invoice.companyId || activeCompanyId;
+  return {
+    ...invoice,
+    issuerCompanyId,
+    documentType: invoice.documentType || "Cuenta de cobro",
+    number: invoice.number || billingDocumentNumber(invoice),
+    issueDate: invoice.issueDate || todayISO(),
+    dueDate: invoice.dueDate || addDaysToDate(todayISO(), 5),
+    observations: invoice.observations || billingDraft.observations,
+    signatureName: invoice.signatureName || billingDraft.signatureName,
+    issuerNit: invoice.issuerNit || billingDraft.issuerNit,
+    issuerPhone: invoice.issuerPhone || billingDraft.issuerPhone,
+    issuerEmail: invoice.issuerEmail || billingDraft.issuerEmail,
+    paymentBank: invoice.paymentBank || billingDraft.paymentBank,
+    paymentAccountType: invoice.paymentAccountType || billingDraft.paymentAccountType,
+    paymentAccountNumber: invoice.paymentAccountNumber || billingDraft.paymentAccountNumber,
+    paymentAccountHolder: invoice.paymentAccountHolder || billingDraft.paymentAccountHolder,
+    clientNit: invoice.clientNit || billingDraft.clientNit,
+    clientPhone: invoice.clientPhone || billingDraft.clientPhone,
+    clientEmail: invoice.clientEmail || client?.email || billingDraft.clientEmail,
+    lines: invoice.lines?.length ? invoice.lines : [{ serviceId: client?.serviceId || "pro", quantity: 1, price: invoice.amount || 0 }],
+  };
+}
+
 function renderFinancePanel() {
   if (!financePanel) return;
   const visibleCompanies = ensureActiveCompanyAccess();
@@ -2972,7 +3012,7 @@ function renderFinancePanel() {
   const filteredProviders = financeFilteredProviders();
   const income = filteredTransactions.filter((item) => item.type === "Ingreso").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const expenses = filteredTransactions.filter((item) => item.type === "Egreso").reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const pending = filteredInvoices.filter((item) => item.status !== "Pagada").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const pending = filteredInvoices.filter((item) => financeInvoiceStatus(item) !== "Pagada").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const monthOptions = [
     ["all", "Todos"],
     ["1", "Enero"],
@@ -3090,17 +3130,19 @@ function renderFinancePanel() {
                     .map((invoice) => {
                       const client = clients.find((item) => item.id === invoice.clientId);
                       const company = companies.find((item) => item.id === invoice.companyId);
+                      const status = financeInvoiceStatus(invoice);
                       return `
-                        <article class="finance-row ${invoice.status === "Pagada" ? "is-paid" : ""}">
+                        <article class="finance-row ${status === "Pagada" ? "is-paid" : ""} ${status === "Vencida" ? "is-overdue" : ""}">
                           <span class="finance-avatar"><i data-lucide="${invoice.documentType === "Factura" ? "file-check-2" : "receipt-text"}"></i></span>
                           <div>
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
                             <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
                           </div>
                           <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
-                          <span class="pill ${invoice.status === "Pagada" ? "done" : "warning"}">${escapeHtml(invoice.status || "Pendiente")}</span>
+                          <span class="pill ${financeInvoiceStatusClass(status)}">${escapeHtml(status)}</span>
                           <div class="finance-row-actions">
                             <button class="secondary-button icon-button compact" type="button" data-finance-invoice-paid="${escapeHtml(invoice.id)}" aria-label="Marcar pagada"><i data-lucide="check"></i></button>
+                            <button class="secondary-button icon-button compact" type="button" data-finance-pdf="${escapeHtml(invoice.id)}" aria-label="Abrir PDF"><i data-lucide="file-down"></i></button>
                             <button class="secondary-button icon-button compact" type="button" data-finance-whatsapp="${escapeHtml(invoice.id)}" aria-label="Enviar por WhatsApp"><i data-lucide="send"></i></button>
                             <button class="secondary-button icon-button compact danger" type="button" data-finance-invoice-delete="${escapeHtml(invoice.id)}" aria-label="Eliminar documento"><i data-lucide="trash-2"></i></button>
                           </div>
@@ -3164,6 +3206,7 @@ function renderFinancePanel() {
                             <p>${escapeHtml(company?.name || "Empresa")} · ${escapeHtml(shortDateLabel(transaction.date))}</p>
                           </div>
                           <strong>${formatMoney(signed, transaction.currency || "COP")}</strong>
+                          <button class="secondary-button icon-button compact danger" type="button" data-transaction-delete="${escapeHtml(transaction.id)}" aria-label="Eliminar movimiento"><i data-lucide="trash-2"></i></button>
                         </article>
                       `;
                     })
@@ -3202,7 +3245,10 @@ function renderFinancePanel() {
                           <p>${escapeHtml(provider.category)} · próximo ${escapeHtml(shortDateLabel(provider.nextPaymentDate))}</p>
                         </div>
                         <strong>${formatMoney(provider.amount, provider.currency || "COP")}</strong>
-                        <button class="secondary-button icon-button compact" type="button" data-provider-paid="${escapeHtml(provider.id)}" aria-label="Registrar pago"><i data-lucide="check"></i></button>
+                        <div class="finance-row-actions">
+                          <button class="secondary-button icon-button compact" type="button" data-provider-paid="${escapeHtml(provider.id)}" aria-label="Registrar pago"><i data-lucide="check"></i></button>
+                          <button class="secondary-button icon-button compact danger" type="button" data-provider-delete="${escapeHtml(provider.id)}" aria-label="Eliminar proveedor"><i data-lucide="trash-2"></i></button>
+                        </div>
                       </article>
                     `
                   )
@@ -4347,6 +4393,24 @@ function registerProviderPayment(providerId) {
   showToast("Egreso registrado y próximo pago actualizado.");
 }
 
+function deleteMonthlyProvider(providerId) {
+  const provider = monthlyProviders.find((item) => item.id === providerId);
+  if (!provider) return;
+  monthlyProviders = monthlyProviders.filter((item) => item.id !== providerId);
+  persistState();
+  renderFinancePanel();
+  showToast("Proveedor eliminado.");
+}
+
+function deleteFinanceTransaction(transactionId) {
+  const transaction = financeTransactions.find((item) => item.id === transactionId);
+  if (!transaction) return;
+  financeTransactions = financeTransactions.filter((item) => item.id !== transactionId);
+  persistState();
+  renderFinancePanel();
+  showToast("Movimiento eliminado.");
+}
+
 function markInvoicePaid(invoiceId) {
   const invoice = invoices.find((item) => item.id === invoiceId);
   if (!invoice || invoice.status === "Pagada") {
@@ -4385,6 +4449,16 @@ function deleteFinanceInvoice(invoiceId) {
   renderFinancePanel();
   renderClientBillingPanel();
   showToast("Documento eliminado.");
+}
+
+function openFinanceDocumentPdf(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId);
+  const documentData = financeDocumentFromInvoice(invoice);
+  if (!documentData) {
+    showToast("No encontre ese documento.");
+    return;
+  }
+  openBillingPdf(documentData);
 }
 
 function prepareFinanceWhatsapp(invoiceId) {
@@ -4822,8 +4896,8 @@ function downloadBillingDocumentHtml() {
   showToast("Documento descargado. Puedes abrirlo e imprimirlo como PDF.");
 }
 
-function openBillingPdf() {
-  const html = billingDocumentHtml();
+function openBillingPdf(documentData = currentBillingDocument()) {
+  const html = billingDocumentHtml(documentData);
   if (!html) {
     showToast("Selecciona un cliente para generar el PDF.");
     return;
@@ -10984,6 +11058,12 @@ financePanel?.addEventListener("click", (event) => {
     return;
   }
 
+  const pdfButton = event.target.closest("[data-finance-pdf]");
+  if (pdfButton) {
+    openFinanceDocumentPdf(pdfButton.dataset.financePdf);
+    return;
+  }
+
   const deleteInvoiceButton = event.target.closest("[data-finance-invoice-delete]");
   if (deleteInvoiceButton) {
     deleteFinanceInvoice(deleteInvoiceButton.dataset.financeInvoiceDelete);
@@ -10993,6 +11073,12 @@ financePanel?.addEventListener("click", (event) => {
   const transactionButton = event.target.closest("[data-transaction-create]");
   if (transactionButton) {
     createManualTransaction();
+    return;
+  }
+
+  const transactionDeleteButton = event.target.closest("[data-transaction-delete]");
+  if (transactionDeleteButton) {
+    deleteFinanceTransaction(transactionDeleteButton.dataset.transactionDelete);
     return;
   }
 
@@ -11012,6 +11098,12 @@ financePanel?.addEventListener("click", (event) => {
   const providerPaidButton = event.target.closest("[data-provider-paid]");
   if (providerPaidButton) {
     registerProviderPayment(providerPaidButton.dataset.providerPaid);
+    return;
+  }
+
+  const providerDeleteButton = event.target.closest("[data-provider-delete]");
+  if (providerDeleteButton) {
+    deleteMonthlyProvider(providerDeleteButton.dataset.providerDelete);
   }
 });
 
