@@ -5054,22 +5054,49 @@ function renderCalendar() {
     button.classList.toggle("active", button.dataset.calendarView === calendarView);
   });
   calendarGrid.className = `calendar-grid calendar-${calendarView}`;
+  const calendarHeader = renderCalendarBoardHeader(companyPublications);
 
   if (calendarView === "month") {
-    calendarGrid.innerHTML = renderCalendarMonth(companyPublications);
+    calendarGrid.innerHTML = calendarHeader + renderCalendarMonth(companyPublications);
   } else if (calendarView === "day") {
-    calendarGrid.innerHTML = renderCalendarDay(companyPublications);
+    calendarGrid.innerHTML = calendarHeader + renderCalendarDay(companyPublications);
   } else if (calendarView === "list") {
-    calendarGrid.innerHTML = renderCalendarList(companyPublications);
+    calendarGrid.innerHTML = calendarHeader + renderCalendarList(companyPublications);
   } else if (calendarView === "kanban") {
-    calendarGrid.innerHTML = renderCalendarKanban(companyPublications);
+    calendarGrid.innerHTML = calendarHeader + renderCalendarKanban(companyPublications);
   } else {
-    calendarGrid.innerHTML = renderCalendarWeek(companyPublications);
+    calendarGrid.innerHTML = calendarHeader + renderCalendarWeek(companyPublications);
   }
   if (calendarPlannerPanel) calendarPlannerPanel.innerHTML = "";
   renderScriptsWorkspace();
   renderIcons();
   renderDashboard();
+}
+
+function renderCalendarBoardHeader(companyPublications) {
+  const company = activeCompany();
+  const scriptsReady = companyPublications.filter((publication) => (publication.script || "").trim()).length;
+  const scheduled = companyPublications.filter((publication) => ["Programado", "Aprobado"].includes(publication.status)).length;
+  const ideas = companyPublications.filter((publication) => publication.status === "Idea").length;
+  return `
+    <section class="calendar-board-header">
+      <div>
+        <span class="workspace-label">Calendario editorial</span>
+        <h3>${escapeHtml(company.name)}</h3>
+        <p>${companyPublications.length} piezas · ${scriptsReady} guiones listos · ${scheduled} aprobadas/programadas · ${ideas} ideas</p>
+      </div>
+      <div class="calendar-board-actions">
+        <button class="secondary-button icon-text-button" type="button" data-calendar-open-scripts>
+          <i data-lucide="notebook-pen"></i>
+          Guiones
+        </button>
+        <button class="primary-button icon-text-button" type="button" data-calendar-create-slot="${todayISO()}" data-calendar-create-time="09:00">
+          <i data-lucide="plus"></i>
+          Nuevo guion
+        </button>
+      </div>
+    </section>
+  `;
 }
 
 function localPreflight(publication, job) {
@@ -5703,23 +5730,35 @@ function renderCalendarMonth(companyPublications) {
 
 function renderCalendarDay(companyPublications) {
   const today = todayISO();
-  const dayPublications = companyPublications.filter((publication) => publication.date === today);
-  const visiblePublications = dayPublications.length ? dayPublications : companyPublications;
+  const selected = selectedCalendarPublication(companyPublications);
+  const dayDate = selected?.date || today;
+  const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, "0")}:00`);
   return `
     <article class="calendar-day-focus">
       <header>
         <span class="status-icon large"><i data-lucide="calendar"></i></span>
         <div>
           <strong>Vista del dia</strong>
-          <p>${today}</p>
+          <p>${escapeHtml(shortDateLabel(dayDate))} · toca una hora para crear guion o una pieza para editarla.</p>
         </div>
       </header>
-      <div class="day-agenda">
-        ${
-          visiblePublications.length
-            ? visiblePublications.map((publication) => calendarPost(publication)).join("")
-            : `<div class="empty-state compact"><strong>Sin publicaciones</strong><p>No hay piezas para mostrar en esta empresa.</p></div>`
-        }
+      <div class="day-agenda timeline">
+        ${hours
+          .map((hour) => {
+            const hourPublications = companyPublications.filter((publication) => publication.date === dayDate && (publication.time || "").slice(0, 2) === hour.slice(0, 2));
+            return `
+              <section class="day-hour-row" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}">
+                <time>${hour}</time>
+                <div>
+                  <button class="slot-create-button visible" type="button" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}" aria-label="Crear guion ${dayDate} ${hour}">
+                    <i data-lucide="plus"></i>
+                  </button>
+                  ${hourPublications.length ? hourPublications.map((publication) => calendarPost(publication)).join("") : `<span class="day-empty">Disponible</span>`}
+                </div>
+              </section>
+            `;
+          })
+          .join("")}
       </div>
     </article>
   `;
@@ -8727,6 +8766,19 @@ document.querySelectorAll("[data-cover-format-button]").forEach((button) => {
 googlePickerButton.addEventListener("click", openGooglePicker);
 
 calendarGrid.addEventListener("click", (event) => {
+  const scriptsButton = event.target.closest("[data-calendar-open-scripts]");
+  if (scriptsButton) {
+    const publication = selectedCalendarPublication(filteredPublications());
+    if (publication) {
+      selectedCalendarPublicationId = publication.id;
+      openScriptsPromptForPublication(publication.id);
+    } else {
+      setView("scripts");
+      renderScriptsWorkspace();
+    }
+    return;
+  }
+
   const slotButton = event.target.closest("[data-calendar-create-slot]");
   if (slotButton && !event.target.closest("[data-publication-id]")) {
     createScriptDraftFromCalendar(slotButton.dataset.calendarCreateSlot || todayISO(), slotButton.dataset.calendarCreateTime || "09:00");

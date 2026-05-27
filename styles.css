@@ -2920,6 +2920,41 @@ input[type="file"]:focus {
   overflow-x: auto;
 }
 
+.calendar-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.calendar-board-header h3,
+.calendar-board-header p {
+  margin: 0;
+}
+
+.calendar-board-header h3 {
+  margin-top: 2px;
+  font-size: 1.18rem;
+}
+
+.calendar-board-header p {
+  margin-top: 3px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.calendar-board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .google-calendar-week {
   display: grid;
   grid-template-columns: 64px repeat(7, minmax(130px, 1fr));
@@ -3303,6 +3338,47 @@ input[type="file"]:focus {
 .day-agenda {
   display: grid;
   gap: 10px;
+}
+
+.day-agenda.timeline {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.day-hour-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-height: 78px;
+  border-bottom: 1px solid var(--line);
+}
+
+.day-hour-row:last-child {
+  border-bottom: 0;
+}
+
+.day-hour-row time {
+  padding: 12px 10px;
+  border-right: 1px solid var(--line);
+  background: #fafafa;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+  text-align: right;
+}
+
+.day-hour-row > div {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 10px 42px 10px 10px;
+}
+
+.day-hour-row:hover > div {
+  background: #f8fbff;
 }
 
 .calendar-list-view {
@@ -10212,6 +10288,19 @@ input[type="file"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .calendar-board-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .calendar-board-actions {
+    justify-content: stretch;
+  }
+
+  .calendar-board-actions button {
+    flex: 1 1 150px;
+  }
+
   .summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -10563,6 +10652,10 @@ input[type="file"] {
   .billing-grid,
   .readiness-summary {
     grid-template-columns: 1fr;
+  }
+
+  .day-hour-row {
+    grid-template-columns: 56px minmax(0, 1fr);
   }
 
   .plan-overview,
