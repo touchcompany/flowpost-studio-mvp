@@ -310,7 +310,7 @@ async function run() {
     const onboarding = await get("/onboarding.html");
     assert.equal(onboarding.response.status, 200, "onboarding page should respond 200");
     assert.ok(onboarding.text.includes("Crear espacio de trabajo"), "onboarding should include submit CTA");
-    assert.ok(onboarding.text.includes("¿Como vas a usar Flowpost?"), "onboarding should include persona selector");
+    assert.ok(onboarding.text.includes("¿Como vas a usar Touch Note?"), "onboarding should include persona selector");
 
     const onboardingJs = await get("/onboarding.js");
     assert.equal(onboardingJs.response.status, 200, "onboarding.js should respond 200");

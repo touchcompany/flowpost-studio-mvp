@@ -2031,7 +2031,7 @@ function renderAgencyServicesManager() {
       <div class="agency-services-header">
         <div class="section-heading small">
           <h2>Servicios de tu agencia</h2>
-          <p>${escapeHtml(activeAgency().name)} vende estos servicios a sus clientes. Esto no afecta el plan de Flowpost.</p>
+          <p>${escapeHtml(activeAgency().name)} vende estos servicios a sus clientes. Esto no afecta el plan de Touch Note.</p>
         </div>
         <label class="field compact service-client-select">
           <span>Comprar para cliente</span>
@@ -2923,7 +2923,7 @@ function renderStorePanel() {
         <span class="status-icon large"><i data-lucide="shopping-bag"></i></span>
         <div>
           <h2>Servicios vendibles de ${escapeHtml(activeAgency().name)}</h2>
-          <p>${portalMode ? "Compra servicios disponibles y activa nuevos modulos dentro de tu panel." : "Elige cliente, compra un servicio y Flowpost crea la orden interna con cuenta de cobro."}</p>
+          <p>${portalMode ? "Compra servicios disponibles y activa nuevos modulos dentro de tu panel." : "Elige cliente, compra un servicio y Touch Note crea la orden interna con cuenta de cobro."}</p>
         </div>
       </div>
       ${
@@ -3724,8 +3724,8 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
       <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
       ${documentData.observations ? `<p class="notes">${escapeHtml(documentData.observations)}</p>` : ""}
       <footer>
-        <span>${escapeHtml(issuer.name || "Flowpost Studio")}</span>
-        <span>${escapeHtml(documentData.signatureName || "Documento generado por Flowpost Studio")}</span>
+        <span>${escapeHtml(issuer.name || "Touch Note")}</span>
+        <span>${escapeHtml(documentData.signatureName || "Documento generado por Touch Note")}</span>
       </footer>
     </main>
     <script>window.addEventListener("load", () => setTimeout(() => window.print(), 250));</script>
@@ -3804,7 +3804,7 @@ function documentAction(action) {
   }
   if (action === "email") {
     const subject = encodeURIComponent(message);
-    const body = encodeURIComponent(`Hola ${client?.contact || client?.name || ""},\n\nTe comparto ${message}.\n\nPuedes guardar el PDF desde la vista del documento en Flowpost Studio.\n\nGracias.`);
+    const body = encodeURIComponent(`Hola ${client?.contact || client?.name || ""},\n\nTe comparto ${message}.\n\nPuedes guardar el PDF desde la vista del documento en Touch Note.\n\nGracias.`);
     window.location.href = `mailto:${client?.email || ""}?subject=${subject}&body=${body}`;
     showToast(`Correo preparado: ${message}`);
     return;
@@ -6060,7 +6060,7 @@ function renderScriptsWorkspaceContext(publication, company) {
         <span class="status-icon"><i data-lucide="calendar-plus"></i></span>
         <div>
           <strong>Nuevo guion libre</strong>
-          <p>Escribe una instruccion como lo harias en ChatGPT o Gemini. Flowpost lo guarda en ${escapeHtml(company.name)}.</p>
+          <p>Escribe una instruccion como lo harias en ChatGPT o Gemini. Touch Note lo guarda en ${escapeHtml(company.name)}.</p>
         </div>
       </section>
     `;
@@ -6296,7 +6296,7 @@ function creativeCapabilityForType(type = selectedCreativeType) {
     label: aiCapabilityStatus.ok ? "Texto IA listo" : "Fallback editable",
     detail: aiCapabilityStatus.ok
       ? `Proveedor: ${promptProviderLabel(aiCapabilityStatus.preferred)} · OpenAI ${aiCapabilityStatus.openai?.ready ? "ok" : "pendiente"} · Gemini ${aiCapabilityStatus.gemini?.ready ? "ok" : "pendiente"}.`
-      : "Falta OPENAI_API_KEY o GEMINI_API_KEY; Flowpost entregara una estructura editable.",
+      : "Falta OPENAI_API_KEY o GEMINI_API_KEY; Touch Note entregara una estructura editable.",
     className: aiCapabilityStatus.ok ? "ready" : "warning",
   };
 }
@@ -6521,7 +6521,7 @@ function renderScriptAssistantBrief(publication, company, prompt, quality) {
         </header>
         <p>
           Estoy usando el tono de <strong>${escapeHtml(company.name)}</strong>, perfil <strong>${escapeHtml(persona)}</strong>,
-          ${escapeHtml(platforms)} y ${prompt ? `el prompt "${escapeHtml(prompt.title)}"` : "la estrategia base de Flowpost"}.
+          ${escapeHtml(platforms)} y ${prompt ? `el prompt "${escapeHtml(prompt.title)}"` : "la estrategia base de Touch Note"}.
         </p>
         <div class="assistant-brief-chips">
           <span><i data-lucide="target"></i>${escapeHtml(publication.type || "Pieza")}</span>
@@ -7926,7 +7926,7 @@ async function refreshDeploymentStatus() {
 async function copyDeploymentCommand(type) {
   const command =
     type === "git"
-      ? `git add .\ngit commit -m "Update Flowpost Studio"\ngit push origin main`
+      ? `git add .\ngit commit -m "Update Touch Note"\ngit push origin main`
       : `npm run check\nnpm run build\nnpm run deploy:package\nnpm run live:check`;
   try {
     await navigator.clipboard.writeText(command);

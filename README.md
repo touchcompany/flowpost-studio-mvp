@@ -1,4 +1,4 @@
-# Flowpost Studio
+# Touch Note
 
 Aplicacion online para operar contenido, clientes, servicios, cobros y conexiones de una agencia o marca.
 
@@ -113,7 +113,7 @@ Resumen rapido:
 ```bash
 git init
 git add .
-git commit -m "Initial Flowpost Studio MVP"
+git commit -m "Initial Touch Note MVP"
 git remote add origin https://github.com/TU_USUARIO/flowpost-studio-mvp.git
 git branch -M main
 git push -u origin main

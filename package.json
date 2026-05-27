@@ -1,5 +1,5 @@
 {
-  "name": "flowpost-studio-mvp",
+  "name": "touch-note",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
@@ -16,5 +16,5 @@
     "supabase:migrate": "node scripts/migrate-supabase.js",
     "deploy:package": "node scripts/package-deploy.js"
   },
-  "description": "MVP de publicacion social con empresas, biblioteca de videos y backend JSON local."
+  "description": "Plataforma de contenido, guiones, clientes y publicaciones para agencias y marcas."
 }

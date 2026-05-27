@@ -53,7 +53,7 @@ function readGitCommit() {
 function buildInfo() {
   const pkg = readPackageInfo();
   return {
-    name: pkg.name || "flowpost-studio-mvp",
+    name: pkg.name || "touch-note",
     version: pkg.version || "0.0.0",
     commit: readGitCommit(),
     dataProvider: store.provider,
@@ -255,7 +255,7 @@ function sendOAuthCallbackPage(res, payload) {
   const title = ok ? "Conexion recibida" : "Conexion pendiente";
   const provider = payload.provider || "OAuth";
   const mode = payload.mode || "callback";
-  const next = payload.next || "Vuelve a Flowpost Studio para continuar.";
+  const next = payload.next || "Vuelve a Touch Note para continuar.";
   const missing = Array.isArray(payload.missing) && payload.missing.length ? payload.missing.join(", ") : "";
   sendHtml(
     res,
@@ -265,7 +265,7 @@ function sendOAuthCallbackPage(res, payload) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(title)} · Flowpost Studio</title>
+    <title>${escapeHtml(title)} · Touch Note</title>
     <style>
       :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       * { box-sizing: border-box; }
@@ -286,14 +286,14 @@ function sendOAuthCallbackPage(res, payload) {
     <main>
       <span class="mark">${ok ? "✓" : "!"}</span>
       <h1>${escapeHtml(title)}</h1>
-      <p>${escapeHtml(provider)} respondio al callback de Flowpost Studio.</p>
+      <p>${escapeHtml(provider)} respondio al callback de Touch Note.</p>
       <dl>
         <div class="row"><dt>Proveedor</dt><dd>${escapeHtml(provider)}</dd></div>
         <div class="row"><dt>Estado</dt><dd>${escapeHtml(mode)}</dd></div>
         ${missing ? `<div class="row"><dt>Falta</dt><dd>${escapeHtml(missing)}</dd></div>` : ""}
         <div class="row"><dt>Siguiente</dt><dd>${escapeHtml(next)}</dd></div>
       </dl>
-      <a href="/index.html#accounts">Volver a Flowpost</a>
+      <a href="/index.html#accounts">Volver a Touch Note</a>
       <small>Por seguridad esta pantalla no muestra codigos OAuth ni tokens.</small>
     </main>
   </body>
@@ -771,18 +771,18 @@ async function requestPasswordReset(payload) {
   try {
     emailDelivery = await sendSmtpEmail({
       to: email,
-      subject: "Recupera tu acceso a Flowpost Studio",
+      subject: "Recupera tu acceso a Touch Note",
       text: [
         "Hola,",
         "",
-        "Recibimos una solicitud para restablecer tu contraseña en Flowpost Studio.",
+        "Recibimos una solicitud para restablecer tu contraseña en Touch Note.",
         `Abre este enlace antes de 30 minutos: ${resetUrl}`,
         "",
         "Si no solicitaste este cambio, puedes ignorar este correo.",
       ].join("\n"),
       html: `
         <p>Hola,</p>
-        <p>Recibimos una solicitud para restablecer tu contraseña en Flowpost Studio.</p>
+        <p>Recibimos una solicitud para restablecer tu contraseña en Touch Note.</p>
         <p><a href="${resetUrl}">Restablecer contraseña</a></p>
         <p>Este enlace vence en 30 minutos. Si no solicitaste este cambio, puedes ignorar este correo.</p>
       `,
@@ -966,11 +966,11 @@ async function sendInvitationEmail({ email, company, role, inviteUrl }) {
   try {
     const delivery = await sendSmtpEmail({
       to: email,
-      subject: `${company.name || "Flowpost Studio"} te invito a Flowpost`,
+      subject: `${company.name || "Touch Note"} te invito a Touch Note`,
       text: [
         "Hola,",
         "",
-        `${company.name || "Una empresa"} te dio acceso a su espacio en Flowpost Studio.`,
+        `${company.name || "Una empresa"} te dio acceso a su espacio en Touch Note.`,
         `Rol asignado: ${role}.`,
         `Acepta la invitacion aqui: ${inviteUrl}`,
         "",
@@ -978,7 +978,7 @@ async function sendInvitationEmail({ email, company, role, inviteUrl }) {
       ].join("\n"),
       html: `
         <p>Hola,</p>
-        <p><strong>${company.name || "Una empresa"}</strong> te dio acceso a su espacio en Flowpost Studio.</p>
+        <p><strong>${company.name || "Una empresa"}</strong> te dio acceso a su espacio en Touch Note.</p>
         <p>Rol asignado: <strong>${role}</strong></p>
         <p><a href="${inviteUrl}">Aceptar invitación</a></p>
         <p>Si no esperabas esta invitación, puedes ignorar este correo.</p>
@@ -1769,7 +1769,7 @@ async function handleStripeEvent(event) {
   if (store.saveSession) {
     await store.saveSession({
       id: profileId,
-      name: email ? email.split("@")[0] : "Cliente Flowpost",
+      name: email ? email.split("@")[0] : "Cliente Touch Note",
       email,
       provider: "stripe",
       plan,
@@ -3256,9 +3256,9 @@ async function handleApi(req, res, url) {
     try {
       const result = await sendSmtpEmail({
         to,
-        subject: "Prueba SMTP Flowpost Studio",
-        text: "SMTP esta funcionando en Flowpost Studio.",
-        html: "<p>SMTP esta funcionando en <strong>Flowpost Studio</strong>.</p>",
+        subject: "Prueba SMTP Touch Note",
+        text: "SMTP esta funcionando en Touch Note.",
+        html: "<p>SMTP esta funcionando en <strong>Touch Note</strong>.</p>",
       });
       sendJson(res, 200, { ok: Boolean(result.ok), to, result });
     } catch (error) {
@@ -4207,7 +4207,7 @@ const server = http.createServer(async (req, res) => {
 if (require.main === module) {
   server.listen(PORT, HOST, () => {
     const shownHost = HOST === "0.0.0.0" ? "localhost" : HOST;
-    console.log(`Flowpost Studio running at http://${shownHost}:${PORT}`);
+    console.log(`Touch Note running at http://${shownHost}:${PORT}`);
   });
 }
 
