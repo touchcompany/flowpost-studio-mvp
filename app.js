@@ -87,6 +87,7 @@ const clientBillingPanel = document.querySelector("#clientBillingPanel");
 const clientWorkspacePanel = document.querySelector("#clientWorkspacePanel");
 const storePanel = document.querySelector("#storePanel");
 const automationCenterPanel = document.querySelector("#automationCenterPanel");
+const settingsPanel = document.querySelector("#settingsPanel");
 const readinessSummary = document.querySelector("#readinessSummary");
 const readinessGrid = document.querySelector("#readinessGrid");
 const diagnosticsGrid = document.querySelector("#diagnosticsGrid");
@@ -757,11 +758,26 @@ let billingDraft = {
   documentType: "Cuenta de cobro",
   issuerCompanyId: "casa-norte",
   clientId: "client-casa-norte",
+  numberPrefix: "CC",
+  nextNumber: 1,
+  currentNumber: "",
   description: "Servicios de marketing digital",
   issueDate: new Date().toISOString().slice(0, 10),
   dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4).toISOString().slice(0, 10),
-  observations: "Servicios prestados segun plan seleccionado. Gracias por confiar en nuestro equipo.",
+  observations: "",
   signatureName: "",
+  issuerNit: "",
+  issuerPhone: "",
+  issuerEmail: "admin@touch.com.co",
+  paymentBank: "",
+  paymentAccountType: "Cuenta de ahorros",
+  paymentAccountNumber: "",
+  paymentAccountHolder: "",
+  clientNit: "",
+  clientPhone: "",
+  clientEmail: "",
+  autoGenerate: false,
+  autoFrequency: "Mensual",
   lines: [
     { serviceId: "pro", quantity: 1, price: 350000 },
     { serviceId: "hosting", quantity: 1, price: 180000 },
@@ -2031,6 +2047,25 @@ function billingDraftSubtotal() {
   return billingDraft.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.price || 0), 0);
 }
 
+function billingDocumentNumberFromDraft() {
+  const prefix = String(billingDraft.numberPrefix || (billingDraft.documentType === "Factura" ? "FAC" : "CC")).trim() || "CC";
+  const next = Math.max(1, Number(billingDraft.nextNumber || 1));
+  return billingDraft.currentNumber || `${prefix}-${String(next).padStart(4, "0")}`;
+}
+
+function billingCycleDays(cycle = "Mensual") {
+  if (cycle === "Anual") return 365;
+  if (cycle === "Semestral") return 182;
+  if (cycle === "Trimestral") return 91;
+  return 30;
+}
+
+function addDaysToDate(dateString, days) {
+  const base = dateString ? new Date(`${dateString}T12:00:00`) : new Date();
+  base.setDate(base.getDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
 function syncBillingDraftDefaults() {
   ensureAgencyClients();
   if (!companies.some((company) => company.id === billingDraft.issuerCompanyId)) {
@@ -2039,6 +2074,15 @@ function syncBillingDraftDefaults() {
   if (!clients.some((client) => client.id === billingDraft.clientId)) {
     billingDraft.clientId = activeAgencyClients()[0]?.id || clients[0]?.id || "";
   }
+  const client = clients.find((item) => item.id === billingDraft.clientId);
+  const issuer = companies.find((company) => company.id === billingDraft.issuerCompanyId);
+  if (!billingDraft.numberPrefix) billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
+  if (!billingDraft.nextNumber) billingDraft.nextNumber = 1;
+  if (!billingDraft.currentNumber) billingDraft.currentNumber = billingDocumentNumberFromDraft();
+  if (!billingDraft.issuerEmail && issuer?.email) billingDraft.issuerEmail = issuer.email;
+  if (!billingDraft.paymentAccountHolder && issuer?.name) billingDraft.paymentAccountHolder = issuer.name;
+  if (!billingDraft.clientEmail && client?.email) billingDraft.clientEmail = client.email;
+  if (!billingDraft.autoFrequency && client?.billingCycle) billingDraft.autoFrequency = client.billingCycle;
   if (!billingDraft.lines.length) {
     billingDraft.lines = [{ serviceId: "pro", quantity: 1, price: serviceById("pro").price }];
   }
@@ -2167,6 +2211,81 @@ function renderBillingDocumentEditor() {
             <label class="field compact">
               <span>Fecha de vencimiento</span>
               <input data-billing-field="dueDate" type="date" value="${escapeHtml(billingDraft.dueDate)}" />
+            </label>
+          </div>
+        </section>
+
+        <section class="document-card">
+          <h3>Numero, emisor y cliente</h3>
+          <div class="document-grid">
+            <label class="field compact">
+              <span>Numero del documento</span>
+              <input data-billing-field="currentNumber" type="text" value="${escapeHtml(billingDraft.currentNumber || billingDocumentNumberFromDraft())}" />
+            </label>
+            <label class="field compact">
+              <span>Consecutivo siguiente</span>
+              <input data-billing-field="nextNumber" type="number" min="1" value="${escapeHtml(billingDraft.nextNumber || 1)}" />
+            </label>
+            <label class="field compact">
+              <span>NIT / ID emisor</span>
+              <input data-billing-field="issuerNit" type="text" value="${escapeHtml(billingDraft.issuerNit || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Telefono emisor</span>
+              <input data-billing-field="issuerPhone" type="text" value="${escapeHtml(billingDraft.issuerPhone || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Correo emisor</span>
+              <input data-billing-field="issuerEmail" type="text" value="${escapeHtml(billingDraft.issuerEmail || "")}" />
+            </label>
+            <label class="field compact">
+              <span>NIT / ID cliente</span>
+              <input data-billing-field="clientNit" type="text" value="${escapeHtml(billingDraft.clientNit || client?.nit || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Celular cliente</span>
+              <input data-billing-field="clientPhone" type="text" value="${escapeHtml(billingDraft.clientPhone || client?.phone || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Correo cliente</span>
+              <input data-billing-field="clientEmail" type="text" value="${escapeHtml(billingDraft.clientEmail || client?.email || "")}" />
+            </label>
+          </div>
+        </section>
+
+        <section class="document-card">
+          <h3>Pago y automatizacion</h3>
+          <div class="document-grid">
+            <label class="field compact">
+              <span>Banco</span>
+              <input data-billing-field="paymentBank" type="text" value="${escapeHtml(billingDraft.paymentBank || "")}" placeholder="Ej: Bancolombia" />
+            </label>
+            <label class="field compact">
+              <span>Tipo de cuenta</span>
+              <select data-billing-field="paymentAccountType">
+                ${["Cuenta de ahorros", "Cuenta corriente", "Nequi", "Daviplata", "Otro"].map((type) => `<option value="${type}" ${billingDraft.paymentAccountType === type ? "selected" : ""}>${type}</option>`).join("")}
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Numero de cuenta</span>
+              <input data-billing-field="paymentAccountNumber" type="text" value="${escapeHtml(billingDraft.paymentAccountNumber || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Titular</span>
+              <input data-billing-field="paymentAccountHolder" type="text" value="${escapeHtml(billingDraft.paymentAccountHolder || issuer?.name || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Generar automaticamente</span>
+              <select data-billing-field="autoGenerate">
+                <option value="false" ${billingDraft.autoGenerate ? "" : "selected"}>No</option>
+                <option value="true" ${billingDraft.autoGenerate ? "selected" : ""}>Si, dejar listo para enviar</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Frecuencia</span>
+              <select data-billing-field="autoFrequency">
+                ${["Mensual", "Trimestral", "Semestral", "Anual"].map((cycle) => `<option value="${cycle}" ${billingDraft.autoFrequency === cycle ? "selected" : ""}>${cycle}</option>`).join("")}
+              </select>
             </label>
           </div>
         </section>
@@ -2448,6 +2567,7 @@ function renderDeletedClientsPanel() {
 function renderClientBillingPanel() {
   ensureAgencyClients();
   ensureServiceOrderAutomations();
+  ensureRecurringBillingDocuments();
   const activeClients = activeAgencyClients();
   const activeClientIds = new Set(activeClients.map((client) => client.id));
   const pendingInvoices = invoices.filter((invoice) => activeClientIds.has(invoice.clientId) && invoice.status !== "Pagada");
@@ -2735,6 +2855,169 @@ function serviceIcon(service) {
   if (group.includes("automat")) return "bot";
   if (group.includes("ia")) return "wand-sparkles";
   return "sparkles";
+}
+
+function renderSettingsPanel() {
+  if (!settingsPanel) return;
+  syncBillingDraftDefaults();
+  const company = activeCompany();
+  const session = currentSession();
+  const issuerCompany = companies.find((item) => item.id === billingDraft.issuerCompanyId) || company;
+  const documentNumberPreview = billingDocumentNumberFromDraft();
+  settingsPanel.innerHTML = `
+    <section class="settings-shell">
+      <article class="settings-profile-card">
+        <span class="company-avatar settings-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
+          <img src="favicon.svg" alt="" />
+        </span>
+        <div>
+          <span class="workspace-label">Cuenta activa</span>
+          <h3>${escapeHtml(session.name || "Usuario Touch")}</h3>
+          <p>${escapeHtml(session.email || "Sin correo")} · ${escapeHtml(planLabels[currentPlan()] || "Starter")}</p>
+        </div>
+        <button class="secondary-button icon-button compact" type="button" data-settings-open="accounts" aria-label="Abrir cuenta">
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </article>
+
+      <section class="settings-group">
+        <header>
+          <span class="status-icon"><i data-lucide="building-2"></i></span>
+          <div>
+            <h3>Empresa activa</h3>
+            <p>Lo que ve el equipo al trabajar esta marca.</p>
+          </div>
+        </header>
+        <div class="settings-form-grid">
+          <label class="field compact">
+            <span>Nombre</span>
+            <input data-settings-company-field="name" value="${escapeHtml(company.name || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Usuario</span>
+            <input data-settings-company-field="handle" value="${escapeHtml(company.handle || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Color</span>
+            <input data-settings-company-field="primaryColor" type="color" value="${escapeHtml(company.primaryColor || "#111111")}" />
+          </label>
+          <label class="field compact wide">
+            <span>Descripción</span>
+            <textarea data-settings-company-field="description">${escapeHtml(company.description || "")}</textarea>
+          </label>
+          <label class="field compact wide">
+            <span>Tono de voz</span>
+            <textarea data-settings-company-field="voice">${escapeHtml(company.voice || "")}</textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <header>
+          <span class="status-icon"><i data-lucide="receipt-text"></i></span>
+          <div>
+            <h3>Cuentas de cobro y facturas</h3>
+            <p>Emisor, numeración, cuenta bancaria y generación recurrente.</p>
+          </div>
+        </header>
+        <div class="settings-billing-preview">
+          <div>
+            <span>Próximo documento</span>
+            <strong>${escapeHtml(documentNumberPreview)}</strong>
+            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerCompany.name || "Empresa")}</small>
+          </div>
+          <button class="primary-button icon-text-button" type="button" data-settings-open="clients">
+            <i data-lucide="file-text"></i>
+            Crear cobro
+          </button>
+        </div>
+        <div class="settings-form-grid">
+          <label class="field compact">
+            <span>Tipo</span>
+            <select data-settings-billing-field="documentType">
+              ${["Cuenta de cobro", "Factura"].map((type) => `<option value="${type}" ${billingDraft.documentType === type ? "selected" : ""}>${type}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Prefijo</span>
+            <input data-settings-billing-field="numberPrefix" value="${escapeHtml(billingDraft.numberPrefix || "CC")}" />
+          </label>
+          <label class="field compact">
+            <span>Empieza en</span>
+            <input data-settings-billing-field="nextNumber" type="number" min="1" value="${escapeHtml(billingDraft.nextNumber || 1)}" />
+          </label>
+          <label class="field compact">
+            <span>Empresa emisora</span>
+            <select data-settings-billing-field="issuerCompanyId">
+              ${companies.map((item) => `<option value="${item.id}" ${billingDraft.issuerCompanyId === item.id ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field compact">
+            <span>NIT / ID emisor</span>
+            <input data-settings-billing-field="issuerNit" value="${escapeHtml(billingDraft.issuerNit || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Celular emisor</span>
+            <input data-settings-billing-field="issuerPhone" value="${escapeHtml(billingDraft.issuerPhone || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Correo emisor</span>
+            <input data-settings-billing-field="issuerEmail" type="email" value="${escapeHtml(billingDraft.issuerEmail || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Banco</span>
+            <input data-settings-billing-field="paymentBank" value="${escapeHtml(billingDraft.paymentBank || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Tipo de cuenta</span>
+            <select data-settings-billing-field="paymentAccountType">
+              ${["Cuenta de ahorros", "Cuenta corriente", "Nequi", "Daviplata", "Otro"].map((type) => `<option value="${type}" ${billingDraft.paymentAccountType === type ? "selected" : ""}>${type}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Número de cuenta</span>
+            <input data-settings-billing-field="paymentAccountNumber" value="${escapeHtml(billingDraft.paymentAccountNumber || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Titular</span>
+            <input data-settings-billing-field="paymentAccountHolder" value="${escapeHtml(billingDraft.paymentAccountHolder || "")}" />
+          </label>
+          <label class="field compact">
+            <span>Automático</span>
+            <select data-settings-billing-field="autoGenerate">
+              <option value="false" ${billingDraft.autoGenerate ? "" : "selected"}>No</option>
+              <option value="true" ${billingDraft.autoGenerate ? "selected" : ""}>Sí</option>
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Frecuencia</span>
+            <select data-settings-billing-field="autoFrequency">
+              ${["Mensual", "Trimestral", "Semestral", "Anual"].map((cycle) => `<option value="${cycle}" ${billingDraft.autoFrequency === cycle ? "selected" : ""}>${cycle}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-group settings-list">
+        <button type="button" data-settings-open="companies">
+          <span class="status-icon"><i data-lucide="briefcase-business"></i></span>
+          <div><strong>Empresas</strong><small>Marcas, redes sociales y acceso por cliente.</small></div>
+          <i data-lucide="chevron-right"></i>
+        </button>
+        <button type="button" data-settings-open="clients">
+          <span class="status-icon"><i data-lucide="users"></i></span>
+          <div><strong>Clientes</strong><small>Servicios, cobros y usuarios vinculados.</small></div>
+          <i data-lucide="chevron-right"></i>
+        </button>
+        <button type="button" data-settings-open="accounts">
+          <span class="status-icon"><i data-lucide="shield-check"></i></span>
+          <div><strong>Accesos e integraciones</strong><small>Google, Facebook, Supabase, APIs y pruebas.</small></div>
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </section>
+    </section>
+  `;
+  renderIcons();
 }
 
 function automationBlueprint(service) {
@@ -3469,23 +3752,102 @@ function generateClientInvoice(clientId) {
     showToast("Este cliente ya tiene un cobro pendiente.");
     return;
   }
+  syncBillingDraftDefaults();
+  const documentNumber = billingDocumentNumberFromDraft();
+  const issueDate = new Date().toISOString().slice(0, 10);
   invoices = [
     {
       id: `invoice-${client.id}-${Date.now()}`,
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
+      issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+      documentType: billingDraft.documentType || "Cuenta de cobro",
+      number: documentNumber,
       concept: `${serviceById(client.serviceId).name || client.plan} ${client.billingCycle.toLowerCase()}`,
       amount: client.amount,
       currency: client.currency,
       status: "Pendiente",
-      dueDate: client.nextInvoiceDate || new Date().toISOString().slice(0, 10),
+      issueDate,
+      dueDate: client.nextInvoiceDate || issueDate,
+      lines: [{ serviceId: client.serviceId || "starter", quantity: 1, price: client.amount || serviceById(client.serviceId).price }],
+      issuerNit: billingDraft.issuerNit,
+      issuerPhone: billingDraft.issuerPhone,
+      issuerEmail: billingDraft.issuerEmail,
+      paymentBank: billingDraft.paymentBank,
+      paymentAccountType: billingDraft.paymentAccountType,
+      paymentAccountNumber: billingDraft.paymentAccountNumber,
+      paymentAccountHolder: billingDraft.paymentAccountHolder,
+      clientNit: client.nit || billingDraft.clientNit,
+      clientPhone: client.phone || billingDraft.clientPhone,
+      clientEmail: client.email || billingDraft.clientEmail,
+      autoGenerate: true,
+      autoFrequency: client.billingCycle || billingDraft.autoFrequency || "Mensual",
     },
     ...invoices,
   ];
+  billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+  billingDraft.currentNumber = "";
+  clients = clients.map((item) => (item.id === client.id ? { ...item, nextInvoiceDate: addDaysToDate(client.nextInvoiceDate || issueDate, billingCycleDays(client.billingCycle)) } : item));
   persistState();
   renderClientBillingPanel();
   showToast("Cuenta de cobro generada.");
+}
+
+function ensureRecurringBillingDocuments() {
+  if (!(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true")) return 0;
+  const today = todayISO();
+  let created = 0;
+  activeAgencyClients().forEach((client) => {
+    if (!client.nextInvoiceDate || client.nextInvoiceDate > today) return;
+    const pending = invoices.find((invoice) => invoice.clientId === client.id && invoice.status !== "Pagada");
+    if (pending) return;
+    syncBillingDraftDefaults();
+    const issueDate = client.nextInvoiceDate;
+    const documentNumber = billingDocumentNumberFromDraft();
+    const service = serviceById(client.serviceId);
+    invoices = [
+      {
+        id: `invoice-${client.id}-${Date.now()}-${created}`,
+        agencyId: activeAgencyId,
+        clientId: client.id,
+        companyId: client.companyId,
+        issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+        documentType: billingDraft.documentType || "Cuenta de cobro",
+        number: documentNumber,
+        concept: `${service.name || client.plan} ${String(client.billingCycle || "Mensual").toLowerCase()}`,
+        amount: client.amount,
+        currency: client.currency || "COP",
+        status: "Pendiente",
+        issueDate,
+        dueDate: addDaysToDate(issueDate, 5),
+        observations: billingDraft.observations,
+        signatureName: billingDraft.signatureName,
+        issuerNit: billingDraft.issuerNit,
+        issuerPhone: billingDraft.issuerPhone,
+        issuerEmail: billingDraft.issuerEmail,
+        paymentBank: billingDraft.paymentBank,
+        paymentAccountType: billingDraft.paymentAccountType,
+        paymentAccountNumber: billingDraft.paymentAccountNumber,
+        paymentAccountHolder: billingDraft.paymentAccountHolder,
+        clientNit: client.nit || billingDraft.clientNit,
+        clientPhone: client.phone || billingDraft.clientPhone,
+        clientEmail: client.email || billingDraft.clientEmail,
+        autoGenerate: true,
+        autoFrequency: client.billingCycle || billingDraft.autoFrequency || "Mensual",
+        lines: [{ serviceId: client.serviceId || "starter", quantity: 1, price: client.amount || service.price }],
+      },
+      ...invoices,
+    ];
+    billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+    billingDraft.currentNumber = "";
+    clients = clients.map((item) =>
+      item.id === client.id ? { ...item, nextInvoiceDate: addDaysToDate(issueDate, billingCycleDays(client.billingCycle || billingDraft.autoFrequency)) } : item
+    );
+    created += 1;
+  });
+  if (created) persistState();
+  return created;
 }
 
 function purchaseServiceForClient(serviceId) {
@@ -3528,6 +3890,7 @@ function purchaseServiceForClient(serviceId) {
       companyId: client.companyId,
       issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
       documentType: "Cuenta de cobro",
+      number: billingDocumentNumberFromDraft(),
       concept: service.name,
       amount: service.price,
       currency: "COP",
@@ -3535,10 +3898,22 @@ function purchaseServiceForClient(serviceId) {
       issueDate: now.toISOString().slice(0, 10),
       dueDate,
       lines: [{ serviceId: service.id, quantity: 1, price: service.price }],
+      issuerNit: billingDraft.issuerNit,
+      issuerPhone: billingDraft.issuerPhone,
+      issuerEmail: billingDraft.issuerEmail,
+      paymentBank: billingDraft.paymentBank,
+      paymentAccountType: billingDraft.paymentAccountType,
+      paymentAccountNumber: billingDraft.paymentAccountNumber,
+      paymentAccountHolder: billingDraft.paymentAccountHolder,
+      clientNit: client.nit || billingDraft.clientNit,
+      clientPhone: client.phone || billingDraft.clientPhone,
+      clientEmail: client.email || billingDraft.clientEmail,
       serviceOrderId: order.id,
     },
     ...invoices,
   ];
+  billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+  billingDraft.currentNumber = "";
   billingDraft.clientId = client.id;
   billingDraft.lines = [{ serviceId: service.id, quantity: 1, price: service.price }];
   billingDraft.description = service.name;
@@ -3660,6 +4035,8 @@ function saveBillingDocument() {
   }
   const subtotal = billingDraftSubtotal();
   const existingIndex = invoices.findIndex((invoice) => invoice.clientId === client.id && invoice.status !== "Pagada");
+  const isNewDocument = existingIndex < 0;
+  const documentNumber = billingDraft.currentNumber || billingDocumentNumberFromDraft();
   const document = {
     id: existingIndex >= 0 ? invoices[existingIndex].id : `invoice-${client.id}-${Date.now()}`,
     agencyId: activeAgencyId,
@@ -3667,6 +4044,7 @@ function saveBillingDocument() {
     companyId: client.companyId,
     issuerCompanyId: billingDraft.issuerCompanyId,
     documentType: billingDraft.documentType,
+    number: documentNumber,
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
     amount: subtotal,
     currency: "COP",
@@ -3675,12 +4053,28 @@ function saveBillingDocument() {
     dueDate: billingDraft.dueDate,
     observations: billingDraft.observations,
     signatureName: billingDraft.signatureName,
+    issuerNit: billingDraft.issuerNit,
+    issuerPhone: billingDraft.issuerPhone,
+    issuerEmail: billingDraft.issuerEmail,
+    paymentBank: billingDraft.paymentBank,
+    paymentAccountType: billingDraft.paymentAccountType,
+    paymentAccountNumber: billingDraft.paymentAccountNumber,
+    paymentAccountHolder: billingDraft.paymentAccountHolder,
+    clientNit: billingDraft.clientNit,
+    clientPhone: billingDraft.clientPhone,
+    clientEmail: billingDraft.clientEmail || client.email,
+    autoGenerate: Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true"),
+    autoFrequency: billingDraft.autoFrequency || client.billingCycle || "Mensual",
     lines: billingDraft.lines,
   };
   if (existingIndex >= 0) {
     invoices = invoices.map((invoice, index) => (index === existingIndex ? document : invoice));
   } else {
     invoices = [document, ...invoices];
+  }
+  if (isNewDocument) {
+    billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+    billingDraft.currentNumber = "";
   }
   persistState();
   renderClientBillingPanel();
@@ -3698,6 +4092,7 @@ function currentBillingDocument() {
     companyId: client.companyId,
     issuerCompanyId: billingDraft.issuerCompanyId,
     documentType: billingDraft.documentType,
+    number: billingDraft.currentNumber || billingDocumentNumberFromDraft(),
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
     amount: subtotal,
     currency: "COP",
@@ -3706,11 +4101,24 @@ function currentBillingDocument() {
     dueDate: billingDraft.dueDate,
     observations: billingDraft.observations,
     signatureName: billingDraft.signatureName,
+    issuerNit: billingDraft.issuerNit,
+    issuerPhone: billingDraft.issuerPhone,
+    issuerEmail: billingDraft.issuerEmail,
+    paymentBank: billingDraft.paymentBank,
+    paymentAccountType: billingDraft.paymentAccountType,
+    paymentAccountNumber: billingDraft.paymentAccountNumber,
+    paymentAccountHolder: billingDraft.paymentAccountHolder,
+    clientNit: billingDraft.clientNit,
+    clientPhone: billingDraft.clientPhone,
+    clientEmail: billingDraft.clientEmail || client.email,
+    autoGenerate: Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true"),
+    autoFrequency: billingDraft.autoFrequency || client.billingCycle || "Mensual",
     lines: billingDraft.lines,
   };
 }
 
 function billingDocumentNumber(documentData = {}) {
+  if (documentData.number) return String(documentData.number).toUpperCase();
   return String(documentData.id || "draft")
     .replace(/^invoice-/, "")
     .replace(/^draft-/, "BORRADOR-")
@@ -3731,6 +4139,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
   const client = clients.find((item) => item.id === documentData.clientId) || {};
   const issuer = companies.find((company) => company.id === documentData.issuerCompanyId) || activeCompany();
   const number = billingDocumentNumber(documentData);
+  const logoSvg = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 40"><g fill="#111111"><circle cx="7.62" cy="9.52" r="1.74"/><path d="M30.04,15.21c.35-.19.58-.56.58-.96.03-1.54-.44-5.13-5.2-5.31-.13,0-.27,0-.41,0h-8.38c-4.92,0-8.91,3.67-8.91,8.19v6.89c0,4.52,3.98,8.19,8.91,8.19h8.38c.31,0,.63-.02.93-.05,3.14-.34,4.96-3.08,4.41-5.71-.07-.35-.29-.64-.58-.84-3.89-2.39-3.77-8.2.26-10.41h0Z"/><path d="M31.81,17.2l4.68-2.02c.77-.33,1.62.23,1.62,1.06v8.72c0,.85-.87,1.4-1.64,1.05l-4.72-2.15c-2.88-1.31-2.84-5.41.06-6.67Z"/></g></svg>');
   const lines = (documentData.lines || []).map((line) => {
     const service = serviceById(line.serviceId);
     const quantity = Number(line.quantity || 1);
@@ -3757,11 +4166,18 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
       h1, h2, p { margin: 0; }
       h1 { font-size: 34px; letter-spacing: -0.02em; }
       h2 { margin-top: 30px; font-size: 16px; text-transform: uppercase; color: #666; }
+      .brand-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+      .brand-row img { width: 46px; height: 42px; object-fit: contain; }
+      .brand-row strong { display: block; font-size: 15px; }
+      .brand-row small { display: block; color: #666; font-size: 12px; }
       .badge { display: inline-block; margin-bottom: 10px; padding: 7px 10px; border-radius: 999px; background: #111; color: #fff; font-size: 12px; font-weight: 800; }
       .meta { text-align: right; color: #555; line-height: 1.55; }
       .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; }
       .box { padding: 18px; border: 1px solid #ededed; border-radius: 18px; background: #fafafa; }
       .box span { display: block; margin-bottom: 8px; color: #777; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      .box p { margin-top: 6px; color: #444; line-height: 1.45; }
+      .payment-box { margin-top: 18px; padding: 18px; border: 1px solid #111; border-radius: 18px; background: #fff; }
+      .payment-box span { display: block; margin-bottom: 8px; color: #777; font-size: 12px; font-weight: 800; text-transform: uppercase; }
       table { width: 100%; border-collapse: collapse; margin-top: 14px; }
       th { color: #666; font-size: 12px; text-align: left; text-transform: uppercase; }
       th, td { padding: 14px 0; border-bottom: 1px solid #ededed; }
@@ -3776,6 +4192,13 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
     <main>
       <header>
         <div>
+          <div class="brand-row">
+            <img src="data:image/svg+xml,${logoSvg}" alt="Touch Note" />
+            <div>
+              <strong>${escapeHtml(issuer.name || "Touch Note")}</strong>
+              <small>${escapeHtml(documentData.issuerEmail || issuer.email || issuer.handle || "")}</small>
+            </div>
+          </div>
           <span class="badge">${escapeHtml(documentData.documentType || "Cuenta de cobro")}</span>
           <h1>${escapeHtml(documentData.concept || "Servicios contratados")}</h1>
         </div>
@@ -3789,14 +4212,26 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
         <div class="box">
           <span>Emisor</span>
           <strong>${escapeHtml(issuer.name || "Emisor")}</strong>
-          <p>${escapeHtml(issuer.description || issuer.handle || "")}</p>
+          <p>${escapeHtml(documentData.issuerNit ? `NIT/ID: ${documentData.issuerNit}` : issuer.description || issuer.handle || "")}</p>
+          <p>${escapeHtml(documentData.issuerPhone ? `Celular: ${documentData.issuerPhone}` : "")}</p>
+          <p>${escapeHtml(documentData.issuerEmail ? `Correo: ${documentData.issuerEmail}` : "")}</p>
         </div>
         <div class="box">
           <span>Cliente</span>
           <strong>${escapeHtml(client.name || "Cliente")}</strong>
-          <p>${escapeHtml(client.email || client.contact || "")}</p>
+          <p>${escapeHtml(documentData.clientNit ? `NIT/ID: ${documentData.clientNit}` : client.contact || "")}</p>
+          <p>${escapeHtml(documentData.clientPhone ? `Celular: ${documentData.clientPhone}` : "")}</p>
+          <p>${escapeHtml(documentData.clientEmail || client.email ? `Correo: ${documentData.clientEmail || client.email}` : "")}</p>
         </div>
       </section>
+      ${documentData.paymentBank || documentData.paymentAccountNumber ? `
+        <section class="payment-box">
+          <span>Datos para pago</span>
+          <strong>${escapeHtml(documentData.paymentBank || "Entidad de pago")}</strong>
+          <p>${escapeHtml(documentData.paymentAccountType || "Cuenta")} ${escapeHtml(documentData.paymentAccountNumber || "")}</p>
+          <p>Titular: ${escapeHtml(documentData.paymentAccountHolder || issuer.name || "")}</p>
+        </section>
+      ` : ""}
       <h2>Detalle</h2>
       <table>
         <thead><tr><th>Servicio</th><th>Cant.</th><th>Valor</th><th>Total</th></tr></thead>
@@ -3868,7 +4303,10 @@ function updateBillingLine(index, field, value) {
 async function documentAction(action) {
   const subtotal = billingDraftSubtotal();
   const client = clients.find((item) => item.id === billingDraft.clientId);
-  const message = `${billingDraft.documentType} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
+  const documentData = currentBillingDocument();
+  const documentNumber = billingDocumentNumber(documentData);
+  const documentType = documentData?.documentType || billingDraft.documentType;
+  const message = `${documentType} ${documentNumber} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
   if (action === "pdf") {
     openBillingPdf();
     return;
@@ -3881,12 +4319,11 @@ async function documentAction(action) {
     const lines = billingDraft.lines
       .map((line) => `${serviceById(line.serviceId).name} x${line.quantity || 1}: ${formatMoney(Number(line.price || 0) * Number(line.quantity || 1), "COP")}`)
       .join("\n");
-    navigator.clipboard?.writeText(`${message}\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, "COP")}`);
+    navigator.clipboard?.writeText(`${message}\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, "COP")}\nPago: ${billingDraft.paymentBank || "Banco por definir"} · ${billingDraft.paymentAccountType || "Cuenta"} ${billingDraft.paymentAccountNumber || ""}`);
     showToast("Resumen del documento copiado.");
     return;
   }
   if (action === "email") {
-    const documentData = currentBillingDocument();
     const html = billingDocumentHtml(documentData);
     const emailSubject = `${message}`;
     const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\nTotal: ${formatMoney(subtotal, "COP")}`;
@@ -3930,9 +4367,15 @@ async function documentAction(action) {
     renderClientBillingPanel();
     return;
   }
-  const whatsappText = encodeURIComponent(`Hola ${client?.name || ""}, te comparto ${message}.`);
+  downloadBillingDocumentHtml(documentData);
+  const whatsappText = encodeURIComponent(
+    `Buen dia ${client?.contact || client?.name || ""}, te comparto ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
+      subtotal,
+      "COP"
+    )}.\n\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\n\nQuedo atento.`
+  );
   window.open(`https://wa.me/?text=${whatsappText}`, "_blank", "noopener,noreferrer");
-  showToast(`WhatsApp preparado: ${message}`);
+  showToast(`WhatsApp preparado. Adjunta el documento descargado: ${documentNumber}.`);
 }
 
 function updateClientProfile(clientId, field, value) {
@@ -4282,7 +4725,7 @@ function setView(viewName, options = {}) {
   }
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
-  mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "automations", "accounts"].includes(targetView));
+  mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "automations", "accounts", "settings"].includes(targetView));
   sidebar?.classList.remove("more-open");
   mobileMoreButton?.setAttribute("aria-expanded", "false");
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
@@ -8166,6 +8609,7 @@ function refreshCompanyContext() {
   syncSelectedPlatformsWithCompany();
   renderAccounts();
   renderClientBillingPanel();
+  renderSettingsPanel();
   renderDashboard();
   renderQueue();
   renderCalendar();
@@ -9873,6 +10317,57 @@ billingPanel.addEventListener("click", (event) => {
   }
 });
 
+settingsPanel?.addEventListener("click", (event) => {
+  const openButton = event.target.closest("[data-settings-open]");
+  if (!openButton) return;
+  const target = openButton.dataset.settingsOpen;
+  if (target === "clients") renderClientBillingPanel();
+  if (target === "companies") renderCompanies();
+  if (target === "accounts") renderAccounts();
+  setView(target);
+});
+
+settingsPanel?.addEventListener("input", (event) => {
+  const companyField = event.target.closest("[data-settings-company-field]");
+  if (companyField) {
+    const field = companyField.dataset.settingsCompanyField;
+    companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: companyField.value } : company));
+    activeCompanyName.textContent = activeCompany().name;
+    persistState();
+    renderCompanies();
+    renderDashboard();
+    updatePreview();
+    return;
+  }
+
+  const billingField = event.target.closest("[data-settings-billing-field]");
+  if (!billingField) return;
+  const field = billingField.dataset.settingsBillingField;
+  billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+  if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
+  if (["nextNumber", "numberPrefix", "documentType"].includes(field)) billingDraft.currentNumber = "";
+  persistState();
+});
+
+settingsPanel?.addEventListener("change", (event) => {
+  const companyField = event.target.closest("[data-settings-company-field]");
+  if (companyField) {
+    renderSettingsPanel();
+    refreshCompanyContext();
+    return;
+  }
+
+  const billingField = event.target.closest("[data-settings-billing-field]");
+  if (!billingField) return;
+  const field = billingField.dataset.settingsBillingField;
+  billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+  if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
+  if (["nextNumber", "numberPrefix", "documentType"].includes(field)) billingDraft.currentNumber = "";
+  persistState();
+  renderSettingsPanel();
+  renderClientBillingPanel();
+});
+
 clientBillingPanel.addEventListener("click", (event) => {
   const invoiceButton = event.target.closest("[data-client-invoice]");
   if (invoiceButton) {
@@ -10109,9 +10604,12 @@ clientWorkspacePanel.addEventListener("input", (event) => {
 
   const billingField = event.target.closest("[data-billing-field]");
   if (billingField) {
-    billingDraft[billingField.dataset.billingField] = billingField.value;
+    const field = billingField.dataset.billingField;
+    billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
     persistState();
-    if (["documentType", "issuerCompanyId", "clientId"].includes(billingField.dataset.billingField)) {
+    if (["documentType", "issuerCompanyId", "clientId", "nextNumber", "numberPrefix"].includes(field)) {
+      if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
+      if (field === "nextNumber" || field === "numberPrefix" || field === "documentType") billingDraft.currentNumber = "";
       renderClientBillingPanel();
     }
     return;
@@ -10133,7 +10631,10 @@ clientWorkspacePanel.addEventListener("change", (event) => {
 
   const billingField = event.target.closest("[data-billing-field]");
   if (billingField) {
-    billingDraft[billingField.dataset.billingField] = billingField.value;
+    const field = billingField.dataset.billingField;
+    billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+    if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
+    if (field === "nextNumber" || field === "numberPrefix" || field === "documentType") billingDraft.currentNumber = "";
     persistState();
     renderClientBillingPanel();
     return;
@@ -10634,6 +11135,7 @@ async function init() {
   renderCompanies();
   renderMediaLocation();
   renderVideoLibrary();
+  renderSettingsPanel();
   videoSourceInput.value = selectedVideo()?.source || "";
   postDateInput.value = postDateInput.value || todayISO();
   postTimeInput.value = postTimeInput.value || "09:00";
