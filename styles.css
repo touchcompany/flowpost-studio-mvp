@@ -1803,8 +1803,12 @@ button {
 }
 
 .icon-button {
+  display: inline-grid;
+  place-items: center;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  padding: 0;
   border: 0;
   border-radius: 8px;
   background: var(--accent);
@@ -6783,6 +6787,8 @@ body {
 
 .nav-icon svg,
 .icon-button svg,
+.panel-toggle svg,
+.queue-mini svg,
 .icon-text-button svg,
 .source-badge svg,
 .queue-actions svg,
@@ -6791,6 +6797,20 @@ body {
   height: 18px;
   stroke: currentColor;
   stroke-width: 1.65;
+}
+
+.panel-toggle,
+.queue-mini,
+.nav-icon,
+.status-icon,
+.dashboard-icon,
+.agency-service-icon,
+.store-service-icon,
+.source-badge,
+.social-icon,
+.provider-mark {
+  display: inline-grid;
+  place-items: center;
 }
 
 .nav-item.active .nav-icon {
