@@ -371,6 +371,17 @@ form?.addEventListener("submit", async (event) => {
       },
     ],
     clients: nextClients,
+    accessMembers: [
+      ...(existingState.accessMembers || []).filter((member) => !(member.companyId === id && member.role === "owner")),
+      {
+        id: `member-${id}-${nextSession.id || session.id || Date.now()}`,
+        companyId: id,
+        email: nextSession.email || session.email || "",
+        role: "owner",
+        status: "Activo",
+        invitedAt: new Date().toISOString(),
+      },
+    ],
     promptLibrary: [...(existingState.promptLibrary || []), ...prompts],
     publications: [...(existingState.publications || []), ...publications],
     jobs: [...(existingState.jobs || []), ...publications.flatMap(jobsForPublication)],

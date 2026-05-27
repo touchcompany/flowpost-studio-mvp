@@ -164,7 +164,7 @@ body.modal-open {
   overflow: hidden;
   color: transparent;
   background: transparent;
-  box-shadow: 0 10px 22px rgba(22, 24, 28, 0.08);
+  box-shadow: none;
 }
 
 .marketing-header nav {
@@ -1596,7 +1596,7 @@ button {
   overflow: hidden;
   background: transparent;
   color: transparent;
-  box-shadow: 0 10px 22px rgba(22, 24, 28, 0.08);
+  box-shadow: none;
 }
 
 .brand-mark img {
@@ -8236,6 +8236,52 @@ input[type="file"] {
 .client-actions .secondary-button:disabled {
   opacity: 0.42;
   cursor: default;
+}
+
+.client-trash-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.client-trash-panel header,
+.client-trash-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.client-trash-panel h3,
+.client-trash-panel p,
+.client-trash-panel strong {
+  margin: 0;
+}
+
+.client-trash-list {
+  display: grid;
+  gap: 8px;
+}
+
+.client-trash-list article {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.client-trash-list article > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.client-trash-list p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .client-workspace {

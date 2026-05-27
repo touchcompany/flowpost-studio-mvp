@@ -412,6 +412,9 @@ function normalizeCompany(payload, existing = {}) {
     voice: payload.voice ?? payload.tone ?? existing.voice ?? "",
     primaryColor: payload.primaryColor || existing.primaryColor || "#0095f6",
     socialNetworks,
+    ownerProfileId: payload.ownerProfileId || existing.ownerProfileId || "",
+    agencyId: payload.agencyId || existing.agencyId || "",
+    onboardingProfile: payload.onboardingProfile || existing.onboardingProfile || null,
     mediaSource: {
       provider: payload.mediaSource?.provider || existing.mediaSource?.provider || "Google Drive",
       folder: payload.mediaSource?.folder || existing.mediaSource?.folder || `/${name}/Videos aprobados`,
@@ -1112,14 +1115,47 @@ function isClientSession(session) {
   return session?.role === "client_user";
 }
 
+function isScopedSession(session) {
+  return Boolean(session?.id) && !sessionIsSuperAdmin(session);
+}
+
 function sessionCompanyAccess(session = {}) {
   return new Set(Array.isArray(session.companyAccess) ? session.companyAccess.filter(Boolean) : []);
 }
 
-function filterStateForSession(state, session) {
-  if (!isClientSession(session)) return state;
+function sessionOwnedCompanyIds(state, session = {}) {
   const allowedCompanyIds = sessionCompanyAccess(session);
-  if (!allowedCompanyIds.size) return { ...state, companies: [], publications: [], jobs: [], clients: [], invoices: [], serviceOrders: [], activityLog: [] };
+  const email = String(session.email || "").trim().toLowerCase();
+  (state.companies || []).forEach((company) => {
+    if (company.ownerProfileId === session.id) allowedCompanyIds.add(company.id);
+  });
+  (state.accessMembers || []).forEach((member) => {
+    if (email && String(member.email || "").trim().toLowerCase() === email) {
+      allowedCompanyIds.add(member.companyId);
+    }
+  });
+  return allowedCompanyIds;
+}
+
+function filterStateForSession(state, session) {
+  if (!isScopedSession(session)) return state;
+  const allowedCompanyIds = sessionOwnedCompanyIds(state, session);
+  if (!allowedCompanyIds.size) {
+    return {
+      ...state,
+      activeCompanyId: "",
+      companies: [],
+      publications: [],
+      jobs: [],
+      clients: [],
+      invoices: [],
+      serviceOrders: [],
+      activityLog: [],
+      promptLibrary: [],
+      accessMembers: [],
+      accessInvites: [],
+    };
+  }
   const companyAllowed = (item) => allowedCompanyIds.has(item.companyId || item.id);
   const companies = (state.companies || []).filter(companyAllowed);
   return {
@@ -1132,42 +1168,79 @@ function filterStateForSession(state, session) {
     invoices: (state.invoices || []).filter(companyAllowed),
     serviceOrders: (state.serviceOrders || []).filter(companyAllowed),
     activityLog: (state.activityLog || []).filter(companyAllowed),
-    accessMembers: [],
-    accessInvites: [],
+    promptLibrary: (state.promptLibrary || []).filter(companyAllowed),
+    characters: (state.characters || []).filter(companyAllowed),
+    creativeAssets: (state.creativeAssets || []).filter(companyAllowed),
+    accessMembers: (state.accessMembers || []).filter(companyAllowed),
+    accessInvites: (state.accessInvites || []).filter(companyAllowed),
   };
 }
 
-function mergeClientScopedRecords(currentState, incomingState, session) {
-  const allowedCompanyIds = sessionCompanyAccess(session);
-  const canWrite = (item) => item?.id && allowedCompanyIds.has(item.companyId);
+async function saveSessionCompanyAccess(session, companyIds) {
+  if (!store.saveSession || !session?.id || !companyIds?.size) return session;
+  const current = sessionCompanyAccess(session);
+  let changed = false;
+  companyIds.forEach((id) => {
+    if (!current.has(id)) {
+      current.add(id);
+      changed = true;
+    }
+  });
+  if (!changed) return session;
+  return store.saveSession(normalizeSession({ ...session, companyAccess: Array.from(current) }));
+}
+
+function mergeScopedRecords(currentState, incomingState, session) {
+  const existingCompanyIds = new Set((currentState.companies || []).map((company) => company.id));
+  const allowedCompanyIds = sessionOwnedCompanyIds(currentState, session);
+  const incomingCompanies = (incomingState.companies || []).filter((company) => {
+    if (allowedCompanyIds.has(company.id)) return true;
+    return !existingCompanyIds.has(company.id) || company.ownerProfileId === session.id;
+  });
+  const writableCompanyIds = new Set([...allowedCompanyIds, ...incomingCompanies.map((company) => company.id)]);
+  const canWrite = (item) => item?.id && writableCompanyIds.has(item.companyId || item.id);
+  const replaceScoped = (current = [], incoming = []) => [...current.filter((item) => !writableCompanyIds.has(item.companyId || item.id)), ...incoming.filter(canWrite)];
+  const nextCompanies = [
+    ...(currentState.companies || []).filter((company) => !writableCompanyIds.has(company.id)),
+    ...incomingCompanies.map((company) => ({ ...company, ownerProfileId: company.ownerProfileId || session.id })),
+  ];
+  const ownerMembers = incomingCompanies.map((company) => ({
+    id: `member-${company.id}-${session.id}`,
+    companyId: company.id,
+    email: session.email || "",
+    role: "owner",
+    status: "Activo",
+    invitedAt: new Date().toISOString(),
+  }));
   const mergeById = (current = [], incoming = []) => {
     const currentIds = new Set(current.map((item) => item.id));
     const additions = incoming.filter((item) => canWrite(item) && !currentIds.has(item.id));
     return [...additions, ...current];
   };
-  const incomingPublications = new Map((incomingState.publications || []).filter(canWrite).map((item) => [item.id, item]));
-  const publications = (currentState.publications || []).map((publication) => {
-    const incoming = incomingPublications.get(publication.id);
-    if (!incoming) return publication;
-    return {
-      ...publication,
-      status: ["Aprobado", "En revisión"].includes(incoming.status) ? incoming.status : publication.status,
-      review: incoming.review || publication.review || null,
-    };
-  });
+  const publications = replaceScoped(currentState.publications || [], incomingState.publications || []);
   const statusByPublication = new Map(publications.map((publication) => [publication.id, publication.status]));
   return {
     ...currentState,
-    activeCompanyId: allowedCompanyIds.has(incomingState.activeCompanyId) ? incomingState.activeCompanyId : currentState.activeCompanyId,
+    activeCompanyId: writableCompanyIds.has(incomingState.activeCompanyId) ? incomingState.activeCompanyId : currentState.activeCompanyId,
+    companies: nextCompanies,
     publications,
-    jobs: (currentState.jobs || []).map((job) =>
-      allowedCompanyIds.has(job.companyId) && statusByPublication.has(job.publicationId)
-        ? { ...job, status: statusByPublication.get(job.publicationId) }
-        : job
+    jobs: replaceScoped(currentState.jobs || [], incomingState.jobs || []).map((job) =>
+      writableCompanyIds.has(job.companyId) && statusByPublication.has(job.publicationId) ? { ...job, status: statusByPublication.get(job.publicationId) } : job
     ),
-    serviceOrders: mergeById(currentState.serviceOrders || [], incomingState.serviceOrders || []),
-    invoices: mergeById(currentState.invoices || [], incomingState.invoices || []),
+    clients: replaceScoped(currentState.clients || [], incomingState.clients || []),
+    invoices: replaceScoped(currentState.invoices || [], incomingState.invoices || []),
+    serviceOrders: replaceScoped(currentState.serviceOrders || [], incomingState.serviceOrders || []),
+    promptLibrary: replaceScoped(currentState.promptLibrary || [], incomingState.promptLibrary || []),
+    characters: replaceScoped(currentState.characters || [], incomingState.characters || []),
+    creativeAssets: replaceScoped(currentState.creativeAssets || [], incomingState.creativeAssets || []),
+    accessMembers: replaceScoped(currentState.accessMembers || [], [...(incomingState.accessMembers || []), ...ownerMembers]),
+    accessInvites: replaceScoped(currentState.accessInvites || [], incomingState.accessInvites || []),
     activityLog: mergeById(currentState.activityLog || [], incomingState.activityLog || []),
+    agencies: mergeById(currentState.agencies || [], incomingState.agencies || []),
+    agencyServices: mergeById(currentState.agencyServices || [], incomingState.agencyServices || []),
+    selectedAiProvider: incomingState.selectedAiProvider || currentState.selectedAiProvider,
+    billingDraft: incomingState.billingDraft || currentState.billingDraft,
+    _newCompanyAccess: writableCompanyIds,
   };
 }
 
@@ -3267,6 +3340,32 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/billing/send-document") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const payload = await readBody(req);
+    const to = String(payload.to || "").trim();
+    if (!to || !to.includes("@")) {
+      sendError(res, 400, "email is required");
+      return;
+    }
+    const setup = mailDeliveryStatus();
+    if (!setup.ready) {
+      sendJson(res, 501, { ok: false, ...setup, message: `SMTP pendiente: ${setup.missing.join(", ")}` });
+      return;
+    }
+    try {
+      const subject = String(payload.subject || "Documento de cobro Touch Note").slice(0, 160);
+      const html = String(payload.html || "").slice(0, 120000);
+      const text = String(payload.text || "Te compartimos tu documento de cobro.").slice(0, 5000);
+      const result = await sendSmtpEmail({ to, subject, text, html });
+      sendJson(res, 200, { ok: Boolean(result.ok), to, result });
+    } catch (error) {
+      sendJson(res, 502, { ok: false, to, message: error.message });
+    }
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/services/provisioning/status") {
     sendJson(res, 200, {
       cpanel: { ...cpanelSetup(), plans: cpanelPlanConfig() },
@@ -3812,10 +3911,12 @@ async function handleApi(req, res, url) {
       sendError(res, 400, validationError);
       return;
     }
-    if (isClientSession(session)) {
+    if (isScopedSession(session)) {
       const currentState = await store.getState();
-      const nextState = mergeClientScopedRecords(currentState, payload, session);
-      sendJson(res, 200, filterStateForSession(await store.saveState(nextState), session));
+      const nextState = mergeScopedRecords(currentState, payload, session);
+      const updatedSession = await saveSessionCompanyAccess(session, nextState._newCompanyAccess);
+      delete nextState._newCompanyAccess;
+      sendJson(res, 200, filterStateForSession(await store.saveState(nextState), updatedSession || session));
       return;
     }
     sendJson(res, 200, await store.saveState(payload));
@@ -3835,7 +3936,16 @@ async function handleApi(req, res, url) {
       sendJson(res, 200, []);
       return;
     }
-    sendJson(res, 200, await store.listDeletedCompanies());
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const deletedCompanies = await store.listDeletedCompanies();
+    if (!isScopedSession(session)) {
+      sendJson(res, 200, deletedCompanies);
+      return;
+    }
+    const state = await store.getState();
+    const allowedCompanyIds = sessionOwnedCompanyIds({ ...state, companies: [...(state.companies || []), ...deletedCompanies] }, session);
+    sendJson(res, 200, deletedCompanies.filter((company) => allowedCompanyIds.has(company.id)));
     return;
   }
 
@@ -3907,7 +4017,9 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/publications") {
-    const db = await store.getState();
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const db = filterStateForSession(await store.getState(), session);
     const companyId = url.searchParams.get("companyId");
     const rows = companyId ? db.publications.filter((item) => item.companyId === companyId) : db.publications;
     sendJson(res, 200, rows);
@@ -3915,7 +4027,9 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/publications") {
-    const db = await store.getState();
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const db = filterStateForSession(await store.getState(), session);
     const payload = await readBody(req);
     const publication = normalizePublication(payload);
     if (!publication.companyId) {
@@ -3934,7 +4048,14 @@ async function handleApi(req, res, url) {
     const publicationJobs = jobsForPublication(publication);
     db.publications = [publication, ...(db.publications || []).filter((item) => item.id !== publication.id)];
     db.jobs = [...publicationJobs, ...(db.jobs || []).filter((job) => job.publicationId !== publication.id)];
-    await store.saveState(db);
+    if (isScopedSession(session)) {
+      const currentState = await store.getState();
+      const nextState = mergeScopedRecords(currentState, db, session);
+      delete nextState._newCompanyAccess;
+      await store.saveState(nextState);
+    } else {
+      await store.saveState(db);
+    }
     sendJson(res, 201, { publication, jobs: publicationJobs });
     return;
   }
@@ -3998,7 +4119,9 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/media/files") {
-    const db = await store.getState();
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const db = filterStateForSession(await store.getState(), session);
     const companyId = url.searchParams.get("companyId") || db.activeCompanyId;
     const company = db.companies.find((item) => item.id === companyId) || db.companies[0] || {};
     const provider = url.searchParams.get("provider") || company.mediaSource?.provider || "Google Drive";
@@ -4017,15 +4140,31 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/companies") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
     const db = await store.getState();
     const payload = await readBody(req);
     if (!payload.name) {
       sendError(res, 400, "name is required");
       return;
     }
-    const company = normalizeCompany(payload);
+    const company = normalizeCompany({ ...payload, ownerProfileId: payload.ownerProfileId || session?.id || "" });
     db.companies.push(company);
     db.activeCompanyId = company.id;
+    if (isScopedSession(session)) {
+      db.accessMembers = [
+        ...(db.accessMembers || []).filter((member) => !(member.companyId === company.id && member.role === "owner")),
+        {
+          id: `member-${company.id}-${session.id}`,
+          companyId: company.id,
+          email: session.email || "",
+          role: "owner",
+          status: "Activo",
+          invitedAt: new Date().toISOString(),
+        },
+      ];
+      await saveSessionCompanyAccess(session, new Set([company.id]));
+    }
     await store.saveState(db);
     sendJson(res, 201, company);
     return;
@@ -4037,11 +4176,25 @@ async function handleApi(req, res, url) {
         sendError(res, 501, "restore unavailable");
         return;
       }
+      const session = await requireAppSession(req, res);
+      if (store.provider === "supabase" && !session?.id) return;
+      if (isScopedSession(session)) {
+        const deletedCompanies = store.listDeletedCompanies ? await store.listDeletedCompanies() : [];
+        const state = await store.getState();
+        const allowedCompanyIds = sessionOwnedCompanyIds({ ...state, companies: [...(state.companies || []), ...deletedCompanies] }, session);
+        if (!allowedCompanyIds.has(parts[2])) {
+          sendError(res, 403, "company restore forbidden");
+          return;
+        }
+      }
       sendJson(res, 200, await store.restoreCompany(parts[2]));
       return;
     }
 
-    const db = await store.getState();
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const fullDb = await store.getState();
+    const db = filterStateForSession(fullDb, session);
     const companyIndex = db.companies.findIndex((item) => item.id === parts[2]);
     const company = db.companies[companyIndex];
     if (!company) {
@@ -4058,7 +4211,13 @@ async function handleApi(req, res, url) {
       const payload = await readBody(req);
       const nextCompany = normalizeCompany(payload, company);
       db.companies[companyIndex] = nextCompany;
-      await store.saveState(db);
+      if (isScopedSession(session)) {
+        const nextState = mergeScopedRecords(fullDb, db, session);
+        delete nextState._newCompanyAccess;
+        await store.saveState(nextState);
+      } else {
+        await store.saveState(db);
+      }
       sendJson(res, 200, nextCompany);
       return;
     }
@@ -4072,7 +4231,13 @@ async function handleApi(req, res, url) {
       db.publications = (db.publications || []).filter((item) => item.companyId !== company.id);
       db.jobs = (db.jobs || []).filter((job) => job.companyId !== company.id);
       db.activeCompanyId = db.activeCompanyId === company.id ? db.companies[0]?.id || "" : db.activeCompanyId;
-      await store.saveState(db);
+      if (isScopedSession(session)) {
+        const nextState = mergeScopedRecords(fullDb, db, session);
+        delete nextState._newCompanyAccess;
+        await store.saveState(nextState);
+      } else {
+        await store.saveState(db);
+      }
       sendJson(res, 200, { deleted: true, id: company.id, activeCompanyId: db.activeCompanyId });
       return;
     }
@@ -4084,7 +4249,13 @@ async function handleApi(req, res, url) {
         folder: payload.folder || company.mediaSource.folder,
         connected: true,
       };
-      await store.saveState(db);
+      if (isScopedSession(session)) {
+        const nextState = mergeScopedRecords(fullDb, db, session);
+        delete nextState._newCompanyAccess;
+        await store.saveState(nextState);
+      } else {
+        await store.saveState(db);
+      }
       sendJson(res, 200, company.mediaSource);
       return;
     }
@@ -4105,14 +4276,23 @@ async function handleApi(req, res, url) {
         tone: payload.tone || "mint",
       };
       company.videos.push(video);
-      await store.saveState(db);
+      if (isScopedSession(session)) {
+        const nextState = mergeScopedRecords(fullDb, db, session);
+        delete nextState._newCompanyAccess;
+        await store.saveState(nextState);
+      } else {
+        await store.saveState(db);
+      }
       sendJson(res, 201, video);
       return;
     }
   }
 
   if (parts[0] === "api" && parts[1] === "publications" && parts[2]) {
-    const db = await store.getState();
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const fullDb = await store.getState();
+    const db = filterStateForSession(fullDb, session);
     const publicationIndex = (db.publications || []).findIndex((item) => item.id === parts[2]);
     const publication = db.publications?.[publicationIndex];
     if (!publication) {
@@ -4131,7 +4311,13 @@ async function handleApi(req, res, url) {
       const publicationJobs = jobsForPublication(nextPublication);
       db.publications[publicationIndex] = nextPublication;
       db.jobs = [...publicationJobs, ...(db.jobs || []).filter((job) => job.publicationId !== nextPublication.id)];
-      await store.saveState(db);
+      if (isScopedSession(session)) {
+        const nextState = mergeScopedRecords(fullDb, db, session);
+        delete nextState._newCompanyAccess;
+        await store.saveState(nextState);
+      } else {
+        await store.saveState(db);
+      }
       sendJson(res, 200, { publication: nextPublication, jobs: publicationJobs });
       return;
     }
@@ -4139,14 +4325,23 @@ async function handleApi(req, res, url) {
     if (req.method === "DELETE") {
       db.publications = (db.publications || []).filter((item) => item.id !== publication.id);
       db.jobs = (db.jobs || []).filter((job) => job.publicationId !== publication.id);
-      await store.saveState(db);
+      if (isScopedSession(session)) {
+        const nextState = mergeScopedRecords(fullDb, db, session);
+        delete nextState._newCompanyAccess;
+        await store.saveState(nextState);
+      } else {
+        await store.saveState(db);
+      }
       sendJson(res, 200, { deleted: true, id: publication.id });
       return;
     }
   }
 
   if (req.method === "POST" && url.pathname === "/api/posts") {
-    const db = await store.getState();
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const fullDb = await store.getState();
+    const db = filterStateForSession(fullDb, session);
     const payload = await readBody(req);
     if (!payload.companyId || !Array.isArray(payload.platforms)) {
       sendError(res, 400, "companyId and platforms are required");
@@ -4164,7 +4359,13 @@ async function handleApi(req, res, url) {
       time: payload.time || "Ahora",
     }));
     db.jobs = [...created, ...db.jobs];
-    await store.saveState(db);
+    if (isScopedSession(session)) {
+      const nextState = mergeScopedRecords(fullDb, db, session);
+      delete nextState._newCompanyAccess;
+      await store.saveState(nextState);
+    } else {
+      await store.saveState(db);
+    }
     sendJson(res, 201, created);
     return;
   }

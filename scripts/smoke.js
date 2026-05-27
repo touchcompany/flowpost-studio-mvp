@@ -170,6 +170,16 @@ async function run() {
     const mailStatus = await getJson("/api/mail/status");
     assert.equal(mailStatus.provider, "smtp", "mail status should report smtp provider");
 
+    await putJson("/api/session", {
+      id: "smoke-admin",
+      name: "Smoke Admin",
+      email: "smoke-admin@example.com",
+      provider: "test",
+      plan: "agency",
+      role: "super_admin",
+      status: "active",
+    });
+
     const state = await getJson("/api/state");
     assert.ok(Array.isArray(state.companies), "state.companies should be an array");
     assert.ok(Array.isArray(state.jobs), "state.jobs should be an array");

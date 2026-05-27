@@ -1772,7 +1772,12 @@ function activeAgency() {
 
 function activeAgencyClients() {
   ensureAgencyClients();
-  return clients.filter((client) => client.agencyId === activeAgencyId && companies.some((company) => company.id === client.companyId));
+  return clients.filter((client) => !client.deletedAt && client.agencyId === activeAgencyId && companies.some((company) => company.id === client.companyId));
+}
+
+function deletedAgencyClients() {
+  ensureAgencyClients();
+  return clients.filter((client) => client.deletedAt && client.agencyId === activeAgencyId);
 }
 
 function activeAgencyServices() {
@@ -2393,6 +2398,41 @@ function renderClientSwitcher(activeClients, pendingInvoices) {
   `;
 }
 
+function renderDeletedClientsPanel() {
+  const deletedClients = deletedAgencyClients();
+  if (!deletedClients.length) return "";
+  return `
+    <section class="client-trash-panel">
+      <header>
+        <div>
+          <span class="workspace-label">Papelera</span>
+          <h3>Clientes eliminados</h3>
+        </div>
+        <strong>${deletedClients.length}</strong>
+      </header>
+      <div class="client-trash-list">
+        ${deletedClients
+          .map(
+            (client) => `
+              <article>
+                <span class="status-icon small"><i data-lucide="archive-restore"></i></span>
+                <div>
+                  <strong>${escapeHtml(client.name)}</strong>
+                  <p>Recuperable hasta ${escapeHtml(shortDateLabel((client.deletionExpiresAt || "").slice(0, 10)) || "30 dias")}</p>
+                </div>
+                <button class="secondary-button icon-text-button" type="button" data-client-restore="${escapeHtml(client.id)}">
+                  <i data-lucide="rotate-ccw"></i>
+                  Recuperar
+                </button>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderClientBillingPanel() {
   ensureAgencyClients();
   ensureServiceOrderAutomations();
@@ -2446,6 +2486,9 @@ function renderClientBillingPanel() {
                 <button class="secondary-button icon-text-button" type="button" data-client-copy="${client.id}">
                   <i data-lucide="copy"></i>
                   Copiar resumen
+                </button>
+                <button class="secondary-button icon-button compact danger" type="button" data-client-delete="${client.id}" aria-label="Eliminar cliente">
+                  <i data-lucide="trash-2"></i>
                 </button>
               </div>
             </article>
@@ -2656,12 +2699,16 @@ function renderClientBillingPanel() {
                       <i data-lucide="folder-open"></i>
                       Abrir cuenta
                     </button>
+                    <button class="secondary-button icon-button compact danger" type="button" data-client-delete="${client.id}" aria-label="Eliminar cliente">
+                      <i data-lucide="trash-2"></i>
+                    </button>
                   </div>
                 </article>
               `;
             })
             .join("")}
         </div>
+        ${renderDeletedClientsPanel()}
       </section>
     `;
   }
@@ -3806,7 +3853,7 @@ function updateBillingLine(index, field, value) {
   renderClientBillingPanel();
 }
 
-function documentAction(action) {
+async function documentAction(action) {
   const subtotal = billingDraftSubtotal();
   const client = clients.find((item) => item.id === billingDraft.clientId);
   const message = `${billingDraft.documentType} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
@@ -3827,6 +3874,26 @@ function documentAction(action) {
     return;
   }
   if (action === "email") {
+    const html = billingDocumentHtml();
+    const emailSubject = `${message}`;
+    const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\nTotal: ${formatMoney(subtotal, "COP")}`;
+    if (window.location.protocol !== "file:" && client?.email) {
+      try {
+        const response = await fetch("/api/billing/send-document", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ to: client.email, subject: emailSubject, text, html }),
+        });
+        const result = await response.json();
+        if (response.ok && result.ok) {
+          showToast(`Documento enviado a ${client.email}.`);
+          return;
+        }
+        showToast(result.message || "SMTP no esta listo. Se abre correo manual.");
+      } catch {
+        showToast("No se pudo enviar por servidor. Se abre correo manual.");
+      }
+    }
     const subject = encodeURIComponent(message);
     const body = encodeURIComponent(`Hola ${client?.contact || client?.name || ""},\n\nTe comparto ${message}.\n\nPuedes guardar el PDF desde la vista del documento en Touch Note.\n\nGracias.`);
     window.location.href = `mailto:${client?.email || ""}?subject=${subject}&body=${body}`;
@@ -3856,6 +3923,50 @@ function updateClientProfile(clientId, field, value) {
   );
   persistState();
   renderDashboard();
+}
+
+function deleteClientAccount(clientId) {
+  const client = clients.find((item) => item.id === clientId);
+  if (!client) return;
+  const deletedAt = new Date();
+  const deletionExpiresAt = new Date(deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  clients = clients.map((item) =>
+    item.id === clientId
+      ? {
+          ...item,
+          deletedAt: deletedAt.toISOString(),
+          deletionExpiresAt: deletionExpiresAt.toISOString(),
+          status: "Eliminado",
+        }
+      : item
+  );
+  if (billingDraft.clientId === clientId) {
+    billingDraft.clientId = activeAgencyClients()[0]?.id || "";
+  }
+  persistState();
+  renderClientBillingPanel();
+  renderDashboard();
+  showToast(`${client.name} movido a papelera por 30 dias.`);
+}
+
+function restoreClientAccount(clientId) {
+  const client = clients.find((item) => item.id === clientId);
+  if (!client) return;
+  clients = clients.map((item) =>
+    item.id === clientId
+      ? {
+          ...item,
+          deletedAt: "",
+          deletionExpiresAt: "",
+          status: item.status === "Eliminado" ? "Activo" : item.status || "Activo",
+        }
+      : item
+  );
+  billingDraft.clientId = clientId;
+  persistState();
+  renderClientBillingPanel();
+  renderDashboard();
+  showToast(`${client.name} recuperado.`);
 }
 
 function generateClientAiProfile(clientId) {
@@ -9754,6 +9865,13 @@ clientBillingPanel.addEventListener("click", (event) => {
   const copyButton = event.target.closest("[data-client-copy]");
   if (copyButton) {
     copyClientBillingSummary(copyButton.dataset.clientCopy);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-client-delete]");
+  if (deleteButton) {
+    deleteClientAccount(deleteButton.dataset.clientDelete);
+    return;
   }
 });
 
@@ -9934,6 +10052,18 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     renderStorePanel();
     setView("store");
     showToast("Tienda abierta para este cliente.");
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-client-delete]");
+  if (deleteButton) {
+    deleteClientAccount(deleteButton.dataset.clientDelete);
+    return;
+  }
+
+  const restoreButton = event.target.closest("[data-client-restore]");
+  if (restoreButton) {
+    restoreClientAccount(restoreButton.dataset.clientRestore);
   }
 });
 
