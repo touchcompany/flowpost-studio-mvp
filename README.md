@@ -38,6 +38,8 @@ Si SMTP no esta configurado, la app no se rompe: muestra un enlace temporal manu
 
 Tambien puedes revisar SMTP en `/api/mail/status` y enviar una prueba con `POST /api/mail/test` estando logueado como super admin.
 
+Las cuentas de cobro y facturas pueden enviarse desde la app con `POST /api/billing/send-document`. El backend valida la sesion y bloquea documentos de clientes o empresas que no pertenezcan a esa cuenta. Si SMTP no esta listo, la interfaz cae a correo manual (`mailto`) para que el flujo no se rompa.
+
 ## Siguiente capa tecnica
 
 1. Mantener `DATA_PROVIDER=supabase` en produccion.
@@ -222,7 +224,7 @@ Para pruebas internas puedes activar acceso total de dos formas:
 
 El estado se puede revisar en `/api/auth/status`, en la tarjeta `Super admin`, sin exponer las credenciales.
 
-La base multiusuario ya esta preparada con `company_members`: cada empresa puede tener propietario, administrador, editor, aprobador, cliente invitado o facturacion. En esta fase se registran permisos y accesos; el siguiente paso es conectar Supabase Auth para enviar invitaciones reales por email y aplicar RLS por usuario autenticado.
+La base multiusuario ya esta preparada con `company_members`: cada empresa puede tener propietario, administrador, editor, aprobador, cliente invitado o facturacion. Toda sesion que no sea super admin queda filtrada por sus empresas asignadas; no debe ver clientes, cobros, guiones, recursos ni actividad de otras cuentas. Los clientes eliminados se mandan a papelera con ventana de recuperacion antes de borrado definitivo.
 
 La biblioteca de prompts guarda plantillas por empresa y por tipo (`guion`, `imagen`, `video`) en `prompt_templates`. Si tu base fue creada antes de esta funcion, ejecuta [supabase/prompt-templates.sql](./supabase/prompt-templates.sql) en Supabase SQL Editor.
 
