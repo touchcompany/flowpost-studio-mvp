@@ -60,6 +60,10 @@
             <span class="nav-icon"><i data-lucide="store"></i></span>
             Tienda
           </a>
+          <a class="nav-item" href="#finances" data-view-link="finances">
+            <span class="nav-icon"><i data-lucide="wallet-cards"></i></span>
+            Cuentas
+          </a>
           <button class="nav-item mobile-more-button" id="mobileMoreButton" type="button" aria-expanded="false" aria-controls="mobileMoreMenu">
             <span class="nav-icon"><i data-lucide="user-round"></i></span>
             Tú
@@ -70,7 +74,7 @@
           </a>
           <a class="nav-item" href="#accounts" data-view-link="accounts">
             <span class="nav-icon"><i data-lucide="badge-check"></i></span>
-            Cuentas
+            Conexiones
           </a>
           <a class="nav-item" href="#settings" data-view-link="settings">
             <span class="nav-icon"><i data-lucide="settings-2"></i></span>
@@ -95,13 +99,17 @@
             <span class="nav-icon"><i data-lucide="store"></i></span>
             Tienda
           </a>
+          <a class="mobile-more-item" href="#finances" data-view-link="finances">
+            <span class="nav-icon"><i data-lucide="wallet-cards"></i></span>
+            Cuentas
+          </a>
           <a class="mobile-more-item" href="#automations" data-view-link="automations">
             <span class="nav-icon"><i data-lucide="bolt"></i></span>
             Automatizaciones
           </a>
           <a class="mobile-more-item" href="#accounts" data-view-link="accounts">
             <span class="nav-icon"><i data-lucide="badge-check"></i></span>
-            Cuentas
+            Conexiones
           </a>
           <a class="mobile-more-item" href="#settings" data-view-link="settings">
             <span class="nav-icon"><i data-lucide="settings-2"></i></span>
@@ -678,9 +686,17 @@
           <div id="automationCenterPanel"></div>
         </section>
 
-        <section class="view" id="accounts" data-view="accounts" aria-label="Cuentas conectadas">
+        <section class="view" id="finances" data-view="finances" aria-label="Cuentas, pagos y proveedores">
           <div class="section-heading">
             <h2>Cuentas</h2>
+            <p>Cuentas de cobro, facturas, pagos, ingresos, egresos y proveedores por empresa.</p>
+          </div>
+          <div id="financePanel"></div>
+        </section>
+
+        <section class="view" id="accounts" data-view="accounts" aria-label="Cuentas conectadas">
+          <div class="section-heading">
+            <h2>Conexiones</h2>
             <p>Conexiones OAuth que despues se enlazan con Meta y TikTok.</p>
           </div>
           <section class="plan-panel" id="planPanel" aria-label="Cuenta y plan"></section>

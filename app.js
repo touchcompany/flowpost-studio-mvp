@@ -87,6 +87,7 @@ const clientBillingPanel = document.querySelector("#clientBillingPanel");
 const clientWorkspacePanel = document.querySelector("#clientWorkspacePanel");
 const storePanel = document.querySelector("#storePanel");
 const automationCenterPanel = document.querySelector("#automationCenterPanel");
+const financePanel = document.querySelector("#financePanel");
 const settingsPanel = document.querySelector("#settingsPanel");
 const readinessSummary = document.querySelector("#readinessSummary");
 const readinessGrid = document.querySelector("#readinessGrid");
@@ -754,6 +755,37 @@ const defaultAgencyServices = [
 let agencyServices = [...defaultAgencyServices];
 let serviceOrders = [];
 let activityLog = [];
+let financeTransactions = [
+  {
+    id: "txn-casa-norte-initial",
+    type: "Ingreso",
+    companyId: "casa-norte",
+    clientId: "client-casa-norte",
+    concept: "Pago inicial Plan Pro",
+    amount: 149,
+    currency: "USD",
+    date: new Date().toISOString().slice(0, 10),
+    status: "Confirmado",
+  },
+];
+let monthlyProviders = [
+  {
+    id: "provider-hosting-demo",
+    companyId: "casa-norte",
+    name: "Hosting base",
+    category: "Servidor",
+    amount: 180000,
+    currency: "COP",
+    cycle: "Mensual",
+    nextPaymentDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15).toISOString().slice(0, 10),
+    status: "Activo",
+  },
+];
+let financeFilters = {
+  month: "all",
+  year: String(new Date().getFullYear()),
+  companyId: "all",
+};
 let billingDraft = {
   documentType: "Cuenta de cobro",
   issuerCompanyId: "casa-norte",
@@ -826,6 +858,15 @@ function restoreState() {
     }
     if (Array.isArray(stored.activityLog)) {
       activityLog = stored.activityLog;
+    }
+    if (Array.isArray(stored.financeTransactions)) {
+      financeTransactions = stored.financeTransactions;
+    }
+    if (Array.isArray(stored.monthlyProviders)) {
+      monthlyProviders = stored.monthlyProviders;
+    }
+    if (stored.financeFilters) {
+      financeFilters = { ...financeFilters, ...stored.financeFilters };
     }
     if (stored.billingDraft) {
       billingDraft = { ...billingDraft, ...stored.billingDraft };
@@ -941,6 +982,15 @@ async function hydrateStateFromBackend() {
     if (Array.isArray(state.activityLog)) {
       activityLog = state.activityLog;
     }
+    if (Array.isArray(state.financeTransactions)) {
+      financeTransactions = state.financeTransactions;
+    }
+    if (Array.isArray(state.monthlyProviders)) {
+      monthlyProviders = state.monthlyProviders;
+    }
+    if (state.financeFilters) {
+      financeFilters = { ...financeFilters, ...state.financeFilters };
+    }
     if (state.billingDraft) {
       billingDraft = { ...billingDraft, ...state.billingDraft };
     }
@@ -962,7 +1012,7 @@ function persistState() {
     fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, accessInvites, promptLibrary, selectedAiProvider, invoices, billingDraft, agencyServices, serviceOrders, activityLog }),
+      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, accessInvites, promptLibrary, selectedAiProvider, invoices, billingDraft, agencyServices, serviceOrders, activityLog, financeTransactions, monthlyProviders, financeFilters }),
     }).catch(() => {
       backendEnabled = false;
       updateConnectionStatus();
@@ -992,6 +1042,9 @@ function persistState() {
           agencyServices,
           serviceOrders,
           activityLog,
+          financeTransactions,
+          monthlyProviders,
+          financeFilters,
         })
       );
     } catch {
@@ -1018,6 +1071,9 @@ function currentState() {
     agencyServices,
     serviceOrders,
     activityLog,
+    financeTransactions,
+    monthlyProviders,
+    financeFilters,
     exportedAt: new Date().toISOString(),
     version: 2,
   };
@@ -1279,6 +1335,7 @@ const viewFeatureMap = {
   scripts: "aiScripts",
   clients: "clients",
   store: "store",
+  finances: "clients",
   automations: "apiAdmin",
   accounts: "apiAdmin",
 };
@@ -2857,6 +2914,255 @@ function serviceIcon(service) {
   return "sparkles";
 }
 
+function financeDateMatches(dateValue) {
+  if (!dateValue) return true;
+  const date = new Date(`${String(dateValue).slice(0, 10)}T12:00:00`);
+  const month = String(date.getMonth() + 1);
+  const year = String(date.getFullYear());
+  return (financeFilters.month === "all" || financeFilters.month === month) && (financeFilters.year === "all" || financeFilters.year === year);
+}
+
+function financeCompanyMatches(companyId) {
+  return financeFilters.companyId === "all" || companyId === financeFilters.companyId;
+}
+
+function financeYearOptions() {
+  const years = new Set([String(new Date().getFullYear())]);
+  [...invoices, ...financeTransactions, ...monthlyProviders].forEach((item) => {
+    const value = item.issueDate || item.dueDate || item.date || item.nextPaymentDate;
+    if (value) years.add(String(new Date(`${String(value).slice(0, 10)}T12:00:00`).getFullYear()));
+  });
+  return ["all", ...[...years].sort((a, b) => Number(b) - Number(a))];
+}
+
+function financeFilteredInvoices() {
+  return invoices.filter((invoice) => financeCompanyMatches(invoice.companyId) && financeDateMatches(invoice.issueDate || invoice.dueDate));
+}
+
+function financeFilteredTransactions() {
+  return financeTransactions.filter((transaction) => financeCompanyMatches(transaction.companyId) && financeDateMatches(transaction.date));
+}
+
+function financeFilteredProviders() {
+  return monthlyProviders.filter((provider) => financeCompanyMatches(provider.companyId) && financeDateMatches(provider.nextPaymentDate));
+}
+
+function transactionSignedAmount(transaction) {
+  return transaction.type === "Egreso" ? -Math.abs(Number(transaction.amount || 0)) : Number(transaction.amount || 0);
+}
+
+function renderFinancePanel() {
+  if (!financePanel) return;
+  const visibleCompanies = ensureActiveCompanyAccess();
+  const activeClients = activeAgencyClients();
+  const filteredInvoices = financeFilteredInvoices();
+  const filteredTransactions = financeFilteredTransactions();
+  const filteredProviders = financeFilteredProviders();
+  const income = filteredTransactions.filter((item) => item.type === "Ingreso").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const expenses = filteredTransactions.filter((item) => item.type === "Egreso").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const pending = filteredInvoices.filter((item) => item.status !== "Pagada").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const monthOptions = [
+    ["all", "Todos"],
+    ["1", "Enero"],
+    ["2", "Febrero"],
+    ["3", "Marzo"],
+    ["4", "Abril"],
+    ["5", "Mayo"],
+    ["6", "Junio"],
+    ["7", "Julio"],
+    ["8", "Agosto"],
+    ["9", "Septiembre"],
+    ["10", "Octubre"],
+    ["11", "Noviembre"],
+    ["12", "Diciembre"],
+  ];
+  financePanel.innerHTML = `
+    <section class="finance-shell">
+      <div class="finance-filter-bar">
+        <label>
+          <span>Mes</span>
+          <select data-finance-filter="month">
+            ${monthOptions.map(([value, label]) => `<option value="${value}" ${financeFilters.month === value ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span>Año</span>
+          <select data-finance-filter="year">
+            ${financeYearOptions().map((year) => `<option value="${year}" ${financeFilters.year === year ? "selected" : ""}>${year === "all" ? "Todos" : year}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span>Empresa</span>
+          <select data-finance-filter="companyId">
+            <option value="all" ${financeFilters.companyId === "all" ? "selected" : ""}>Todas</option>
+            ${visibleCompanies.map((company) => `<option value="${company.id}" ${financeFilters.companyId === company.id ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+
+      <div class="finance-metrics">
+        <article><span>Ingresos</span><strong>${formatMoney(income)}</strong></article>
+        <article><span>Egresos</span><strong>${formatMoney(expenses)}</strong></article>
+        <article><span>Pendiente</span><strong>${formatMoney(pending)}</strong></article>
+        <article><span>Balance</span><strong>${formatMoney(income - expenses)}</strong></article>
+      </div>
+
+      <section class="finance-create-card">
+        <header>
+          <span class="status-icon"><i data-lucide="file-plus-2"></i></span>
+          <div>
+            <h3>Crear cuenta o factura</h3>
+            <p>Genera un documento rápido y queda listado por mes, empresa y año.</p>
+          </div>
+        </header>
+        <div class="finance-form-grid">
+          <label class="field compact">
+            <span>Cliente</span>
+            <select data-finance-new="clientId">
+              ${activeClients.map((client) => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Tipo</span>
+            <select data-finance-new="documentType">
+              <option>Cuenta de cobro</option>
+              <option>Factura</option>
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Servicio</span>
+            <select data-finance-new="serviceId">
+              ${activeAgencyServices().map((service) => `<option value="${service.id}">${escapeHtml(service.name)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Valor</span>
+            <input data-finance-new="amount" type="number" min="0" placeholder="350000" />
+          </label>
+          <label class="field compact">
+            <span>Vence</span>
+            <input data-finance-new="dueDate" type="date" value="${escapeHtml(addDaysToDate(todayISO(), 5))}" />
+          </label>
+          <button class="primary-button icon-text-button" type="button" data-finance-create-document>
+            <i data-lucide="plus"></i>
+            Crear
+          </button>
+        </div>
+      </section>
+
+      <div class="finance-grid">
+        <section class="finance-list-card">
+          <header>
+            <div>
+              <h3>Cuentas de cobro y facturas</h3>
+              <p>${filteredInvoices.length} documento${filteredInvoices.length === 1 ? "" : "s"}</p>
+            </div>
+            <button class="secondary-button icon-button compact" type="button" data-finance-open-clients aria-label="Abrir editor de cobros"><i data-lucide="panel-right-open"></i></button>
+          </header>
+          <div class="finance-list">
+            ${
+              filteredInvoices.length
+                ? filteredInvoices
+                    .map((invoice) => {
+                      const client = clients.find((item) => item.id === invoice.clientId);
+                      const company = companies.find((item) => item.id === invoice.companyId);
+                      return `
+                        <article class="finance-row ${invoice.status === "Pagada" ? "is-paid" : ""}">
+                          <span class="finance-avatar"><i data-lucide="${invoice.documentType === "Factura" ? "file-check-2" : "receipt-text"}"></i></span>
+                          <div>
+                            <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
+                            <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
+                          </div>
+                          <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
+                          <span class="pill ${invoice.status === "Pagada" ? "done" : "warning"}">${escapeHtml(invoice.status || "Pendiente")}</span>
+                          <div class="finance-row-actions">
+                            <button class="secondary-button icon-button compact" type="button" data-finance-invoice-paid="${escapeHtml(invoice.clientId)}" aria-label="Marcar pagada"><i data-lucide="check"></i></button>
+                            <button class="secondary-button icon-button compact" type="button" data-finance-whatsapp="${escapeHtml(invoice.id)}" aria-label="Enviar por WhatsApp"><i data-lucide="send"></i></button>
+                          </div>
+                        </article>
+                      `;
+                    })
+                    .join("")
+                : `<div class="empty-state compact"><strong>Sin documentos</strong><p>Crea una cuenta de cobro o cambia los filtros.</p></div>`
+            }
+          </div>
+        </section>
+
+        <section class="finance-list-card">
+          <header>
+            <div>
+              <h3>Transacciones</h3>
+              <p>Ingresos y egresos operativos.</p>
+            </div>
+            <span class="pill muted">${filteredTransactions.length}</span>
+          </header>
+          <div class="finance-list">
+            ${
+              filteredTransactions.length
+                ? filteredTransactions
+                    .map((transaction) => {
+                      const company = companies.find((item) => item.id === transaction.companyId);
+                      const signed = transactionSignedAmount(transaction);
+                      return `
+                        <article class="finance-row compact ${transaction.type === "Egreso" ? "is-expense" : ""}">
+                          <span class="finance-avatar"><i data-lucide="${transaction.type === "Egreso" ? "arrow-down-left" : "arrow-up-right"}"></i></span>
+                          <div>
+                            <strong>${escapeHtml(transaction.concept)}</strong>
+                            <p>${escapeHtml(company?.name || "Empresa")} · ${escapeHtml(shortDateLabel(transaction.date))}</p>
+                          </div>
+                          <strong>${formatMoney(signed, transaction.currency || "COP")}</strong>
+                        </article>
+                      `;
+                    })
+                    .join("")
+                : `<div class="empty-state compact"><strong>Sin movimientos</strong><p>Los pagos confirmados y proveedores pagados aparecerán aquí.</p></div>`
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="finance-list-card">
+        <header>
+          <div>
+            <h3>Proveedores mensuales</h3>
+            <p>Pagos recurrentes que haces a terceros.</p>
+          </div>
+        </header>
+        <div class="finance-form-grid provider-form">
+          <label class="field compact"><span>Nombre</span><input data-provider-new="name" placeholder="Proveedor" /></label>
+          <label class="field compact"><span>Categoría</span><input data-provider-new="category" placeholder="Hosting, Ads, software" /></label>
+          <label class="field compact"><span>Empresa</span><select data-provider-new="companyId">${visibleCompanies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("")}</select></label>
+          <label class="field compact"><span>Valor mensual</span><input data-provider-new="amount" type="number" min="0" placeholder="120000" /></label>
+          <label class="field compact"><span>Próximo pago</span><input data-provider-new="nextPaymentDate" type="date" value="${escapeHtml(addDaysToDate(todayISO(), 30))}" /></label>
+          <button class="secondary-button icon-text-button" type="button" data-provider-create><i data-lucide="plus"></i>Agregar</button>
+        </div>
+        <div class="finance-list provider-list">
+          ${
+            filteredProviders.length
+              ? filteredProviders
+                  .map(
+                    (provider) => `
+                      <article class="finance-row compact">
+                        <span class="finance-avatar"><i data-lucide="landmark"></i></span>
+                        <div>
+                          <strong>${escapeHtml(provider.name)}</strong>
+                          <p>${escapeHtml(provider.category)} · próximo ${escapeHtml(shortDateLabel(provider.nextPaymentDate))}</p>
+                        </div>
+                        <strong>${formatMoney(provider.amount, provider.currency || "COP")}</strong>
+                        <button class="secondary-button icon-button compact" type="button" data-provider-paid="${escapeHtml(provider.id)}" aria-label="Registrar pago"><i data-lucide="check"></i></button>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : `<div class="empty-state compact"><strong>Sin proveedores</strong><p>Agrega pagos mensuales para controlar egresos.</p></div>`
+          }
+        </div>
+      </section>
+    </section>
+  `;
+  renderIcons();
+}
+
 function renderSettingsPanel() {
   if (!settingsPanel) return;
   syncBillingDraftDefaults();
@@ -3850,6 +4156,131 @@ function ensureRecurringBillingDocuments() {
   return created;
 }
 
+function createFinanceDocument() {
+  const clientId = financePanel?.querySelector('[data-finance-new="clientId"]')?.value;
+  const documentType = financePanel?.querySelector('[data-finance-new="documentType"]')?.value || "Cuenta de cobro";
+  const serviceId = financePanel?.querySelector('[data-finance-new="serviceId"]')?.value || "pro";
+  const service = serviceById(serviceId);
+  const client = clients.find((item) => item.id === clientId);
+  if (!client) {
+    showToast("Selecciona un cliente para crear la cuenta.");
+    return;
+  }
+  syncBillingDraftDefaults();
+  billingDraft.documentType = documentType;
+  billingDraft.numberPrefix = documentType === "Factura" ? "FAC" : "CC";
+  billingDraft.currentNumber = "";
+  const amount = Number(financePanel?.querySelector('[data-finance-new="amount"]')?.value || service.price || client.amount || 0);
+  const dueDate = financePanel?.querySelector('[data-finance-new="dueDate"]')?.value || addDaysToDate(todayISO(), 5);
+  const documentNumber = billingDocumentNumberFromDraft();
+  invoices = [
+    {
+      id: `invoice-${client.id}-${Date.now()}`,
+      agencyId: activeAgencyId,
+      clientId: client.id,
+      companyId: client.companyId,
+      issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+      documentType,
+      number: documentNumber,
+      concept: service.name,
+      amount,
+      currency: "COP",
+      status: "Pendiente",
+      issueDate: todayISO(),
+      dueDate,
+      lines: [{ serviceId, quantity: 1, price: amount }],
+      issuerNit: billingDraft.issuerNit,
+      issuerPhone: billingDraft.issuerPhone,
+      issuerEmail: billingDraft.issuerEmail,
+      paymentBank: billingDraft.paymentBank,
+      paymentAccountType: billingDraft.paymentAccountType,
+      paymentAccountNumber: billingDraft.paymentAccountNumber,
+      paymentAccountHolder: billingDraft.paymentAccountHolder,
+      clientNit: client.nit || billingDraft.clientNit,
+      clientPhone: client.phone || billingDraft.clientPhone,
+      clientEmail: client.email || billingDraft.clientEmail,
+    },
+    ...invoices,
+  ];
+  billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+  billingDraft.currentNumber = "";
+  billingDraft.clientId = client.id;
+  billingDraft.lines = [{ serviceId, quantity: 1, price: amount }];
+  billingDraft.description = service.name;
+  billingDraft.dueDate = dueDate;
+  persistState();
+  renderFinancePanel();
+  renderClientBillingPanel();
+  showToast(`${documentType} ${documentNumber} creada.`);
+}
+
+function createMonthlyProvider() {
+  const name = financePanel?.querySelector('[data-provider-new="name"]')?.value.trim();
+  const category = financePanel?.querySelector('[data-provider-new="category"]')?.value.trim() || "Proveedor";
+  const companyId = financePanel?.querySelector('[data-provider-new="companyId"]')?.value || activeCompanyId;
+  const amount = Number(financePanel?.querySelector('[data-provider-new="amount"]')?.value || 0);
+  const nextPaymentDate = financePanel?.querySelector('[data-provider-new="nextPaymentDate"]')?.value || addDaysToDate(todayISO(), 30);
+  if (!name || !amount) {
+    showToast("Agrega nombre y valor mensual del proveedor.");
+    return;
+  }
+  monthlyProviders = [
+    {
+      id: `provider-${slugify(name)}-${Date.now()}`,
+      companyId,
+      name,
+      category,
+      amount,
+      currency: "COP",
+      cycle: "Mensual",
+      nextPaymentDate,
+      status: "Activo",
+    },
+    ...monthlyProviders,
+  ];
+  persistState();
+  renderFinancePanel();
+  showToast("Proveedor mensual agregado.");
+}
+
+function registerProviderPayment(providerId) {
+  const provider = monthlyProviders.find((item) => item.id === providerId);
+  if (!provider) return;
+  financeTransactions = [
+    {
+      id: `txn-provider-${provider.id}-${Date.now()}`,
+      type: "Egreso",
+      companyId: provider.companyId,
+      providerId: provider.id,
+      concept: provider.name,
+      amount: Number(provider.amount || 0),
+      currency: provider.currency || "COP",
+      date: todayISO(),
+      status: "Confirmado",
+    },
+    ...financeTransactions,
+  ];
+  monthlyProviders = monthlyProviders.map((item) => (item.id === provider.id ? { ...item, lastPaidAt: new Date().toISOString(), nextPaymentDate: addDaysToDate(provider.nextPaymentDate || todayISO(), 30) } : item));
+  persistState();
+  renderFinancePanel();
+  showToast("Egreso registrado y próximo pago actualizado.");
+}
+
+function prepareFinanceWhatsapp(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId);
+  if (!invoice) return;
+  const client = clients.find((item) => item.id === invoice.clientId);
+  billingDraft.clientId = invoice.clientId;
+  billingDraft.documentType = invoice.documentType || "Cuenta de cobro";
+  billingDraft.currentNumber = invoice.number || "";
+  billingDraft.description = invoice.concept || "";
+  billingDraft.issueDate = invoice.issueDate || todayISO();
+  billingDraft.dueDate = invoice.dueDate || addDaysToDate(todayISO(), 5);
+  billingDraft.lines = invoice.lines?.length ? invoice.lines : [{ serviceId: client?.serviceId || "pro", quantity: 1, price: invoice.amount || 0 }];
+  persistState();
+  documentAction("whatsapp");
+}
+
 function purchaseServiceForClient(serviceId) {
   const service = serviceById(serviceId);
   const client = isClientPortalSession() ? clientForCompany() : clients.find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
@@ -4566,18 +4997,33 @@ function cancelInvite(inviteId) {
 
 function markClientInvoicePaid(clientId) {
   let changed = false;
+  const paidTransactions = [];
   invoices = invoices.map((invoice) => {
     if (invoice.clientId !== clientId || invoice.status === "Pagada") return invoice;
     changed = true;
+    paidTransactions.push({
+      id: `txn-${invoice.id}-${Date.now()}`,
+      type: "Ingreso",
+      companyId: invoice.companyId,
+      clientId: invoice.clientId,
+      invoiceId: invoice.id,
+      concept: `${invoice.documentType || "Cuenta"} ${invoice.number || billingDocumentNumber(invoice)}`,
+      amount: Number(invoice.amount || 0),
+      currency: invoice.currency || "COP",
+      date: new Date().toISOString().slice(0, 10),
+      status: "Confirmado",
+    });
     return { ...invoice, status: "Pagada", paidAt: new Date().toISOString() };
   });
   if (!changed) {
     showToast("No hay cobros pendientes para este cliente.");
     return;
   }
+  financeTransactions = [...paidTransactions, ...financeTransactions];
   addActivity("billing", "Cobro pagado", "Se marco un documento como pagado.", { companyId: activeCompanyId, clientId });
   persistState();
   renderClientBillingPanel();
+  renderFinancePanel();
   showToast("Cobro marcado como pagado.");
 }
 
@@ -4725,7 +5171,7 @@ function setView(viewName, options = {}) {
   }
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
-  mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "automations", "accounts", "settings"].includes(targetView));
+  mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "finances", "automations", "accounts", "settings"].includes(targetView));
   sidebar?.classList.remove("more-open");
   mobileMoreButton?.setAttribute("aria-expanded", "false");
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
@@ -8554,49 +9000,64 @@ function renderCompanies() {
     )
     .join("");
 
-  companiesGrid.innerHTML = visibleCompanies
-    .map((company) => {
-      const isActive = company.id === activeCompanyId;
-      return `
-        <article class="company-card ${isActive ? "active" : ""}">
-          <header>
-            <span class="company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#0095f6")}">
-              <i data-lucide="briefcase"></i>
-            </span>
-            <div class="company-main">
-              <h3>${escapeHtml(company.name)}</h3>
-              <p>${escapeHtml(company.handle)}</p>
-            </div>
-            <span class="pill ${isActive ? "done" : ""}">${isActive ? "Activa" : "Lista"}</span>
-          </header>
-          <p class="company-description">${escapeHtml(company.description || "Sin descripcion")}</p>
-          <div class="company-networks">
-            ${(company.socialNetworks || company.accounts.map((account) => account.platform))
-              .map((network) => networkPill(network))
-              .join("")}
-          </div>
-          <div class="company-actions">
-            ${
-              isActive || isClientPortalSession()
-                ? ""
-                : `<button class="secondary-button" type="button" data-company-id="${company.id}">
-                    <i data-lucide="mouse-pointer-click"></i>
-                    Usar
-                  </button>`
-            }
-            ${
-              isClientPortalSession()
-                ? ""
-                : `<button class="secondary-button" type="button" data-edit-company-id="${company.id}">
-                    <i data-lucide="pencil"></i>
-                    Editar
-                  </button>`
-            }
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+  const active = activeCompany();
+  const activeClient = clients.find((client) => client.companyId === active.id);
+  const activeOpenInvoices = invoices.filter((invoice) => invoice.companyId === active.id && invoice.status !== "Pagada");
+  companiesGrid.innerHTML = `
+    <section class="company-detail-panel">
+      <span class="company-avatar detail" style="--company-color: ${escapeHtml(active.primaryColor || "#0095f6")}">
+        <i data-lucide="building-2"></i>
+      </span>
+      <div>
+        <span class="workspace-label">Empresa activa</span>
+        <h3>${escapeHtml(active.name)}</h3>
+        <p>${escapeHtml(active.description || active.handle || "Sin descripcion")}</p>
+        <div class="company-networks">
+          ${(active.socialNetworks || active.accounts.map((account) => account.platform)).map((network) => networkPill(network)).join("")}
+        </div>
+      </div>
+      <div class="company-detail-stats">
+        <article><strong>${publications.filter((post) => post.companyId === active.id).length}</strong><span>Posts</span></article>
+        <article><strong>${activeOpenInvoices.length}</strong><span>Cobros</span></article>
+        <article><strong>${activeClient ? formatMoney(activeClient.amount, activeClient.currency) : "$ 0"}</strong><span>Plan</span></article>
+      </div>
+    </section>
+
+    <section class="company-chat-list">
+      ${visibleCompanies
+        .map((company) => {
+          const isActive = company.id === activeCompanyId;
+          const client = clients.find((item) => item.companyId === company.id);
+          const pending = invoices.filter((invoice) => invoice.companyId === company.id && invoice.status !== "Pagada").length;
+          const companyPosts = publications.filter((post) => post.companyId === company.id).length;
+          return `
+            <article class="company-chat-row ${isActive ? "active" : ""}">
+              <button class="company-row-main" type="button" data-company-id="${company.id}" ${isActive ? "disabled" : ""}>
+                <span class="company-avatar list" style="--company-color: ${escapeHtml(company.primaryColor || "#0095f6")}">
+                  <i data-lucide="building-2"></i>
+                </span>
+                <span>
+                  <strong>${escapeHtml(company.name)}</strong>
+                  <small>${escapeHtml(company.handle || client?.email || "Sin usuario")} · ${companyPosts} piezas · ${pending} cobro${pending === 1 ? "" : "s"}</small>
+                  <em>${escapeHtml(company.description || "Toca para ver esta empresa")}</em>
+                </span>
+              </button>
+              <div class="company-row-meta">
+                <span class="pill ${isActive ? "done" : pending ? "warning" : "muted"}">${isActive ? "Activa" : pending ? "Cobro" : "Lista"}</span>
+                ${
+                  isClientPortalSession()
+                    ? ""
+                    : `<button class="secondary-button icon-button compact" type="button" data-edit-company-id="${company.id}" aria-label="Editar ${escapeHtml(company.name)}">
+                        <i data-lucide="pencil"></i>
+                      </button>`
+                }
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </section>
+  `;
   renderIcons();
 }
 
@@ -8609,6 +9070,7 @@ function refreshCompanyContext() {
   syncSelectedPlatformsWithCompany();
   renderAccounts();
   renderClientBillingPanel();
+  renderFinancePanel();
   renderSettingsPanel();
   renderDashboard();
   renderQueue();
@@ -10368,6 +10830,52 @@ settingsPanel?.addEventListener("change", (event) => {
   renderClientBillingPanel();
 });
 
+financePanel?.addEventListener("click", (event) => {
+  const createButton = event.target.closest("[data-finance-create-document]");
+  if (createButton) {
+    createFinanceDocument();
+    return;
+  }
+
+  const paidButton = event.target.closest("[data-finance-invoice-paid]");
+  if (paidButton) {
+    markClientInvoicePaid(paidButton.dataset.financeInvoicePaid);
+    return;
+  }
+
+  const whatsappButton = event.target.closest("[data-finance-whatsapp]");
+  if (whatsappButton) {
+    prepareFinanceWhatsapp(whatsappButton.dataset.financeWhatsapp);
+    return;
+  }
+
+  const clientsButton = event.target.closest("[data-finance-open-clients]");
+  if (clientsButton) {
+    renderClientBillingPanel();
+    setView("clients");
+    return;
+  }
+
+  const providerButton = event.target.closest("[data-provider-create]");
+  if (providerButton) {
+    createMonthlyProvider();
+    return;
+  }
+
+  const providerPaidButton = event.target.closest("[data-provider-paid]");
+  if (providerPaidButton) {
+    registerProviderPayment(providerPaidButton.dataset.providerPaid);
+  }
+});
+
+financePanel?.addEventListener("change", (event) => {
+  const filter = event.target.closest("[data-finance-filter]");
+  if (!filter) return;
+  financeFilters[filter.dataset.financeFilter] = filter.value;
+  persistState();
+  renderFinancePanel();
+});
+
 clientBillingPanel.addEventListener("click", (event) => {
   const invoiceButton = event.target.closest("[data-client-invoice]");
   if (invoiceButton) {
@@ -11126,6 +11634,7 @@ async function init() {
   refreshActiveUsers(false);
   renderStorePanel();
   renderAutomationCenter();
+  renderFinancePanel();
   refreshProvisioningStatus(false);
   refreshSystemStatus(false);
   renderDiagnostics();
