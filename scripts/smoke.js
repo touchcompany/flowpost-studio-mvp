@@ -232,6 +232,33 @@ async function run() {
     assert.deepEqual(clientSessionPut.session.companyAccess, ["casa-norte"], "session PUT should preserve scoped company access");
     const scopedState = await getJson("/api/state");
     assert.ok((scopedState.companies || []).every((company) => company.id === "casa-norte"), "client state should be scoped to allowed company");
+    const forbiddenBillingResponse = await fetch(`${BASE_URL}/api/billing/send-document`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        to: "outside@example.com",
+        subject: "Cuenta de cobro",
+        text: "Documento de prueba",
+        clientId: "client-verde",
+        companyId: "verde-lima",
+      }),
+    });
+    assert.equal(forbiddenBillingResponse.status, 403, "scoped users should not send billing documents for other companies");
+    const scopedClient = (scopedState.clients || []).find((client) => client.companyId === "casa-norte");
+    if (scopedClient) {
+      const scopedBillingResponse = await fetch(`${BASE_URL}/api/billing/send-document`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          to: scopedClient.email || "client@example.com",
+          subject: "Cuenta de cobro",
+          text: "Documento de prueba",
+          clientId: scopedClient.id,
+          companyId: scopedClient.companyId,
+        }),
+      });
+      assert.equal(scopedBillingResponse.status, 501, "allowed billing documents should reach SMTP readiness check");
+    }
 
     const inviteLookup = await getJson("/api/invitations/lookup?token=smoke-invite-token");
     assert.equal(inviteLookup.invite.companyId, inviteTestCompanyId, "invite lookup should return scoped company");
