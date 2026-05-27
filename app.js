@@ -5,6 +5,9 @@ const dashboardPanel = document.querySelector("#dashboardPanel");
 const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebar = document.querySelector(".sidebar");
 const mobileMoreButton = document.querySelector("#mobileMoreButton");
+const mobileProfileNavIcon = document.querySelector("#mobileProfileNavIcon");
+const mobileMoreProfileName = document.querySelector("#mobileMoreProfileName");
+const mobileMoreProfileMeta = document.querySelector("#mobileMoreProfileMeta");
 const queueToggle = document.querySelector("#queueToggle");
 const form = document.querySelector("#composerForm");
 const captionInput = document.querySelector("#caption");
@@ -1320,6 +1323,27 @@ function normalizeClientSession(session = {}) {
 function currentPlan() {
   const session = currentSession();
   return isTouchSuperAdmin(session) ? "agency" : planLimits[session.plan] ? session.plan : "starter";
+}
+
+function profileInitials(name = "") {
+  const parts = String(name || "Usuario").trim().split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((part) => part[0]).join("");
+  return (initials || "T").toUpperCase();
+}
+
+function updateMobileProfileNav() {
+  const session = currentSession();
+  const planLabel = session.planLabel || planLimits[currentPlan()]?.label || "Starter";
+  const roleLabel = session.roleLabel || roleProfiles[session.role]?.label || "Cuenta";
+  const photoUrl = session.avatarUrl || session.picture || session.photoURL || "";
+  const initials = profileInitials(session.name);
+  if (mobileProfileNavIcon) {
+    mobileProfileNavIcon.innerHTML = photoUrl
+      ? `<img src="${escapeHtml(photoUrl)}" alt="" />`
+      : `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
+  }
+  if (mobileMoreProfileName) mobileMoreProfileName.textContent = session.name || "Tu perfil";
+  if (mobileMoreProfileMeta) mobileMoreProfileMeta.textContent = `${roleLabel} · ${planLabel}`;
 }
 
 function featureEnabled(feature, session = currentSession()) {
@@ -3278,7 +3302,7 @@ function renderSettingsPanel() {
         <div>
           <span class="workspace-label">Cuenta activa</span>
           <h3>${escapeHtml(session.name || "Usuario Touch")}</h3>
-          <p>${escapeHtml(session.email || "Sin correo")} · ${escapeHtml(planLabels[currentPlan()] || "Starter")}</p>
+          <p>${escapeHtml(session.email || "Sin correo")} · ${escapeHtml(session.planLabel || planLimits[currentPlan()]?.label || "Starter")}</p>
         </div>
         <button class="secondary-button icon-button compact" type="button" data-settings-open="accounts" aria-label="Abrir cuenta">
           <i data-lucide="chevron-right"></i>
@@ -5369,6 +5393,7 @@ function setView(viewName, options = {}) {
   mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "finances", "automations", "accounts", "settings"].includes(targetView));
   sidebar?.classList.remove("more-open");
   mobileMoreButton?.setAttribute("aria-expanded", "false");
+  updateMobileProfileNav();
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
     window.history.replaceState(null, "", `#${targetView}`);
   }
@@ -11895,6 +11920,7 @@ async function init() {
   postTimeInput.value = postTimeInput.value || "09:00";
   syncSelectedPlatformsWithCompany();
   updateConnectionStatus();
+  updateMobileProfileNav();
   renderAccount();
   updatePreview();
   renderDashboard();
