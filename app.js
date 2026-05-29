@@ -791,6 +791,8 @@ let financeFilters = {
   documentStatus: "all",
   transactionType: "all",
 };
+let companyListSearch = "";
+let companyListFilter = "all";
 let billingDraft = {
   documentType: "Cuenta de cobro",
   issuerCompanyId: "casa-norte",
@@ -1810,6 +1812,14 @@ function formatMoney(amount, currency = "USD") {
     currency,
     maximumFractionDigits: 0,
   }).format(Number(amount || 0));
+}
+
+function normalizeText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function ensureAgencyClients() {
@@ -9223,6 +9233,19 @@ function renderCompanies() {
   const active = activeCompany();
   const activeClient = clients.find((client) => client.companyId === active.id);
   const activeOpenInvoices = invoices.filter((invoice) => invoice.companyId === active.id && invoice.status !== "Pagada");
+  const normalizedSearch = normalizeText(companyListSearch);
+  const companyRows = visibleCompanies.filter((company) => {
+    const client = clients.find((item) => item.companyId === company.id);
+    const pending = invoices.filter((invoice) => invoice.companyId === company.id && invoice.status !== "Pagada").length;
+    const text = normalizeText(`${company.name} ${company.handle || ""} ${company.description || ""} ${client?.name || ""} ${client?.email || ""}`);
+    const matchesSearch = !normalizedSearch || text.includes(normalizedSearch);
+    const matchesFilter =
+      companyListFilter === "all" ||
+      (companyListFilter === "pending" && pending > 0) ||
+      (companyListFilter === "active" && company.id === activeCompanyId) ||
+      (companyListFilter === "ready" && pending === 0);
+    return matchesSearch && matchesFilter;
+  });
   companiesGrid.innerHTML = `
     <section class="company-detail-panel">
       <span class="company-avatar detail" style="--company-color: ${escapeHtml(active.primaryColor || "#0095f6")}">
@@ -9257,8 +9280,33 @@ function renderCompanies() {
       </div>
     </section>
 
+    <section class="company-list-toolbar">
+      <label class="field compact">
+        <span>Buscar</span>
+        <input data-company-search value="${escapeHtml(companyListSearch)}" placeholder="Nombre, usuario o cliente" />
+      </label>
+      <div class="company-filter-chips" aria-label="Filtros de empresas">
+        ${[
+          ["all", "Todas"],
+          ["active", "Activa"],
+          ["pending", "Con cobros"],
+          ["ready", "Al dia"],
+        ]
+          .map(
+            ([value, label]) => `
+              <button class="${companyListFilter === value ? "active" : ""}" type="button" data-company-filter="${value}">
+                ${escapeHtml(label)}
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+
     <section class="company-chat-list">
-      ${visibleCompanies
+      ${
+        companyRows.length
+          ? companyRows
         .map((company) => {
           const isActive = company.id === activeCompanyId;
           const client = clients.find((item) => item.companyId === company.id);
@@ -9289,7 +9337,9 @@ function renderCompanies() {
             </article>
           `;
         })
-        .join("")}
+        .join("")
+          : `<div class="empty-state compact"><strong>Sin empresas</strong><p>Cambia el filtro o crea una nueva empresa.</p></div>`
+      }
     </section>
   `;
   renderIcons();
@@ -11701,6 +11751,13 @@ activeCompanySelect.addEventListener("change", () => {
 });
 
 companiesGrid.addEventListener("click", (event) => {
+  const filterButton = event.target.closest("[data-company-filter]");
+  if (filterButton) {
+    companyListFilter = filterButton.dataset.companyFilter || "all";
+    renderCompanies();
+    return;
+  }
+
   const jumpButton = event.target.closest("[data-company-jump]");
   if (jumpButton) {
     setView(jumpButton.dataset.companyJump);
@@ -11729,6 +11786,19 @@ companiesGrid.addEventListener("click", (event) => {
   activeCompanyId = button.dataset.companyId;
   refreshCompanyContext();
   showToast(`${activeCompany().name} ahora es la empresa activa.`);
+});
+
+companiesGrid.addEventListener("input", (event) => {
+  const searchInput = event.target.closest("[data-company-search]");
+  if (!searchInput) return;
+  companyListSearch = searchInput.value;
+  renderCompanies();
+  const nextSearchInput = companiesGrid.querySelector("[data-company-search]");
+  nextSearchInput?.focus();
+  if (nextSearchInput) {
+    const length = nextSearchInput.value.length;
+    nextSearchInput.setSelectionRange?.(length, length);
+  }
 });
 
 companyCancelButton.addEventListener("click", () => {

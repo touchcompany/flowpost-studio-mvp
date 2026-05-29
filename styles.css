@@ -361,6 +361,15 @@
     border-radius: 24px;
   }
 
+  .company-list-toolbar {
+    grid-template-columns: 1fr;
+    border-radius: 22px;
+  }
+
+  .company-filter-chips {
+    justify-content: flex-start;
+  }
+
   .company-detail-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -2538,6 +2547,48 @@ input[type="file"]:focus {
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.company-list-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+}
+
+.company-list-toolbar .field {
+  margin: 0;
+}
+
+.company-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.company-filter-chips button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.company-filter-chips button.active {
+  background: #111;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(17, 17, 17, 0.12);
 }
 
 .company-chat-list {
