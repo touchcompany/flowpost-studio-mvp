@@ -2159,6 +2159,14 @@ function addDaysToDate(dateString, days) {
   return base.toISOString().slice(0, 10);
 }
 
+function nextBillingCycleDate(dateString, cycle = "Mensual", minimumDate = todayISO()) {
+  let nextDate = addDaysToDate(dateString || minimumDate, billingCycleDays(cycle));
+  while (nextDate <= minimumDate) {
+    nextDate = addDaysToDate(nextDate, billingCycleDays(cycle));
+  }
+  return nextDate;
+}
+
 function syncBillingDraftDefaults() {
   ensureAgencyClients();
   if (!companies.some((company) => company.id === billingDraft.issuerCompanyId)) {
@@ -3069,6 +3077,7 @@ function renderFinancePanel() {
   if (!financePanel) return;
   const visibleCompanies = ensureActiveCompanyAccess();
   const activeClients = activeAgencyClients();
+  ensureRecurringBillingDocuments();
   const filteredInvoices = financeFilteredInvoices();
   const filteredTransactions = financeFilteredTransactions();
   const filteredProviders = financeFilteredProviders();
@@ -3079,6 +3088,8 @@ function renderFinancePanel() {
   const overdue = overdueInvoices.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const overdueProviders = filteredProviders.filter((item) => financeProviderStatus(item) === "Atrasado");
   const upcomingProviders = filteredProviders.filter((item) => ["Atrasado", "Próximo"].includes(financeProviderStatus(item)));
+  const recurringInvoices = filteredInvoices.filter((item) => item.autoGenerate);
+  const recurringClients = activeClients.filter((item) => item.nextInvoiceDate);
   const monthOptions = [
     ["all", "Todos"],
     ["1", "Enero"],
@@ -3187,11 +3198,14 @@ function renderFinancePanel() {
       <div class="finance-grid">
         <section class="finance-list-card">
           <header>
-            <div>
-              <h3>Cuentas de cobro y facturas</h3>
-              <p>${filteredInvoices.length} documento${filteredInvoices.length === 1 ? "" : "s"}</p>
-            </div>
+          <div>
+            <h3>Cuentas de cobro y facturas</h3>
+            <p>${filteredInvoices.length} documento${filteredInvoices.length === 1 ? "" : "s"}</p>
+          </div>
+          <div class="finance-row-actions">
+            <span class="pill ${billingDraft.autoGenerate ? "ready" : "muted"}" title="${recurringClients.length} cliente${recurringClients.length === 1 ? "" : "s"} con próximo cobro">${billingDraft.autoGenerate ? `${recurringInvoices.length} recurrente${recurringInvoices.length === 1 ? "" : "s"}` : "Automatización pausada"}</span>
             <button class="secondary-button icon-button compact" type="button" data-finance-open-clients aria-label="Abrir editor de cobros"><i data-lucide="panel-right-open"></i></button>
+          </div>
           </header>
           <div class="finance-list">
             ${
@@ -3206,7 +3220,7 @@ function renderFinancePanel() {
                           <span class="finance-avatar"><i data-lucide="${invoice.documentType === "Factura" ? "file-check-2" : "receipt-text"}"></i></span>
                           <div>
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
-                            <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
+                            <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
                           </div>
                           <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
                           <span class="pill ${financeInvoiceStatusClass(status)}">${escapeHtml(status)}</span>
@@ -4266,7 +4280,7 @@ function generateClientInvoice(clientId) {
   ];
   billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
   billingDraft.currentNumber = "";
-  clients = clients.map((item) => (item.id === client.id ? { ...item, nextInvoiceDate: addDaysToDate(client.nextInvoiceDate || issueDate, billingCycleDays(client.billingCycle)) } : item));
+  clients = clients.map((item) => (item.id === client.id ? { ...item, nextInvoiceDate: nextBillingCycleDate(client.nextInvoiceDate || issueDate, client.billingCycle) } : item));
   persistState();
   renderClientBillingPanel();
   showToast("Cuenta de cobro generada.");
@@ -4320,7 +4334,7 @@ function ensureRecurringBillingDocuments() {
     billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
     billingDraft.currentNumber = "";
     clients = clients.map((item) =>
-      item.id === client.id ? { ...item, nextInvoiceDate: addDaysToDate(issueDate, billingCycleDays(client.billingCycle || billingDraft.autoFrequency)) } : item
+      item.id === client.id ? { ...item, nextInvoiceDate: nextBillingCycleDate(issueDate, client.billingCycle || billingDraft.autoFrequency) } : item
     );
     created += 1;
   });
