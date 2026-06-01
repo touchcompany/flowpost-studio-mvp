@@ -794,6 +794,7 @@ let financeFilters = {
 let companyListSearch = "";
 let companyListFilter = "all";
 let billingDraft = {
+  editingInvoiceId: "",
   documentType: "Cuenta de cobro",
   issuerCompanyId: "casa-norte",
   clientId: "client-casa-norte",
@@ -2274,7 +2275,7 @@ function renderBillingDocumentEditor() {
         <header class="document-editor-title">
           <span class="status-icon"><i data-lucide="receipt"></i></span>
           <div>
-            <h2>Editar ${escapeHtml(documentLabel)}</h2>
+            <h2>${billingDraft.editingInvoiceId ? "Editar" : "Nueva"} ${escapeHtml(documentLabel)}</h2>
             <p>Selecciona emisor, cliente, servicios y fechas para generar el documento.</p>
           </div>
         </header>
@@ -2446,7 +2447,11 @@ function renderBillingDocumentEditor() {
           <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
           <button class="primary-button icon-text-button" type="button" data-save-billing-document>
             <i data-lucide="save"></i>
-            Guardar cambios
+            ${billingDraft.editingInvoiceId ? "Actualizar documento" : "Guardar documento"}
+          </button>
+          <button class="secondary-button icon-text-button" type="button" data-new-billing-document>
+            <i data-lucide="file-plus-2"></i>
+            Nuevo documento
           </button>
         </section>
 
@@ -3226,6 +3231,7 @@ function renderFinancePanel() {
                           <span class="pill ${financeInvoiceStatusClass(status)}">${escapeHtml(status)}</span>
                           <div class="finance-row-actions">
                             <button class="secondary-button icon-button compact" type="button" data-finance-invoice-paid="${escapeHtml(invoice.id)}" aria-label="Marcar pagada"><i data-lucide="check"></i></button>
+                            <button class="secondary-button icon-button compact" type="button" data-finance-edit="${escapeHtml(invoice.id)}" aria-label="Editar documento"><i data-lucide="pencil"></i></button>
                             <button class="secondary-button icon-button compact" type="button" data-finance-pdf="${escapeHtml(invoice.id)}" aria-label="Abrir PDF"><i data-lucide="file-down"></i></button>
                             <button class="secondary-button icon-button compact" type="button" data-finance-whatsapp="${escapeHtml(invoice.id)}" aria-label="Enviar por WhatsApp"><i data-lucide="send"></i></button>
                             <button class="secondary-button icon-button compact danger" type="button" data-finance-invoice-delete="${escapeHtml(invoice.id)}" aria-label="Eliminar documento"><i data-lucide="trash-2"></i></button>
@@ -4549,6 +4555,27 @@ function openFinanceDocumentPdf(invoiceId) {
   openBillingPdf(documentData);
 }
 
+function editFinanceInvoice(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId);
+  const documentData = financeDocumentFromInvoice(invoice);
+  if (!documentData) {
+    showToast("No encontre ese documento.");
+    return;
+  }
+  billingDraft = {
+    ...billingDraft,
+    ...documentData,
+    editingInvoiceId: invoice.id,
+    currentNumber: documentData.number,
+    description: documentData.concept || "",
+    lines: documentData.lines,
+  };
+  persistState();
+  renderClientBillingPanel();
+  setView("clients");
+  showToast(`${documentData.documentType} abierta para editar.`);
+}
+
 function prepareFinanceWhatsapp(invoiceId) {
   const invoice = invoices.find((item) => item.id === invoiceId);
   if (!invoice) return;
@@ -4748,7 +4775,7 @@ function saveBillingDocument() {
     return;
   }
   const subtotal = billingDraftSubtotal();
-  const existingIndex = invoices.findIndex((invoice) => invoice.clientId === client.id && invoice.status !== "Pagada");
+  const existingIndex = billingDraft.editingInvoiceId ? invoices.findIndex((invoice) => invoice.id === billingDraft.editingInvoiceId) : -1;
   const isNewDocument = existingIndex < 0;
   const documentNumber = billingDraft.currentNumber || billingDocumentNumberFromDraft();
   const recurringEnabled = Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true");
@@ -4790,8 +4817,9 @@ function saveBillingDocument() {
   }
   if (isNewDocument) {
     billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
-    billingDraft.currentNumber = "";
   }
+  billingDraft.editingInvoiceId = document.id;
+  billingDraft.currentNumber = document.number;
   if (recurringEnabled) {
     clients = clients.map((item) =>
       item.id === client.id
@@ -4809,6 +4837,19 @@ function saveBillingDocument() {
   persistState();
   renderClientBillingPanel();
   showToast(`${billingDraft.documentType} guardada.`);
+}
+
+function newBillingDocument() {
+  billingDraft.editingInvoiceId = "";
+  billingDraft.currentNumber = "";
+  billingDraft.description = "";
+  billingDraft.issueDate = todayISO();
+  billingDraft.dueDate = addDaysToDate(todayISO(), 5);
+  billingDraft.observations = "";
+  billingDraft.lines = [{ serviceId: "pro", quantity: 1, price: serviceById("pro").price }];
+  persistState();
+  renderClientBillingPanel();
+  showToast("Nuevo documento listo.");
 }
 
 function currentBillingDocument() {
@@ -11205,6 +11246,12 @@ financePanel?.addEventListener("click", (event) => {
     return;
   }
 
+  const editButton = event.target.closest("[data-finance-edit]");
+  if (editButton) {
+    editFinanceInvoice(editButton.dataset.financeEdit);
+    return;
+  }
+
   const whatsappButton = event.target.closest("[data-finance-whatsapp]");
   if (whatsappButton) {
     prepareFinanceWhatsapp(whatsappButton.dataset.financeWhatsapp);
@@ -11304,6 +11351,8 @@ clientWorkspacePanel.addEventListener("click", (event) => {
   const switchClientButton = event.target.closest("[data-client-switch]");
   if (switchClientButton) {
     billingDraft.clientId = switchClientButton.dataset.clientSwitch;
+    billingDraft.editingInvoiceId = "";
+    billingDraft.currentNumber = "";
     const client = clients.find((item) => item.id === billingDraft.clientId);
     if (client) {
       activeCompanyId = client.companyId;
@@ -11429,6 +11478,12 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     return;
   }
 
+  const newDocumentButton = event.target.closest("[data-new-billing-document]");
+  if (newDocumentButton) {
+    newBillingDocument();
+    return;
+  }
+
   const documentActionButton = event.target.closest("[data-document-action]");
   if (documentActionButton) {
     documentAction(documentActionButton.dataset.documentAction);
@@ -11506,6 +11561,10 @@ clientWorkspacePanel.addEventListener("input", (event) => {
   if (billingField) {
     const field = billingField.dataset.billingField;
     billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+    if (field === "clientId") {
+      billingDraft.editingInvoiceId = "";
+      billingDraft.currentNumber = "";
+    }
     persistState();
     if (["documentType", "issuerCompanyId", "clientId", "nextNumber", "numberPrefix"].includes(field)) {
       if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
