@@ -3664,6 +3664,40 @@ input[type="file"]:focus {
   font-size: 0.92rem;
 }
 
+.calendar-day-trigger,
+.calendar-month-day-trigger {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.calendar-day-trigger {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+}
+
+.calendar-day-trigger:hover strong,
+.calendar-month-day-trigger:hover {
+  color: #0095f6;
+}
+
+.calendar-month-day-trigger {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 850;
+}
+
+.calendar-month-day-trigger:hover {
+  background: rgba(0, 149, 246, 0.1);
+}
+
 .calendar-hour-label {
   padding: 10px 8px;
   color: var(--muted);

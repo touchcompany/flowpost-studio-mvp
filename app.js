@@ -7149,8 +7149,10 @@ function renderCalendarWeek(companyPublications) {
           const dayDate = addDaysISO(focusDate, index - weekdayIndex(focusDate));
           return `
             <header class="calendar-day-head">
-              <span>${day}</span>
-              <strong>${shortDateLabel(dayDate)}</strong>
+              <button class="calendar-day-trigger" type="button" data-calendar-open-day="${dayDate}" aria-label="Abrir ${dayDate}">
+                <span>${day}</span>
+                <strong>${shortDateLabel(dayDate)}</strong>
+              </button>
             </header>
           `;
         })
@@ -7197,7 +7199,7 @@ function renderCalendarMonth(companyPublications) {
     return `
       <article class="calendar-month-cell ${outside ? "outside" : ""}" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00">
         <header>
-          <strong>${date.getDate()}</strong>
+          <button class="calendar-month-day-trigger" type="button" data-calendar-open-day="${iso}" aria-label="Abrir ${iso}">${date.getDate()}</button>
           <button class="slot-create-button visible" type="button" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00" aria-label="Crear guion ${iso}">
             <i data-lucide="plus"></i>
           </button>
@@ -10327,6 +10329,15 @@ calendarGrid.addEventListener("click", (event) => {
   const navigationButton = event.target.closest("[data-calendar-nav]");
   if (navigationButton) {
     shiftCalendarFocus(navigationButton.dataset.calendarNav);
+    return;
+  }
+
+  const openDayButton = event.target.closest("[data-calendar-open-day]");
+  if (openDayButton) {
+    calendarFocusDate = openDayButton.dataset.calendarOpenDay || todayISO();
+    calendarView = "day";
+    persistUiState();
+    renderCalendar();
     return;
   }
 
