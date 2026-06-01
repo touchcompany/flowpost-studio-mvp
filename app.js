@@ -4985,7 +4985,29 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
       .total { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 2px solid #111; font-size: 24px; font-weight: 900; }
       .notes { margin-top: 28px; color: #444; line-height: 1.55; }
       footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 44px; color: #666; font-size: 13px; }
-      @media print { body { padding: 0; background: #fff; } main { border: 0; border-radius: 0; } }
+      @page { size: A4; margin: 10mm; }
+      @media print {
+        body { padding: 0; background: #fff; font-size: 12px; }
+        main { max-width: none; padding: 0; border: 0; border-radius: 0; }
+        header { gap: 18px; padding-bottom: 16px; }
+        h1 { font-size: 25px; }
+        h2 { margin-top: 18px; font-size: 13px; }
+        .brand-row { gap: 10px; margin-bottom: 10px; }
+        .brand-row img { width: 36px; height: 32px; }
+        .badge { margin-bottom: 7px; padding: 5px 8px; font-size: 10px; }
+        .meta { font-size: 11px; }
+        .parties { gap: 10px; margin-top: 16px; break-inside: avoid; }
+        .box { padding: 12px; border-radius: 12px; }
+        .box span, .payment-box span { margin-bottom: 5px; font-size: 10px; }
+        .box p { margin-top: 3px; line-height: 1.3; }
+        .payment-box { margin-top: 11px; padding: 12px; border-radius: 12px; break-inside: avoid; }
+        table { margin-top: 8px; break-inside: avoid; }
+        th { font-size: 10px; }
+        th, td { padding: 8px 0; }
+        .total { margin-top: 14px; padding-top: 11px; font-size: 20px; break-inside: avoid; }
+        .notes { margin-top: 14px; line-height: 1.35; break-inside: avoid; }
+        footer { margin-top: 20px; font-size: 11px; break-inside: avoid; }
+      }
     </style>
   </head>
   <body>
@@ -5168,11 +5190,15 @@ async function documentAction(action) {
     return;
   }
   downloadBillingDocumentHtml(documentData);
+  const paymentDetail =
+    billingDraft.paymentBank || billingDraft.paymentAccountNumber
+      ? `\nPago: ${billingDraft.paymentBank || "Entidad de pago"} · ${billingDraft.paymentAccountType || "Cuenta"} ${billingDraft.paymentAccountNumber || ""} · Titular: ${billingDraft.paymentAccountHolder || ""}`
+      : "";
   const whatsappText = encodeURIComponent(
-    `Buen dia ${client?.contact || client?.name || ""}, te comparto ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
+    `Buen día ${client?.contact || client?.name || ""}, te comparto la ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
       subtotal,
       "COP"
-    )}.\n\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\n\nQuedo atento.`
+    )}.\n\nEmisión: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`
   );
   window.open(`https://wa.me/?text=${whatsappText}`, "_blank", "noopener,noreferrer");
   showToast(`WhatsApp preparado. Adjunta el documento descargado: ${documentNumber}.`);
