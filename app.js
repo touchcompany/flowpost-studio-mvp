@@ -2267,9 +2267,10 @@ function renderBillingDocumentEditor() {
   const documentLabel = billingDraft.documentType === "Factura" ? "Factura" : "Cuenta de cobro";
   const mailReady = Boolean(mailStatus?.ready);
   const mailMissing = mailStatus?.missing?.length ? mailStatus.missing.join(", ") : "SMTP_HOST, SMTP_USER, SMTP_PASS";
-  const emailReady = mailReady && Boolean(client?.email);
+  const documentClientEmail = billingDraft.clientEmail || client?.email || "";
+  const emailReady = mailReady && Boolean(documentClientEmail);
   const emailDetail = emailReady
-    ? `Listo para enviar a ${client.email}.`
+    ? `Listo para enviar a ${documentClientEmail}.`
     : mailReady
       ? "Agrega email al cliente para enviar desde Touch Note."
       : `Configura SMTP para envio real: ${mailMissing}.`;
@@ -5126,12 +5127,20 @@ function updateBillingLine(index, field, value) {
   renderClientBillingPanel();
 }
 
+function whatsappPhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 10 && digits.startsWith("3")) return `57${digits}`;
+  return digits;
+}
+
 async function documentAction(action) {
   const subtotal = billingDraftSubtotal();
   const client = clients.find((item) => item.id === billingDraft.clientId);
   const documentData = currentBillingDocument();
   const documentNumber = billingDocumentNumber(documentData);
   const documentType = documentData?.documentType || billingDraft.documentType;
+  const recipientEmail = billingDraft.clientEmail || client?.email || "";
+  const recipientPhone = whatsappPhone(billingDraft.clientPhone || client?.phone);
   const message = `${documentType} ${documentNumber} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
   if (action === "pdf") {
     openBillingPdf();
@@ -5161,13 +5170,13 @@ async function documentAction(action) {
         mailStatus = null;
       }
     }
-    if (window.location.protocol !== "file:" && client?.email) {
+    if (window.location.protocol !== "file:" && recipientEmail) {
       try {
         const response = await fetch("/api/billing/send-document", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({
-            to: client.email,
+            to: recipientEmail,
             subject: emailSubject,
             text,
             html,
@@ -5178,7 +5187,7 @@ async function documentAction(action) {
         });
         const result = await response.json();
         if (response.ok && result.ok) {
-          showToast(`Documento enviado a ${client.email}.`);
+          showToast(`Documento enviado a ${recipientEmail}.`);
           return;
         }
         showToast(result.message || "SMTP no esta listo. Se abre correo manual.");
@@ -5188,7 +5197,7 @@ async function documentAction(action) {
     }
     const subject = encodeURIComponent(message);
     const body = encodeURIComponent(`Hola ${client?.contact || client?.name || ""},\n\nTe comparto ${message}.\n\nPuedes guardar el PDF desde la vista del documento en Touch Note.\n\nGracias.`);
-    window.location.href = `mailto:${client?.email || ""}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
     showToast(`Correo preparado: ${message}`);
     renderClientBillingPanel();
     return;
@@ -5204,8 +5213,8 @@ async function documentAction(action) {
       "COP"
     )}.\n\nEmisión: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`
   );
-  window.open(`https://wa.me/?text=${whatsappText}`, "_blank", "noopener,noreferrer");
-  showToast(`WhatsApp preparado. Adjunta el documento descargado: ${documentNumber}.`);
+  window.open(`https://wa.me/${recipientPhone}?text=${whatsappText}`, "_blank", "noopener,noreferrer");
+  showToast(`${recipientPhone ? "WhatsApp del cliente abierto" : "WhatsApp preparado"}. Adjunta el documento descargado: ${documentNumber}.`);
 }
 
 function updateClientProfile(clientId, field, value) {
