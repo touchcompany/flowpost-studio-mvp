@@ -2700,7 +2700,7 @@ function renderClientBillingPanel() {
               </span>
               <div>
                 <strong>${escapeHtml(client.name)}</strong>
-                <p>${escapeHtml(serviceById(client.serviceId).name || client.plan)} · ${escapeHtml(client.billingCycle)} · ${formatMoney(client.amount, client.currency)} · ${orders.length} servicio${orders.length === 1 ? "" : "s"}</p>
+                <p>${escapeHtml(serviceById(client.serviceId).name || client.plan)} · ${escapeHtml(client.billingCycle)} · ${formatMoney(client.amount, client.currency)} · ${orders.length} servicio${orders.length === 1 ? "" : "s"}${client.nextInvoiceDate ? ` · próximo ${escapeHtml(shortDateLabel(client.nextInvoiceDate))}` : ""}</p>
               </div>
               <div class="client-health-mini">
                 <strong>${score}%</strong>
@@ -4751,6 +4751,8 @@ function saveBillingDocument() {
   const existingIndex = invoices.findIndex((invoice) => invoice.clientId === client.id && invoice.status !== "Pagada");
   const isNewDocument = existingIndex < 0;
   const documentNumber = billingDraft.currentNumber || billingDocumentNumberFromDraft();
+  const recurringEnabled = Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true");
+  const recurringFrequency = billingDraft.autoFrequency || client.billingCycle || "Mensual";
   const document = {
     id: existingIndex >= 0 ? invoices[existingIndex].id : `invoice-${client.id}-${Date.now()}`,
     agencyId: activeAgencyId,
@@ -4777,8 +4779,8 @@ function saveBillingDocument() {
     clientNit: billingDraft.clientNit,
     clientPhone: billingDraft.clientPhone,
     clientEmail: billingDraft.clientEmail || client.email,
-    autoGenerate: Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true"),
-    autoFrequency: billingDraft.autoFrequency || client.billingCycle || "Mensual",
+    autoGenerate: recurringEnabled,
+    autoFrequency: recurringFrequency,
     lines: billingDraft.lines,
   };
   if (existingIndex >= 0) {
@@ -4789,6 +4791,20 @@ function saveBillingDocument() {
   if (isNewDocument) {
     billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
     billingDraft.currentNumber = "";
+  }
+  if (recurringEnabled) {
+    clients = clients.map((item) =>
+      item.id === client.id
+        ? {
+            ...item,
+            billingCycle: recurringFrequency,
+            nextInvoiceDate:
+              item.nextInvoiceDate && item.nextInvoiceDate > todayISO()
+                ? item.nextInvoiceDate
+                : nextBillingCycleDate(billingDraft.issueDate || todayISO(), recurringFrequency),
+          }
+        : item
+    );
   }
   persistState();
   renderClientBillingPanel();
