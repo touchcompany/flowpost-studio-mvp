@@ -825,6 +825,20 @@ let billingDraft = {
     { serviceId: "hosting", quantity: 1, price: 180000 },
   ],
 };
+const issuerBillingProfileFields = [
+  "documentType",
+  "numberPrefix",
+  "nextNumber",
+  "issuerNit",
+  "issuerPhone",
+  "issuerEmail",
+  "paymentBank",
+  "paymentAccountType",
+  "paymentAccountNumber",
+  "paymentAccountHolder",
+  "autoGenerate",
+  "autoFrequency",
+];
 
 function restoreState() {
   if (window.location.protocol !== "file:") return;
@@ -2183,6 +2197,7 @@ function syncBillingDraftDefaults() {
   }
   const client = clients.find((item) => item.id === billingDraft.clientId);
   const issuer = companies.find((company) => company.id === billingDraft.issuerCompanyId);
+  applyIssuerBillingProfile(billingDraft.issuerCompanyId);
   if (!billingDraft.numberPrefix) billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
   if (!billingDraft.nextNumber) billingDraft.nextNumber = 1;
   if (!billingDraft.currentNumber) billingDraft.currentNumber = billingDocumentNumberFromDraft();
@@ -2193,6 +2208,45 @@ function syncBillingDraftDefaults() {
   if (!billingDraft.lines.length) {
     billingDraft.lines = [{ serviceId: "pro", quantity: 1, price: serviceById("pro").price }];
   }
+}
+
+function applyIssuerBillingProfile(companyId = billingDraft.issuerCompanyId, options = {}) {
+  const issuer = companies.find((company) => company.id === companyId);
+  if (!issuer) return;
+  const profile = issuer.billingProfile || {};
+  const defaults = {
+    documentType: "Cuenta de cobro",
+    numberPrefix: "CC",
+    nextNumber: 1,
+    issuerNit: issuer.nit || "",
+    issuerPhone: issuer.phone || "",
+    issuerEmail: issuer.email || "",
+    paymentBank: "",
+    paymentAccountType: "Cuenta de ahorros",
+    paymentAccountNumber: "",
+    paymentAccountHolder: issuer.name || "",
+    autoGenerate: false,
+    autoFrequency: "Mensual",
+  };
+  issuerBillingProfileFields.forEach((field) => {
+    if (options.force || billingDraft[field] === "" || billingDraft[field] === null || billingDraft[field] === undefined) {
+      billingDraft[field] = profile[field] ?? defaults[field];
+    }
+  });
+  if (options.force) billingDraft.currentNumber = "";
+}
+
+function persistIssuerBillingProfile() {
+  const companyId = billingDraft.issuerCompanyId;
+  if (!companyId) return;
+  companies = companies.map((company) => {
+    if (company.id !== companyId) return company;
+    const billingProfile = issuerBillingProfileFields.reduce(
+      (profile, field) => ({ ...profile, [field]: billingDraft[field] }),
+      {}
+    );
+    return { ...company, billingProfile };
+  });
 }
 
 function syncBillingDraftClientContact(clientId = billingDraft.clientId) {
@@ -11362,8 +11416,10 @@ settingsPanel?.addEventListener("input", (event) => {
   if (!billingField) return;
   const field = billingField.dataset.settingsBillingField;
   billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+  if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
   if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
   if (["nextNumber", "numberPrefix", "documentType"].includes(field)) billingDraft.currentNumber = "";
+  persistIssuerBillingProfile();
   persistState();
 });
 
@@ -11379,8 +11435,10 @@ settingsPanel?.addEventListener("change", (event) => {
   if (!billingField) return;
   const field = billingField.dataset.settingsBillingField;
   billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+  if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
   if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
   if (["nextNumber", "numberPrefix", "documentType"].includes(field)) billingDraft.currentNumber = "";
+  persistIssuerBillingProfile();
   persistState();
   renderSettingsPanel();
   renderClientBillingPanel();
@@ -11733,6 +11791,7 @@ clientWorkspacePanel.addEventListener("input", (event) => {
       billingDraft.currentNumber = "";
       syncBillingDraftClientContact(billingDraft.clientId);
     }
+    if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
     persistState();
     if (["documentType", "issuerCompanyId", "clientId", "nextNumber", "numberPrefix"].includes(field)) {
       if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
@@ -11765,6 +11824,7 @@ clientWorkspacePanel.addEventListener("change", (event) => {
       billingDraft.currentNumber = "";
       syncBillingDraftClientContact(billingDraft.clientId);
     }
+    if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
     if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
     if (field === "nextNumber" || field === "numberPrefix" || field === "documentType") billingDraft.currentNumber = "";
     persistState();
