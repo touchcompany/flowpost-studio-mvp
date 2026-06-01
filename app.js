@@ -2972,12 +2972,19 @@ function financeYearOptions() {
 }
 
 function financeFilteredInvoices() {
-  return invoices.filter(
-    (invoice) =>
-      financeCompanyMatches(invoice.companyId) &&
-      financeDateMatches(invoice.issueDate || invoice.dueDate) &&
-      (financeFilters.documentStatus === "all" || financeInvoiceStatus(invoice) === financeFilters.documentStatus)
-  );
+  const priority = { Vencida: 0, Pendiente: 1, Pagada: 2 };
+  return invoices
+    .filter(
+      (invoice) =>
+        financeCompanyMatches(invoice.companyId) &&
+        financeDateMatches(invoice.issueDate || invoice.dueDate) &&
+        (financeFilters.documentStatus === "all" || financeInvoiceStatus(invoice) === financeFilters.documentStatus)
+    )
+    .sort((left, right) => {
+      const statusDifference = (priority[financeInvoiceStatus(left)] ?? 3) - (priority[financeInvoiceStatus(right)] ?? 3);
+      if (statusDifference) return statusDifference;
+      return String(left.dueDate || "").localeCompare(String(right.dueDate || ""));
+    });
 }
 
 function financeFilteredTransactions() {
@@ -3047,6 +3054,8 @@ function renderFinancePanel() {
   const income = filteredTransactions.filter((item) => item.type === "Ingreso").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const expenses = filteredTransactions.filter((item) => item.type === "Egreso").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const pending = filteredInvoices.filter((item) => financeInvoiceStatus(item) !== "Pagada").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const overdueInvoices = filteredInvoices.filter((item) => financeInvoiceStatus(item) === "Vencida");
+  const overdue = overdueInvoices.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const monthOptions = [
     ["all", "Todos"],
     ["1", "Enero"],
@@ -3102,6 +3111,10 @@ function renderFinancePanel() {
         <article><span>Ingresos</span><strong>${formatMoney(income)}</strong></article>
         <article><span>Egresos</span><strong>${formatMoney(expenses)}</strong></article>
         <article><span>Pendiente</span><strong>${formatMoney(pending)}</strong></article>
+        <button class="finance-metric-button ${overdueInvoices.length ? "is-alert" : ""}" type="button" data-finance-show-overdue>
+          <span>Vencidas · ${overdueInvoices.length}</span>
+          <strong>${formatMoney(overdue)}</strong>
+        </button>
         <article><span>Balance</span><strong>${formatMoney(income - expenses)}</strong></article>
       </div>
 
@@ -11115,6 +11128,14 @@ settingsPanel?.addEventListener("change", (event) => {
 });
 
 financePanel?.addEventListener("click", (event) => {
+  const overdueButton = event.target.closest("[data-finance-show-overdue]");
+  if (overdueButton) {
+    financeFilters.documentStatus = "Vencida";
+    persistState();
+    renderFinancePanel();
+    return;
+  }
+
   const createButton = event.target.closest("[data-finance-create-document]");
   if (createButton) {
     createFinanceDocument();
