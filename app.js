@@ -5515,15 +5515,25 @@ function activePublications() {
   return publications.filter((publication) => publication.companyId === activeCompanyId);
 }
 
+function sortPublicationsChronologically(items) {
+  return [...items].sort((a, b) => {
+    const first = `${a.date || "9999-12-31"} ${a.time || "23:59"}`;
+    const second = `${b.date || "9999-12-31"} ${b.time || "23:59"}`;
+    return first.localeCompare(second);
+  });
+}
+
 function filteredPublications() {
   const status = statusFilter?.value || "all";
   const platform = platformFilter?.value || "all";
-  return activePublications().filter((publication) => {
-    const statusMatches = status === "all" || publication.status === status;
-    const platforms = (publication.platforms || []).map((item) => item.toLowerCase());
-    const platformMatches = platform === "all" || platforms.includes(platform);
-    return statusMatches && platformMatches;
-  });
+  return sortPublicationsChronologically(
+    activePublications().filter((publication) => {
+      const statusMatches = status === "all" || publication.status === status;
+      const platforms = (publication.platforms || []).map((item) => item.toLowerCase());
+      const platformMatches = platform === "all" || platforms.includes(platform);
+      return statusMatches && platformMatches;
+    })
+  );
 }
 
 function slugify(value) {

@@ -11987,4 +11987,19 @@ input[type="file"] {
   .summary-strip span {
     font-size: 0.7rem;
   }
+
+  .filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .filter-bar span {
+    font-size: 0.68rem;
+  }
+
+  .filter-bar select {
+    min-width: 0;
+    padding-inline: 10px 28px;
+    font-size: 0.82rem;
+  }
 }
