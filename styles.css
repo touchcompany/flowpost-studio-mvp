@@ -147,7 +147,7 @@
 
 .finance-filter-bar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
   gap: 12px;
   padding: 12px;
   border: 1px solid rgba(17, 17, 17, 0.08);
@@ -158,6 +158,10 @@
 .finance-filter-bar label,
 .finance-form-grid label {
   min-width: 0;
+}
+
+.finance-filter-reset {
+  align-self: end;
 }
 
 .finance-metrics {

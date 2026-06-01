@@ -3051,6 +3051,19 @@ function financeProviderStatusClass(status) {
   return "ready";
 }
 
+function resetFinanceFilters() {
+  financeFilters = {
+    month: "all",
+    year: String(new Date().getFullYear()),
+    companyId: "all",
+    documentStatus: "all",
+    transactionType: "all",
+  };
+  persistState();
+  renderFinancePanel();
+  showToast("Filtros restablecidos.");
+}
+
 function financeDocumentFromInvoice(invoice) {
   if (!invoice) return null;
   const client = clients.find((item) => item.id === invoice.clientId);
@@ -3144,6 +3157,9 @@ function renderFinancePanel() {
             ${["all", "Ingreso", "Egreso"].map((type) => `<option value="${type}" ${financeFilters.transactionType === type ? "selected" : ""}>${type === "all" ? "Todos" : type}</option>`).join("")}
           </select>
         </label>
+        <button class="secondary-button icon-button finance-filter-reset" type="button" data-finance-reset-filters aria-label="Restablecer filtros" title="Restablecer filtros">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
       </div>
 
       <div class="finance-metrics">
@@ -4555,39 +4571,39 @@ function openFinanceDocumentPdf(invoiceId) {
   openBillingPdf(documentData);
 }
 
-function editFinanceInvoice(invoiceId) {
+function loadFinanceInvoiceIntoDraft(invoiceId, options = {}) {
   const invoice = invoices.find((item) => item.id === invoiceId);
   const documentData = financeDocumentFromInvoice(invoice);
-  if (!documentData) {
-    showToast("No encontre ese documento.");
-    return;
-  }
+  if (!documentData) return null;
   billingDraft = {
     ...billingDraft,
     ...documentData,
-    editingInvoiceId: invoice.id,
+    editingInvoiceId: options.editing ? invoice.id : "",
     currentNumber: documentData.number,
     description: documentData.concept || "",
     lines: documentData.lines,
   };
   persistState();
+  return documentData;
+}
+
+function editFinanceInvoice(invoiceId) {
+  const documentData = loadFinanceInvoiceIntoDraft(invoiceId, { editing: true });
+  if (!documentData) {
+    showToast("No encontre ese documento.");
+    return;
+  }
   renderClientBillingPanel();
   setView("clients");
   showToast(`${documentData.documentType} abierta para editar.`);
 }
 
 function prepareFinanceWhatsapp(invoiceId) {
-  const invoice = invoices.find((item) => item.id === invoiceId);
-  if (!invoice) return;
-  const client = clients.find((item) => item.id === invoice.clientId);
-  billingDraft.clientId = invoice.clientId;
-  billingDraft.documentType = invoice.documentType || "Cuenta de cobro";
-  billingDraft.currentNumber = invoice.number || "";
-  billingDraft.description = invoice.concept || "";
-  billingDraft.issueDate = invoice.issueDate || todayISO();
-  billingDraft.dueDate = invoice.dueDate || addDaysToDate(todayISO(), 5);
-  billingDraft.lines = invoice.lines?.length ? invoice.lines : [{ serviceId: client?.serviceId || "pro", quantity: 1, price: invoice.amount || 0 }];
-  persistState();
+  const documentData = loadFinanceInvoiceIntoDraft(invoiceId);
+  if (!documentData) {
+    showToast("No encontre ese documento.");
+    return;
+  }
   documentAction("whatsapp");
 }
 
@@ -11226,6 +11242,12 @@ settingsPanel?.addEventListener("change", (event) => {
 });
 
 financePanel?.addEventListener("click", (event) => {
+  const resetFiltersButton = event.target.closest("[data-finance-reset-filters]");
+  if (resetFiltersButton) {
+    resetFinanceFilters();
+    return;
+  }
+
   const overdueButton = event.target.closest("[data-finance-show-overdue]");
   if (overdueButton) {
     financeFilters.documentStatus = "Vencida";
