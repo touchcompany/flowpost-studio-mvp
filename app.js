@@ -2997,7 +2997,14 @@ function financeFilteredTransactions() {
 }
 
 function financeFilteredProviders() {
-  return monthlyProviders.filter((provider) => financeCompanyMatches(provider.companyId) && financeDateMatches(provider.nextPaymentDate));
+  const priority = { Atrasado: 0, Próximo: 1, Programado: 2, "Sin fecha": 3 };
+  return monthlyProviders
+    .filter((provider) => financeCompanyMatches(provider.companyId) && financeDateMatches(provider.nextPaymentDate))
+    .sort((left, right) => {
+      const statusDifference = (priority[financeProviderStatus(left)] ?? 4) - (priority[financeProviderStatus(right)] ?? 4);
+      if (statusDifference) return statusDifference;
+      return String(left.nextPaymentDate || "").localeCompare(String(right.nextPaymentDate || ""));
+    });
 }
 
 function transactionSignedAmount(transaction) {
@@ -3015,6 +3022,20 @@ function financeInvoiceStatusClass(status) {
   if (status === "Pagada") return "done";
   if (status === "Vencida") return "danger";
   return "warning";
+}
+
+function financeProviderStatus(provider) {
+  const nextPaymentDate = String(provider?.nextPaymentDate || "").slice(0, 10);
+  if (!nextPaymentDate) return "Sin fecha";
+  if (nextPaymentDate < todayISO()) return "Atrasado";
+  if (nextPaymentDate <= addDaysToDate(todayISO(), 7)) return "Próximo";
+  return "Programado";
+}
+
+function financeProviderStatusClass(status) {
+  if (status === "Atrasado") return "danger";
+  if (status === "Próximo") return "warning";
+  return "ready";
 }
 
 function financeDocumentFromInvoice(invoice) {
@@ -3056,6 +3077,8 @@ function renderFinancePanel() {
   const pending = filteredInvoices.filter((item) => financeInvoiceStatus(item) !== "Pagada").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const overdueInvoices = filteredInvoices.filter((item) => financeInvoiceStatus(item) === "Vencida");
   const overdue = overdueInvoices.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const overdueProviders = filteredProviders.filter((item) => financeProviderStatus(item) === "Atrasado");
+  const upcomingProviders = filteredProviders.filter((item) => ["Atrasado", "Próximo"].includes(financeProviderStatus(item)));
   const monthOptions = [
     ["all", "Todos"],
     ["1", "Enero"],
@@ -3270,6 +3293,7 @@ function renderFinancePanel() {
             <h3>Proveedores mensuales</h3>
             <p>Pagos recurrentes que haces a terceros.</p>
           </div>
+          <span class="pill ${overdueProviders.length ? "danger" : "ready"}">${overdueProviders.length ? `${overdueProviders.length} atrasado${overdueProviders.length === 1 ? "" : "s"}` : `${upcomingProviders.length} próximos`}</span>
         </header>
         <div class="finance-form-grid provider-form">
           <label class="field compact"><span>Nombre</span><input data-provider-new="name" placeholder="Proveedor" /></label>
@@ -3283,9 +3307,10 @@ function renderFinancePanel() {
           ${
             filteredProviders.length
               ? filteredProviders
-                  .map(
-                    (provider) => `
-                      <article class="finance-row compact">
+                  .map((provider) => {
+                    const status = financeProviderStatus(provider);
+                    return `
+                      <article class="finance-row compact ${status === "Atrasado" ? "is-overdue" : ""}">
                         <span class="finance-avatar"><i data-lucide="landmark"></i></span>
                         <div>
                           <strong>${escapeHtml(provider.name)}</strong>
@@ -3293,12 +3318,13 @@ function renderFinancePanel() {
                         </div>
                         <strong>${formatMoney(provider.amount, provider.currency || "COP")}</strong>
                         <div class="finance-row-actions">
+                          <span class="pill ${financeProviderStatusClass(status)}">${escapeHtml(status)}</span>
                           <button class="secondary-button icon-button compact" type="button" data-provider-paid="${escapeHtml(provider.id)}" aria-label="Registrar pago"><i data-lucide="check"></i></button>
                           <button class="secondary-button icon-button compact danger" type="button" data-provider-delete="${escapeHtml(provider.id)}" aria-label="Eliminar proveedor"><i data-lucide="trash-2"></i></button>
                         </div>
                       </article>
-                    `
-                  )
+                    `;
+                  })
                   .join("")
               : `<div class="empty-state compact"><strong>Sin proveedores</strong><p>Agrega pagos mensuales para controlar egresos.</p></div>`
           }
@@ -4434,7 +4460,8 @@ function registerProviderPayment(providerId) {
     },
     ...financeTransactions,
   ];
-  monthlyProviders = monthlyProviders.map((item) => (item.id === provider.id ? { ...item, lastPaidAt: new Date().toISOString(), nextPaymentDate: addDaysToDate(provider.nextPaymentDate || todayISO(), 30) } : item));
+  const nextPaymentBase = provider.nextPaymentDate && provider.nextPaymentDate >= todayISO() ? provider.nextPaymentDate : todayISO();
+  monthlyProviders = monthlyProviders.map((item) => (item.id === provider.id ? { ...item, lastPaidAt: new Date().toISOString(), nextPaymentDate: addDaysToDate(nextPaymentBase, 30) } : item));
   persistState();
   renderFinancePanel();
   showToast("Egreso registrado y próximo pago actualizado.");
