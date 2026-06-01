@@ -528,32 +528,49 @@ function smtpSafeHeader(value = "") {
   return String(value).replace(/[\r\n]+/g, " ").trim();
 }
 
-function smtpMessage({ from, to, subject, text, html }) {
+function smtpMessage({ from, to, subject, text, html, attachment }) {
   const safeFrom = smtpSafeHeader(from);
   const safeTo = smtpSafeHeader(to);
-  const boundary = `flowpost-${crypto.randomBytes(8).toString("hex")}`;
+  const alternativeBoundary = `flowpost-alt-${crypto.randomBytes(8).toString("hex")}`;
+  const mixedBoundary = `flowpost-mixed-${crypto.randomBytes(8).toString("hex")}`;
   const plain = String(text || "").replace(/\r?\n/g, "\r\n");
   const bodyHtml = String(html || "").replace(/\r?\n/g, "\r\n");
+  const attachmentName = smtpSafeHeader(attachment?.filename || "touch-note-documento.html").replace(/[^a-zA-Z0-9._-]+/g, "-");
+  const attachmentBody = attachment?.content ? Buffer.from(String(attachment.content), "utf8").toString("base64").match(/.{1,76}/g)?.join("\r\n") || "" : "";
   const lines = [
     `From: ${safeFrom}`,
     `To: ${safeTo}`,
     `Subject: ${smtpSafeHeader(subject)}`,
     "MIME-Version: 1.0",
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    `Content-Type: ${attachmentBody ? `multipart/mixed; boundary="${mixedBoundary}"` : `multipart/alternative; boundary="${alternativeBoundary}"`}`,
     "",
-    `--${boundary}`,
+    ...(attachmentBody ? [`--${mixedBoundary}`, `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`, ""] : []),
+    `--${alternativeBoundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     "Content-Transfer-Encoding: 8bit",
     "",
     plain,
     "",
-    `--${boundary}`,
+    `--${alternativeBoundary}`,
     'Content-Type: text/html; charset="UTF-8"',
     "Content-Transfer-Encoding: 8bit",
     "",
     bodyHtml || plain,
     "",
-    `--${boundary}--`,
+    `--${alternativeBoundary}--`,
+    ...(attachmentBody
+      ? [
+          "",
+          `--${mixedBoundary}`,
+          `Content-Type: ${attachment.contentType || "text/html; charset=UTF-8"}; name="${attachmentName}"`,
+          `Content-Disposition: attachment; filename="${attachmentName}"`,
+          "Content-Transfer-Encoding: base64",
+          "",
+          attachmentBody,
+          "",
+          `--${mixedBoundary}--`,
+        ]
+      : []),
     "",
   ];
   return lines.join("\r\n").replace(/^\./gm, "..");
@@ -590,7 +607,7 @@ async function smtpCommand(socket, command, expected = /^[23]/) {
   return response;
 }
 
-async function sendSmtpEmail({ to, subject, text, html }) {
+async function sendSmtpEmail({ to, subject, text, html, attachment }) {
   const status = mailDeliveryStatus();
   if (!status.ready) {
     return { ok: false, skipped: true, message: `SMTP pendiente: ${status.missing.join(", ")}` };
@@ -614,7 +631,7 @@ async function sendSmtpEmail({ to, subject, text, html }) {
     await smtpCommand(socket, `MAIL FROM:<${from}>`);
     await smtpCommand(socket, `RCPT TO:<${to}>`);
     await smtpCommand(socket, "DATA", /^354/);
-    socket.write(`${smtpMessage({ from, to, subject, text, html })}\r\n.\r\n`);
+    socket.write(`${smtpMessage({ from, to, subject, text, html, attachment })}\r\n.\r\n`);
     await smtpCommand(socket, null);
     await smtpCommand(socket, "QUIT", /^221|^250/);
     return { ok: true, skipped: false };
@@ -3383,7 +3400,20 @@ async function handleApi(req, res, url) {
       const subject = String(payload.subject || "Documento de cobro Touch Note").slice(0, 160);
       const html = String(payload.html || "").slice(0, 120000);
       const text = String(payload.text || "Te compartimos tu documento de cobro.").slice(0, 5000);
-      const result = await sendSmtpEmail({ to, subject, text, html });
+      const filename = String(payload.filename || "touch-note-documento.html").slice(0, 120);
+      const result = await sendSmtpEmail({
+        to,
+        subject,
+        text,
+        html,
+        attachment: html
+          ? {
+              filename,
+              contentType: "text/html; charset=UTF-8",
+              content: html,
+            }
+          : null,
+      });
       sendJson(res, 200, { ok: Boolean(result.ok), to, result });
     } catch (error) {
       sendJson(res, 502, { ok: false, to, message: error.message });

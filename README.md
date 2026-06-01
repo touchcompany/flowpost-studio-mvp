@@ -38,7 +38,7 @@ Si SMTP no esta configurado, la app no se rompe: muestra un enlace temporal manu
 
 Tambien puedes revisar SMTP en `/api/mail/status` y enviar una prueba con `POST /api/mail/test` estando logueado como super admin.
 
-Las cuentas de cobro y facturas pueden enviarse desde la app con `POST /api/billing/send-document`. El backend valida la sesion y bloquea documentos de clientes o empresas que no pertenezcan a esa cuenta. Si SMTP no esta listo, la interfaz cae a correo manual (`mailto`) para que el flujo no se rompa.
+Las cuentas de cobro y facturas pueden enviarse desde la app con `POST /api/billing/send-document`. El backend valida la sesion, bloquea documentos de clientes o empresas que no pertenezcan a esa cuenta y adjunta una copia HTML imprimible para guardar como PDF. Si SMTP no esta listo, la interfaz cae a correo manual (`mailto`) para que el flujo no se rompa.
 
 ## Siguiente capa tecnica
 

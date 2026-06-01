@@ -5191,6 +5191,7 @@ async function documentAction(action) {
             subject: emailSubject,
             text,
             html,
+            filename: billingDocumentFileName(documentData),
             clientId: documentData?.clientId || client.id,
             companyId: documentData?.companyId || client.companyId,
             documentId: documentData?.id || "",
