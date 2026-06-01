@@ -2195,6 +2195,13 @@ function syncBillingDraftDefaults() {
   }
 }
 
+function syncBillingDraftClientContact(clientId = billingDraft.clientId) {
+  const client = clients.find((item) => item.id === clientId);
+  billingDraft.clientNit = client?.nit || "";
+  billingDraft.clientPhone = client?.phone || "";
+  billingDraft.clientEmail = client?.email || "";
+}
+
 function renderServiceOptions(selectedServiceId) {
   return activeAgencyServices()
     .map(
@@ -4431,6 +4438,7 @@ function createFinanceDocument() {
   billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
   billingDraft.currentNumber = "";
   billingDraft.clientId = client.id;
+  syncBillingDraftClientContact(client.id);
   billingDraft.lines = [{ serviceId, quantity: 1, price: amount }];
   billingDraft.description = service.name;
   billingDraft.dueDate = dueDate;
@@ -4811,11 +4819,13 @@ function saveBillingDocument() {
   const subtotal = billingDraftSubtotal();
   const existingIndex = billingDraft.editingInvoiceId ? invoices.findIndex((invoice) => invoice.id === billingDraft.editingInvoiceId) : -1;
   const isNewDocument = existingIndex < 0;
+  const existingDocument = existingIndex >= 0 ? invoices[existingIndex] : null;
   const documentNumber = billingDraft.currentNumber || billingDocumentNumberFromDraft();
   const recurringEnabled = Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true");
   const recurringFrequency = billingDraft.autoFrequency || client.billingCycle || "Mensual";
   const document = {
-    id: existingIndex >= 0 ? invoices[existingIndex].id : `invoice-${client.id}-${Date.now()}`,
+    ...(existingDocument || {}),
+    id: existingDocument?.id || `invoice-${client.id}-${Date.now()}`,
     agencyId: activeAgencyId,
     clientId: client.id,
     companyId: client.companyId,
@@ -4825,7 +4835,7 @@ function saveBillingDocument() {
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
     amount: subtotal,
     currency: "COP",
-    status: "Pendiente",
+    status: existingDocument?.status || "Pendiente",
     issueDate: billingDraft.issueDate,
     dueDate: billingDraft.dueDate,
     observations: billingDraft.observations,
@@ -4880,6 +4890,7 @@ function newBillingDocument() {
   billingDraft.issueDate = todayISO();
   billingDraft.dueDate = addDaysToDate(todayISO(), 5);
   billingDraft.observations = "";
+  syncBillingDraftClientContact();
   billingDraft.lines = [{ serviceId: "pro", quantity: 1, price: serviceById("pro").price }];
   persistState();
   renderClientBillingPanel();
@@ -11706,6 +11717,7 @@ clientWorkspacePanel.addEventListener("input", (event) => {
     if (field === "clientId") {
       billingDraft.editingInvoiceId = "";
       billingDraft.currentNumber = "";
+      syncBillingDraftClientContact(billingDraft.clientId);
     }
     persistState();
     if (["documentType", "issuerCompanyId", "clientId", "nextNumber", "numberPrefix"].includes(field)) {
@@ -11734,6 +11746,11 @@ clientWorkspacePanel.addEventListener("change", (event) => {
   if (billingField) {
     const field = billingField.dataset.billingField;
     billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
+    if (field === "clientId") {
+      billingDraft.editingInvoiceId = "";
+      billingDraft.currentNumber = "";
+      syncBillingDraftClientContact(billingDraft.clientId);
+    }
     if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
     if (field === "nextNumber" || field === "numberPrefix" || field === "documentType") billingDraft.currentNumber = "";
     persistState();
