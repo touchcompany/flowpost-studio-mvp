@@ -374,6 +374,14 @@
     grid-template-columns: 1fr;
   }
 
+  .finance-filter-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+
+  .finance-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .finance-create-card > header,
   .finance-list-card > header {
     align-items: flex-start;
@@ -12058,5 +12066,38 @@ input[type="file"] {
 
   .scripts-company-stats::-webkit-scrollbar {
     display: none;
+  }
+
+  .finance-filter-bar {
+    grid-template-columns: repeat(6, minmax(126px, 1fr)) auto;
+    gap: 8px;
+    overflow-x: auto;
+    border-radius: 18px;
+    scrollbar-width: none;
+  }
+
+  .finance-filter-bar::-webkit-scrollbar,
+  .finance-metrics::-webkit-scrollbar {
+    display: none;
+  }
+
+  .finance-filter-bar .finance-filter-reset {
+    position: sticky;
+    right: 0;
+    min-width: 40px;
+    background: #fff;
+  }
+
+  .finance-metrics {
+    grid-template-columns: repeat(5, minmax(132px, 1fr));
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .finance-metrics article,
+  .finance-metric-button {
+    padding: 12px;
+    border-radius: 16px;
   }
 }
