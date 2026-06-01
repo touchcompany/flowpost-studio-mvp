@@ -10843,6 +10843,22 @@ input[type="file"] {
   }
 
   .scripts-company-header {
+    order: 0;
+  }
+
+  .scripts-chat-panel {
+    order: 1;
+  }
+
+  .scripts-list-panel {
+    order: 2;
+  }
+
+  .scripts-resource-panel {
+    order: 3;
+  }
+
+  .scripts-company-header {
     grid-template-columns: auto auto minmax(0, 1fr);
   }
 
@@ -12029,5 +12045,18 @@ input[type="file"] {
 
   .calendar-time-slot .slot-create-button {
     opacity: 1;
+  }
+
+  .scripts-company-stats {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(112px, 1fr);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .scripts-company-stats::-webkit-scrollbar {
+    display: none;
   }
 }
