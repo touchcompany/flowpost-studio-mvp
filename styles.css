@@ -11745,6 +11745,131 @@ input[type="file"] {
 }
 
 @media (max-width: 620px) {
+  .company-detail-panel {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .company-avatar.detail {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+  }
+
+  .company-detail-panel h3 {
+    font-size: 1.48rem;
+    line-height: 1.08;
+  }
+
+  .company-detail-panel p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.9rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .company-detail-panel .company-networks {
+    gap: 5px;
+    min-height: 0;
+    margin: 9px 0;
+  }
+
+  .company-detail-panel .network-pill {
+    padding: 3px 6px 3px 4px;
+    font-size: 0.68rem;
+  }
+
+  .company-detail-actions {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .company-detail-actions .secondary-button {
+    width: 36px;
+    min-height: 36px;
+    padding: 0;
+  }
+
+  .company-detail-action-label {
+    display: none;
+  }
+
+  .company-detail-stats {
+    grid-column: 1 / -1;
+    gap: 7px;
+  }
+
+  .company-detail-stats article {
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .company-detail-stats strong {
+    font-size: 0.95rem;
+  }
+
+  .company-detail-stats span {
+    font-size: 0.62rem;
+  }
+
+  .company-list-toolbar {
+    gap: 9px;
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .company-filter-chips {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .company-filter-chips button {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 10px;
+    scroll-snap-align: start;
+  }
+
+  .company-chat-list {
+    border-radius: 20px;
+  }
+
+  .company-chat-row {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .company-row-main {
+    gap: 10px;
+  }
+
+  .company-avatar.list {
+    width: 48px;
+    height: 48px;
+  }
+
+  .company-row-main strong {
+    font-size: 1rem;
+  }
+
+  .company-row-main small,
+  .company-row-main em {
+    font-size: 0.78rem;
+  }
+
+  .company-row-meta {
+    gap: 5px;
+    padding-left: 58px;
+  }
+
   .dashboard-hero {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;

@@ -9559,15 +9559,15 @@ function renderCompanies() {
         <div class="company-detail-actions">
           <button class="secondary-button icon-text-button" type="button" data-company-jump="calendar">
             <i data-lucide="calendar-days"></i>
-            Calendario
+            <span class="company-detail-action-label">Calendario</span>
           </button>
           <button class="secondary-button icon-text-button" type="button" data-company-jump="finances">
             <i data-lucide="wallet-cards"></i>
-            Cuentas
+            <span class="company-detail-action-label">Cuentas</span>
           </button>
           <button class="secondary-button icon-text-button" type="button" data-company-jump="scripts">
             <i data-lucide="notebook-pen"></i>
-            Guiones
+            <span class="company-detail-action-label">Guiones</span>
           </button>
         </div>
       </div>
