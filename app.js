@@ -8472,6 +8472,9 @@ function renderScriptsWorkspace() {
   scriptsWorkspacePanel.innerHTML = `
     <section class="scripts-workspace scripts-focused-workspace">
       <header class="scripts-company-header">
+        <button class="icon-button compact scripts-back-button" type="button" data-back-to-calendar title="Volver al calendario" aria-label="Volver al calendario">
+          <i data-lucide="arrow-left"></i>
+        </button>
         <span class="brand-dot large" style="background:${escapeHtml(company.color || "#111")}"></span>
         <div>
           <p>Workspace de guiones</p>
@@ -10535,7 +10538,7 @@ scriptsWorkspacePanel?.addEventListener("click", (event) => {
 
   const newDraftButton = event.target.closest("[data-script-new-draft]");
   if (newDraftButton) {
-    createScriptDraftFromCalendar(todayISO(), "09:00");
+    createScriptDraftFromCalendar(calendarFocusDate || todayISO(), "09:00");
     return;
   }
 
