@@ -440,7 +440,7 @@
   }
 
   .summary-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -11177,7 +11177,7 @@ input[type="file"] {
   }
 
   .summary-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .cover-tools,
@@ -11960,5 +11960,31 @@ input[type="file"] {
 
   .order-actions button {
     flex: 1 1 120px;
+  }
+
+  .summary-strip {
+    grid-template-columns: repeat(4, minmax(82px, 1fr));
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .summary-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .summary-strip article {
+    min-width: 82px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .summary-strip strong {
+    font-size: 1.12rem;
+  }
+
+  .summary-strip span {
+    font-size: 0.7rem;
   }
 }
