@@ -3597,6 +3597,31 @@ input[type="file"]:focus {
   justify-content: flex-end;
 }
 
+.calendar-period-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.calendar-period-nav strong {
+  min-width: 124px;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.calendar-period-nav .calendar-today-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+}
+
 .google-calendar-week {
   display: grid;
   grid-template-columns: 64px repeat(7, minmax(130px, 1fr));
@@ -11077,6 +11102,19 @@ input[type="file"] {
 
   .calendar-board-actions button {
     flex: 1 1 150px;
+  }
+
+  .calendar-period-nav {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .calendar-period-nav button {
+    flex: 0 0 auto;
+  }
+
+  .calendar-period-nav strong {
+    min-width: 0;
   }
 
   .summary-strip {

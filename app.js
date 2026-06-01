@@ -310,6 +310,7 @@ let deletedCompanies = [];
 let deletedUsers = [];
 let activeUsers = [];
 let calendarView = "week";
+let calendarFocusDate = todayISO();
 let scriptsSearchTerm = "";
 let scriptsStatusFilter = "Todos";
 let selectedCalendarPublicationId = "";
@@ -897,12 +898,14 @@ function restoreUiState() {
     sidebarCollapsed = Boolean(stored.sidebarCollapsed);
     queueCollapsed = Boolean(stored.queueCollapsed);
     calendarView = stored.calendarView || "week";
+    calendarFocusDate = stored.calendarFocusDate || todayISO();
     scriptsSearchTerm = stored.scriptsSearchTerm || "";
     scriptsStatusFilter = stored.scriptsStatusFilter || "Todos";
   } catch {
     sidebarCollapsed = false;
     queueCollapsed = false;
     calendarView = "week";
+    calendarFocusDate = todayISO();
     scriptsSearchTerm = "";
     scriptsStatusFilter = "Todos";
   }
@@ -917,6 +920,7 @@ function persistUiState() {
         sidebarCollapsed,
         queueCollapsed,
         calendarView,
+        calendarFocusDate,
         scriptsSearchTerm,
         scriptsStatusFilter,
       })
@@ -6523,6 +6527,31 @@ function renderCalendar() {
   renderDashboard();
 }
 
+function calendarPeriodLabel() {
+  const focusDate = calendarFocusDate || todayISO();
+  if (calendarView === "month") {
+    return new Intl.DateTimeFormat("es-CO", { month: "long", year: "numeric" }).format(new Date(`${focusDate}T12:00:00`));
+  }
+  if (calendarView === "day") {
+    return new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long" }).format(new Date(`${focusDate}T12:00:00`));
+  }
+  const startDate = addDaysISO(focusDate, -weekdayIndex(focusDate));
+  return `${shortDateLabel(startDate)} - ${shortDateLabel(addDaysISO(startDate, 6))}`;
+}
+
+function shiftCalendarFocus(direction) {
+  if (direction === "today") {
+    calendarFocusDate = todayISO();
+  } else {
+    const date = new Date(`${calendarFocusDate || todayISO()}T12:00:00`);
+    if (calendarView === "month") date.setMonth(date.getMonth() + Number(direction || 0));
+    else date.setDate(date.getDate() + Number(direction || 0) * (calendarView === "week" ? 7 : 1));
+    calendarFocusDate = date.toISOString().slice(0, 10);
+  }
+  persistUiState();
+  renderCalendar();
+}
+
 function renderCalendarBoardHeader(companyPublications) {
   const company = activeCompany();
   const scriptsReady = companyPublications.filter((publication) => (publication.script || "").trim()).length;
@@ -6536,11 +6565,21 @@ function renderCalendarBoardHeader(companyPublications) {
         <p>${companyPublications.length} piezas · ${scriptsReady} guiones listos · ${scheduled} aprobadas/programadas · ${ideas} ideas</p>
       </div>
       <div class="calendar-board-actions">
+        ${
+          ["week", "month", "day"].includes(calendarView)
+            ? `<div class="calendar-period-nav" aria-label="Navegar calendario">
+                <button class="secondary-button icon-button compact" type="button" data-calendar-nav="-1" aria-label="Periodo anterior"><i data-lucide="chevron-left"></i></button>
+                <button class="secondary-button calendar-today-button" type="button" data-calendar-nav="today">Hoy</button>
+                <strong>${escapeHtml(calendarPeriodLabel())}</strong>
+                <button class="secondary-button icon-button compact" type="button" data-calendar-nav="1" aria-label="Periodo siguiente"><i data-lucide="chevron-right"></i></button>
+              </div>`
+            : ""
+        }
         <button class="secondary-button icon-text-button" type="button" data-calendar-open-scripts>
           <i data-lucide="notebook-pen"></i>
           Guiones
         </button>
-        <button class="primary-button icon-text-button" type="button" data-calendar-create-slot="${todayISO()}" data-calendar-create-time="09:00">
+        <button class="primary-button icon-text-button" type="button" data-calendar-create-slot="${calendarFocusDate || todayISO()}" data-calendar-create-time="09:00">
           <i data-lucide="plus"></i>
           Nuevo guion
         </button>
@@ -7100,14 +7139,14 @@ function calendarPost(publication, compact = false) {
 
 function renderCalendarWeek(companyPublications) {
   const days = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
-  const today = todayISO();
+  const focusDate = calendarFocusDate || todayISO();
   const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, "0")}:00`);
   return `
     <section class="google-calendar-week">
       <div class="calendar-time-head"></div>
       ${days
         .map((day, index) => {
-          const dayDate = addDaysISO(today, index - weekdayIndex(today));
+          const dayDate = addDaysISO(focusDate, index - weekdayIndex(focusDate));
           return `
             <header class="calendar-day-head">
               <span>${day}</span>
@@ -7122,7 +7161,7 @@ function renderCalendarWeek(companyPublications) {
             <div class="calendar-hour-label">${hour}</div>
             ${days
               .map((_, index) => {
-                const dayDate = addDaysISO(today, index - weekdayIndex(today));
+                const dayDate = addDaysISO(focusDate, index - weekdayIndex(focusDate));
                 const dayPublications = companyPublications.filter((publication) => publication.date === dayDate && (publication.time || "").slice(0, 2) === hour.slice(0, 2));
                 return `
                   <div class="calendar-time-slot" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}">
@@ -7142,8 +7181,8 @@ function renderCalendarWeek(companyPublications) {
 }
 
 function renderCalendarMonth(companyPublications) {
-  const today = todayISO();
-  const current = new Date(`${today}T00:00:00`);
+  const focusDate = calendarFocusDate || todayISO();
+  const current = new Date(`${focusDate}T00:00:00`);
   const year = current.getFullYear();
   const month = current.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -7179,9 +7218,7 @@ function renderCalendarMonth(companyPublications) {
 }
 
 function renderCalendarDay(companyPublications) {
-  const today = todayISO();
-  const selected = selectedCalendarPublication(companyPublications);
-  const dayDate = selected?.date || today;
+  const dayDate = calendarFocusDate || todayISO();
   const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, "0")}:00`);
   return `
     <article class="calendar-day-focus">
@@ -10287,6 +10324,12 @@ document.querySelectorAll("[data-cover-format-button]").forEach((button) => {
 googlePickerButton.addEventListener("click", openGooglePicker);
 
 calendarGrid.addEventListener("click", (event) => {
+  const navigationButton = event.target.closest("[data-calendar-nav]");
+  if (navigationButton) {
+    shiftCalendarFocus(navigationButton.dataset.calendarNav);
+    return;
+  }
+
   const scriptsButton = event.target.closest("[data-calendar-open-scripts]");
   if (scriptsButton) {
     const publication = selectedCalendarPublication(filteredPublications());
@@ -10309,8 +10352,12 @@ calendarGrid.addEventListener("click", (event) => {
   const card = event.target.closest("[data-publication-id]");
   if (!card) return;
   selectedCalendarPublicationId = card.dataset.publicationId;
-  openScriptsPromptForPublication(card.dataset.publicationId);
   const publication = publications.find((item) => item.id === card.dataset.publicationId);
+  if (publication?.date) {
+    calendarFocusDate = publication.date;
+    persistUiState();
+  }
+  openScriptsPromptForPublication(card.dataset.publicationId);
   showToast(`Abierto en guiones de ${activeCompany().name}: ${publication?.title || "pieza seleccionada"}.`);
 });
 
