@@ -790,6 +790,7 @@ let financeFilters = {
   companyId: "all",
   documentStatus: "all",
   transactionType: "all",
+  providerStatus: "all",
 };
 let companyListSearch = "";
 let companyListFilter = "all";
@@ -3012,7 +3013,12 @@ function financeFilteredTransactions() {
 function financeFilteredProviders() {
   const priority = { Atrasado: 0, Próximo: 1, Programado: 2, "Sin fecha": 3 };
   return monthlyProviders
-    .filter((provider) => financeCompanyMatches(provider.companyId) && financeDateMatches(provider.nextPaymentDate))
+    .filter(
+      (provider) =>
+        financeCompanyMatches(provider.companyId) &&
+        financeDateMatches(provider.nextPaymentDate) &&
+        (financeFilters.providerStatus === "all" || financeProviderStatus(provider) === financeFilters.providerStatus)
+    )
     .sort((left, right) => {
       const statusDifference = (priority[financeProviderStatus(left)] ?? 4) - (priority[financeProviderStatus(right)] ?? 4);
       if (statusDifference) return statusDifference;
@@ -3058,6 +3064,7 @@ function resetFinanceFilters() {
     companyId: "all",
     documentStatus: "all",
     transactionType: "all",
+    providerStatus: "all",
   };
   persistState();
   renderFinancePanel();
@@ -3155,6 +3162,12 @@ function renderFinancePanel() {
           <span>Movimiento</span>
           <select data-finance-filter="transactionType">
             ${["all", "Ingreso", "Egreso"].map((type) => `<option value="${type}" ${financeFilters.transactionType === type ? "selected" : ""}>${type === "all" ? "Todos" : type}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span>Proveedor</span>
+          <select data-finance-filter="providerStatus">
+            ${["all", "Atrasado", "Próximo", "Programado"].map((status) => `<option value="${status}" ${financeFilters.providerStatus === status ? "selected" : ""}>${status === "all" ? "Todos" : status}</option>`).join("")}
           </select>
         </label>
         <button class="secondary-button icon-button finance-filter-reset" type="button" data-finance-reset-filters aria-label="Restablecer filtros" title="Restablecer filtros">
