@@ -11491,8 +11491,11 @@ input[type="file"] {
     bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     display: none;
     width: min(310px, calc(100vw - 36px));
+    max-height: min(68svh, 560px);
     gap: 6px;
     padding: 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border: 1px solid rgba(255, 255, 255, 0.76);
     border-radius: 28px;
     background:

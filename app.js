@@ -5585,6 +5585,11 @@ function normalizeViewName(viewName) {
   return [...views].some((view) => view.dataset.view === viewName) ? viewName : "dashboard";
 }
 
+function closeMobileMoreMenu() {
+  sidebar?.classList.remove("more-open");
+  mobileMoreButton?.setAttribute("aria-expanded", "false");
+}
+
 function setView(viewName, options = {}) {
   let targetView = normalizeViewName(viewName);
   syncViewEntitlements();
@@ -5602,8 +5607,7 @@ function setView(viewName, options = {}) {
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
   mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "finances", "automations", "accounts", "settings"].includes(targetView));
-  sidebar?.classList.remove("more-open");
-  mobileMoreButton?.setAttribute("aria-expanded", "false");
+  closeMobileMoreMenu();
   updateMobileProfileNav();
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
     window.history.replaceState(null, "", `#${targetView}`);
@@ -10316,6 +10320,15 @@ sidebarToggle.addEventListener("click", () => {
 mobileMoreButton?.addEventListener("click", () => {
   const isOpen = sidebar?.classList.toggle("more-open");
   mobileMoreButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+});
+
+document.addEventListener("click", (event) => {
+  if (!sidebar?.classList.contains("more-open") || sidebar.contains(event.target)) return;
+  closeMobileMoreMenu();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeMobileMoreMenu();
 });
 
 queueToggle.addEventListener("click", () => {
