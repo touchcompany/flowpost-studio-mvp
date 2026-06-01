@@ -7148,7 +7148,7 @@ function renderCalendarWeek(companyPublications) {
         .map((day, index) => {
           const dayDate = addDaysISO(focusDate, index - weekdayIndex(focusDate));
           return `
-            <header class="calendar-day-head">
+            <header class="calendar-day-head ${dayDate === todayISO() ? "today" : ""}">
               <button class="calendar-day-trigger" type="button" data-calendar-open-day="${dayDate}" aria-label="Abrir ${dayDate}">
                 <span>${day}</span>
                 <strong>${shortDateLabel(dayDate)}</strong>
@@ -7197,7 +7197,7 @@ function renderCalendarMonth(companyPublications) {
     const dayPublications = companyPublications.filter((publication) => publication.date === iso);
     const outside = date.getMonth() !== month;
     return `
-      <article class="calendar-month-cell ${outside ? "outside" : ""}" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00">
+      <article class="calendar-month-cell ${outside ? "outside" : ""} ${iso === todayISO() ? "today" : ""}" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00">
         <header>
           <button class="calendar-month-day-trigger" type="button" data-calendar-open-day="${iso}" aria-label="Abrir ${iso}">${date.getDate()}</button>
           <button class="slot-create-button visible" type="button" data-calendar-create-slot="${iso}" data-calendar-create-time="09:00" aria-label="Crear guion ${iso}">
@@ -7222,6 +7222,7 @@ function renderCalendarMonth(companyPublications) {
 function renderCalendarDay(companyPublications) {
   const dayDate = calendarFocusDate || todayISO();
   const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, "0")}:00`);
+  const currentHour = `${String(new Date().getHours()).padStart(2, "0")}:00`;
   return `
     <article class="calendar-day-focus">
       <header>
@@ -7236,7 +7237,7 @@ function renderCalendarDay(companyPublications) {
           .map((hour) => {
             const hourPublications = companyPublications.filter((publication) => publication.date === dayDate && (publication.time || "").slice(0, 2) === hour.slice(0, 2));
             return `
-              <section class="day-hour-row" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}">
+              <section class="day-hour-row ${dayDate === todayISO() && hour === currentHour ? "current" : ""}" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}">
                 <time>${hour}</time>
                 <div>
                   <button class="slot-create-button visible" type="button" data-calendar-create-slot="${dayDate}" data-calendar-create-time="${hour}" aria-label="Crear guion ${dayDate} ${hour}">
