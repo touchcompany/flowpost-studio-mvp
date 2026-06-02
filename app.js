@@ -2752,7 +2752,7 @@ function renderClientBillingPanel() {
   ensureRecurringBillingDocuments();
   const activeClients = activeAgencyClients();
   const activeClientIds = new Set(activeClients.map((client) => client.id));
-  const pendingInvoices = invoices.filter((invoice) => activeClientIds.has(invoice.clientId) && invoice.status !== "Pagada");
+  const pendingInvoices = invoices.filter((invoice) => !invoice.deletedAt && activeClientIds.has(invoice.clientId) && invoice.status !== "Pagada");
   const activeOrders = serviceOrders.filter((order) => order.agencyId === activeAgencyId);
   const monthlyTotal = activeClients.reduce((sum, client) => sum + Number(client.amount || 0), 0);
 
@@ -2771,7 +2771,7 @@ function renderClientBillingPanel() {
       ${activeClients
         .map((client) => {
           const company = companies.find((item) => item.id === client.companyId);
-          const invoice = invoices.find((item) => item.clientId === client.id && item.status !== "Pagada");
+          const invoice = invoices.find((item) => !item.deletedAt && item.clientId === client.id && item.status !== "Pagada");
           const orders = clientServiceOrders(client.id);
           const score = clientHealthScore(client, company, orders, invoice);
           return `
@@ -2835,7 +2835,7 @@ function renderClientBillingPanel() {
               const company = companies.find((item) => item.id === client.companyId);
               const companyPublications = publications.filter((publication) => publication.companyId === client.companyId);
               const companyAssets = company?.videos?.length || 0;
-              const invoice = invoices.find((item) => item.clientId === client.id && item.status !== "Pagada");
+              const invoice = invoices.find((item) => !item.deletedAt && item.clientId === client.id && item.status !== "Pagada");
               const orders = clientServiceOrders(client.id);
               const score = clientHealthScore(client, company, orders, invoice);
               const completedOrders = orders.filter((order) => order.status === "Completado").length;
@@ -3053,16 +3053,34 @@ function financeCompanyMatches(companyId) {
 
 function financeYearOptions() {
   const years = new Set([String(new Date().getFullYear())]);
-  [...invoices, ...financeTransactions, ...monthlyProviders].forEach((item) => {
+  [...financeActiveInvoices(), ...financeTransactions, ...monthlyProviders].forEach((item) => {
     const value = item.issueDate || item.dueDate || item.date || item.nextPaymentDate;
     if (value) years.add(String(new Date(`${String(value).slice(0, 10)}T12:00:00`).getFullYear()));
   });
   return ["all", ...[...years].sort((a, b) => Number(b) - Number(a))];
 }
 
+function financeActiveInvoices() {
+  return invoices.filter((invoice) => !invoice.deletedAt);
+}
+
+function purgeExpiredFinanceInvoices() {
+  const now = new Date().toISOString();
+  const nextInvoices = invoices.filter((invoice) => !invoice.deletedAt || !invoice.deletionExpiresAt || invoice.deletionExpiresAt > now);
+  if (nextInvoices.length === invoices.length) return;
+  invoices = nextInvoices;
+  persistState();
+}
+
+function financeDeletedInvoices() {
+  return invoices
+    .filter((invoice) => invoice.deletedAt)
+    .sort((left, right) => String(right.deletedAt || "").localeCompare(String(left.deletedAt || "")));
+}
+
 function financeFilteredInvoices() {
   const priority = { Vencida: 0, Pendiente: 1, Pagada: 2 };
-  return invoices
+  return financeActiveInvoices()
     .filter(
       (invoice) =>
         financeCompanyMatches(invoice.companyId) &&
@@ -3178,6 +3196,7 @@ function financeDocumentFromInvoice(invoice) {
 
 function renderFinancePanel() {
   if (!financePanel) return;
+  purgeExpiredFinanceInvoices();
   const visibleCompanies = ensureActiveCompanyAccess();
   const activeClients = activeAgencyClients();
   ensureRecurringBillingDocuments();
@@ -3193,6 +3212,7 @@ function renderFinancePanel() {
   const upcomingProviders = filteredProviders.filter((item) => ["Atrasado", "Próximo"].includes(financeProviderStatus(item)));
   const recurringInvoices = filteredInvoices.filter((item) => item.autoGenerate);
   const recurringClients = activeClients.filter((item) => item.nextInvoiceDate);
+  const deletedInvoices = financeDeletedInvoices().filter((invoice) => financeCompanyMatches(invoice.companyId));
   const monthOptions = [
     ["all", "Todos"],
     ["1", "Enero"],
@@ -3351,6 +3371,39 @@ function renderFinancePanel() {
             }
           </div>
         </section>
+
+        ${
+          deletedInvoices.length
+            ? `
+              <section class="finance-list-card">
+                <header>
+                  <div>
+                    <h3>Papelera de documentos</h3>
+                    <p>${deletedInvoices.length} recuperable${deletedInvoices.length === 1 ? "" : "s"} durante 30 días.</p>
+                  </div>
+                  <span class="pill muted">${deletedInvoices.length}</span>
+                </header>
+                <div class="finance-list">
+                  ${deletedInvoices
+                    .map((invoice) => {
+                      const client = clients.find((item) => item.id === invoice.clientId);
+                      return `
+                        <article class="finance-row compact">
+                          <span class="finance-avatar"><i data-lucide="archive-restore"></i></span>
+                          <div>
+                            <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
+                            <p>${escapeHtml(client?.name || "Cliente")} · recuperable hasta ${escapeHtml(shortDateLabel((invoice.deletionExpiresAt || "").slice(0, 10)))}</p>
+                          </div>
+                          <button class="secondary-button icon-button compact" type="button" data-finance-invoice-restore="${escapeHtml(invoice.id)}" aria-label="Recuperar documento"><i data-lucide="archive-restore"></i></button>
+                        </article>
+                      `;
+                    })
+                    .join("")}
+                </div>
+              </section>
+            `
+            : ""
+        }
 
         <section class="finance-list-card">
           <header>
@@ -4352,7 +4405,7 @@ function validateProvisioningForService(service, client) {
 function generateClientInvoice(clientId) {
   const client = clients.find((item) => item.id === clientId);
   if (!client) return;
-  const existing = invoices.find((invoice) => invoice.clientId === client.id && invoice.status !== "Pagada");
+  const existing = invoices.find((invoice) => !invoice.deletedAt && invoice.clientId === client.id && invoice.status !== "Pagada");
   if (existing) {
     showToast("Este cliente ya tiene un cobro pendiente.");
     return;
@@ -4406,7 +4459,7 @@ function ensureRecurringBillingDocuments() {
   let created = 0;
   activeAgencyClients().forEach((client) => {
     if (!client.nextInvoiceDate || client.nextInvoiceDate > today) return;
-    const pending = invoices.find((invoice) => invoice.clientId === client.id && invoice.status !== "Pagada");
+    const pending = invoices.find((invoice) => !invoice.deletedAt && invoice.clientId === client.id && invoice.status !== "Pagada");
     if (pending) return;
     syncBillingDraftDefaults();
     const issueDate = client.nextInvoiceDate;
@@ -4619,7 +4672,7 @@ function deleteFinanceTransaction(transactionId) {
 }
 
 function markInvoicePaid(invoiceId) {
-  const invoice = invoices.find((item) => item.id === invoiceId);
+  const invoice = invoices.find((item) => item.id === invoiceId && !item.deletedAt);
   if (!invoice || invoice.status === "Pagada") {
     showToast("Ese documento no tiene cobro pendiente.");
     return;
@@ -4648,18 +4701,33 @@ function markInvoicePaid(invoiceId) {
 }
 
 function deleteFinanceInvoice(invoiceId) {
-  const invoice = invoices.find((item) => item.id === invoiceId);
+  const invoice = invoices.find((item) => item.id === invoiceId && !item.deletedAt);
   if (!invoice) return;
-  invoices = invoices.filter((item) => item.id !== invoiceId);
-  financeTransactions = financeTransactions.filter((item) => item.invoiceId !== invoiceId);
+  const deletedAt = new Date();
+  const deletionExpiresAt = new Date(deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  invoices = invoices.map((item) =>
+    item.id === invoiceId
+      ? { ...item, deletedAt: deletedAt.toISOString(), deletionExpiresAt: deletionExpiresAt.toISOString() }
+      : item
+  );
   persistState();
   renderFinancePanel();
   renderClientBillingPanel();
-  showToast("Documento eliminado.");
+  showToast("Documento movido a papelera por 30 días.");
+}
+
+function restoreFinanceInvoice(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId && item.deletedAt);
+  if (!invoice) return;
+  invoices = invoices.map((item) => (item.id === invoiceId ? { ...item, deletedAt: "", deletionExpiresAt: "" } : item));
+  persistState();
+  renderFinancePanel();
+  renderClientBillingPanel();
+  showToast("Documento recuperado.");
 }
 
 function openFinanceDocumentPdf(invoiceId) {
-  const invoice = invoices.find((item) => item.id === invoiceId);
+  const invoice = invoices.find((item) => item.id === invoiceId && !item.deletedAt);
   const documentData = financeDocumentFromInvoice(invoice);
   if (!documentData) {
     showToast("No encontre ese documento.");
@@ -4669,7 +4737,7 @@ function openFinanceDocumentPdf(invoiceId) {
 }
 
 function loadFinanceInvoiceIntoDraft(invoiceId, options = {}) {
-  const invoice = invoices.find((item) => item.id === invoiceId);
+  const invoice = invoices.find((item) => item.id === invoiceId && !item.deletedAt);
   const documentData = financeDocumentFromInvoice(invoice);
   if (!documentData) return null;
   billingDraft = {
@@ -5511,7 +5579,7 @@ function markClientInvoicePaid(clientId) {
   let changed = false;
   const paidTransactions = [];
   invoices = invoices.map((invoice) => {
-    if (invoice.clientId !== clientId || invoice.status === "Pagada") return invoice;
+    if (invoice.deletedAt || invoice.clientId !== clientId || invoice.status === "Pagada") return invoice;
     changed = true;
     paidTransactions.push({
       id: `txn-${invoice.id}-${Date.now()}`,
@@ -5542,7 +5610,7 @@ function markClientInvoicePaid(clientId) {
 async function copyClientBillingSummary(clientId) {
   const client = clients.find((item) => item.id === clientId);
   if (!client) return;
-  const invoice = invoices.find((item) => item.clientId === client.id && item.status !== "Pagada");
+  const invoice = invoices.find((item) => !item.deletedAt && item.clientId === client.id && item.status !== "Pagada");
   const text = `${client.name} · ${serviceById(client.serviceId).name || client.plan} ${client.billingCycle} · ${formatMoney(client.amount, client.currency)} · ${invoice ? `Cobro pendiente vence ${invoice.dueDate}` : "Al dia"}`;
   try {
     await navigator.clipboard.writeText(text);
@@ -5897,7 +5965,7 @@ function renderDashboard() {
   const companyPosts = activePublications();
   const companyJobs = jobs.filter((job) => job.companyId === company.id);
   const client = clients.find((item) => item.companyId === company.id);
-  const openInvoices = invoices.filter((invoice) => invoice.companyId === company.id && invoice.status !== "Pagada");
+  const openInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada");
   const readyAccounts = (company.accounts || []).filter((account) => account.status === "Conectada").length;
   const scheduled = companyPosts.filter((post) => post.status === "Programado").length;
   const published = companyPosts.filter((post) => post.status === "Publicado").length;
@@ -9568,11 +9636,11 @@ function renderCompanies() {
 
   const active = activeCompany();
   const activeClient = clients.find((client) => client.companyId === active.id);
-  const activeOpenInvoices = invoices.filter((invoice) => invoice.companyId === active.id && invoice.status !== "Pagada");
+  const activeOpenInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === active.id && invoice.status !== "Pagada");
   const normalizedSearch = normalizeText(companyListSearch);
   const companyRows = visibleCompanies.filter((company) => {
     const client = clients.find((item) => item.companyId === company.id);
-    const pending = invoices.filter((invoice) => invoice.companyId === company.id && invoice.status !== "Pagada").length;
+    const pending = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada").length;
     const text = normalizeText(`${company.name} ${company.handle || ""} ${company.description || ""} ${client?.name || ""} ${client?.email || ""}`);
     const matchesSearch = !normalizedSearch || text.includes(normalizedSearch);
     const matchesFilter =
@@ -9646,7 +9714,7 @@ function renderCompanies() {
         .map((company) => {
           const isActive = company.id === activeCompanyId;
           const client = clients.find((item) => item.companyId === company.id);
-          const pending = invoices.filter((invoice) => invoice.companyId === company.id && invoice.status !== "Pagada").length;
+          const pending = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada").length;
           const companyPosts = publications.filter((post) => post.companyId === company.id).length;
           return `
             <article class="company-chat-row ${isActive ? "active" : ""}">
@@ -11530,6 +11598,12 @@ financePanel?.addEventListener("click", (event) => {
   const deleteInvoiceButton = event.target.closest("[data-finance-invoice-delete]");
   if (deleteInvoiceButton) {
     deleteFinanceInvoice(deleteInvoiceButton.dataset.financeInvoiceDelete);
+    return;
+  }
+
+  const restoreInvoiceButton = event.target.closest("[data-finance-invoice-restore]");
+  if (restoreInvoiceButton) {
+    restoreFinanceInvoice(restoreInvoiceButton.dataset.financeInvoiceRestore);
     return;
   }
 
