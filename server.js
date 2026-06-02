@@ -1154,6 +1154,53 @@ function sessionOwnedCompanyIds(state, session = {}) {
   return allowedCompanyIds;
 }
 
+function scopedFinanceFilters() {
+  return {
+    month: "all",
+    year: String(new Date().getFullYear()),
+    companyId: "all",
+    documentStatus: "all",
+    transactionType: "all",
+    providerStatus: "all",
+  };
+}
+
+function scopedBillingDraft(state, allowedCompanyIds, companies, clients) {
+  const draft = state.billingDraft || {};
+  const client = clients.find((item) => item.id === draft.clientId) || clients[0] || {};
+  const issuer = companies.find((item) => item.id === draft.issuerCompanyId) || companies[0] || {};
+  const draftIsAllowed = allowedCompanyIds.has(draft.issuerCompanyId) && (!draft.clientId || clients.some((item) => item.id === draft.clientId));
+  if (draftIsAllowed) return draft;
+  const profile = issuer.billingProfile || {};
+  return {
+    editingInvoiceId: "",
+    documentType: profile.documentType || "Cuenta de cobro",
+    issuerCompanyId: issuer.id || "",
+    clientId: client.id || "",
+    numberPrefix: profile.numberPrefix || "CC",
+    nextNumber: Number(profile.nextNumber || 1),
+    currentNumber: "",
+    description: "",
+    issueDate: new Date().toISOString().slice(0, 10),
+    dueDate: "",
+    observations: "",
+    signatureName: "",
+    issuerNit: profile.issuerNit || issuer.nit || "",
+    issuerPhone: profile.issuerPhone || issuer.phone || "",
+    issuerEmail: profile.issuerEmail || issuer.email || "",
+    paymentBank: profile.paymentBank || "",
+    paymentAccountType: profile.paymentAccountType || "Cuenta de ahorros",
+    paymentAccountNumber: profile.paymentAccountNumber || "",
+    paymentAccountHolder: profile.paymentAccountHolder || issuer.name || "",
+    clientNit: client.nit || "",
+    clientPhone: client.phone || "",
+    clientEmail: client.email || "",
+    autoGenerate: Boolean(profile.autoGenerate),
+    autoFrequency: profile.autoFrequency || "Mensual",
+    lines: [],
+  };
+}
+
 function filterStateForSession(state, session) {
   if (!isScopedSession(session)) return state;
   const allowedCompanyIds = sessionOwnedCompanyIds(state, session);
@@ -1177,23 +1224,33 @@ function filterStateForSession(state, session) {
   }
   const companyAllowed = (item) => allowedCompanyIds.has(item.companyId || item.id);
   const companies = (state.companies || []).filter(companyAllowed);
+  const clients = (state.clients || []).filter(companyAllowed);
+  const allowedAgencyIds = new Set(clients.map((client) => client.agencyId).filter(Boolean));
+  (state.agencies || []).forEach((agency) => {
+    if (agency.ownerUserId === session.id) allowedAgencyIds.add(agency.id);
+  });
   return {
     ...state,
     activeCompanyId: allowedCompanyIds.has(state.activeCompanyId) ? state.activeCompanyId : companies[0]?.id || "",
+    activeAgencyId: allowedAgencyIds.has(state.activeAgencyId) ? state.activeAgencyId : [...allowedAgencyIds][0] || "",
+    agencies: (state.agencies || []).filter((agency) => allowedAgencyIds.has(agency.id)),
     companies,
     publications: (state.publications || []).filter(companyAllowed),
     jobs: (state.jobs || []).filter(companyAllowed),
-    clients: (state.clients || []).filter(companyAllowed),
+    clients,
     invoices: (state.invoices || []).filter(companyAllowed),
     serviceOrders: (state.serviceOrders || []).filter(companyAllowed),
     financeTransactions: (state.financeTransactions || []).filter(companyAllowed),
     monthlyProviders: (state.monthlyProviders || []).filter(companyAllowed),
+    agencyServices: (state.agencyServices || []).filter((service) => !service.agencyId || allowedAgencyIds.has(service.agencyId)),
     activityLog: (state.activityLog || []).filter(companyAllowed),
     promptLibrary: (state.promptLibrary || []).filter(companyAllowed),
     characters: (state.characters || []).filter(companyAllowed),
     creativeAssets: (state.creativeAssets || []).filter(companyAllowed),
     accessMembers: (state.accessMembers || []).filter(companyAllowed),
     accessInvites: (state.accessInvites || []).filter(companyAllowed),
+    billingDraft: scopedBillingDraft(state, allowedCompanyIds, companies, clients),
+    financeFilters: scopedFinanceFilters(),
   };
 }
 
@@ -1240,6 +1297,11 @@ function mergeScopedRecords(currentState, incomingState, session) {
   };
   const publications = replaceScoped(currentState.publications || [], incomingState.publications || []);
   const statusByPublication = new Map(publications.map((publication) => [publication.id, publication.status]));
+  const incomingBillingDraft = incomingState.billingDraft || {};
+  const billingDraftClient = (incomingState.clients || []).find((client) => client.id === incomingBillingDraft.clientId);
+  const billingDraftAllowed =
+    writableCompanyIds.has(incomingBillingDraft.issuerCompanyId) &&
+    (!incomingBillingDraft.clientId || (billingDraftClient && writableCompanyIds.has(billingDraftClient.companyId)));
   return {
     ...currentState,
     activeCompanyId: writableCompanyIds.has(incomingState.activeCompanyId) ? incomingState.activeCompanyId : currentState.activeCompanyId,
@@ -1262,8 +1324,8 @@ function mergeScopedRecords(currentState, incomingState, session) {
     agencies: mergeById(currentState.agencies || [], incomingState.agencies || []),
     agencyServices: mergeById(currentState.agencyServices || [], incomingState.agencyServices || []),
     selectedAiProvider: incomingState.selectedAiProvider || currentState.selectedAiProvider,
-    billingDraft: incomingState.billingDraft || currentState.billingDraft,
-    financeFilters: incomingState.financeFilters || currentState.financeFilters,
+    billingDraft: billingDraftAllowed ? incomingBillingDraft : currentState.billingDraft,
+    financeFilters: currentState.financeFilters,
     _newCompanyAccess: writableCompanyIds,
   };
 }

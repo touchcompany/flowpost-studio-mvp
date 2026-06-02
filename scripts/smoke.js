@@ -232,6 +232,26 @@ async function run() {
     assert.deepEqual(clientSessionPut.session.companyAccess, ["casa-norte"], "session PUT should preserve scoped company access");
     const scopedState = await getJson("/api/state");
     assert.ok((scopedState.companies || []).every((company) => company.id === "casa-norte"), "client state should be scoped to allowed company");
+    const scopedAgencyIds = new Set((scopedState.clients || []).map((client) => client.agencyId).filter(Boolean));
+    assert.ok((scopedState.agencies || []).every((agency) => scopedAgencyIds.has(agency.id)), "client state should not expose unrelated agencies");
+    assert.ok(
+      (scopedState.agencyServices || []).every((service) => !service.agencyId || scopedAgencyIds.has(service.agencyId)),
+      "client state should not expose unrelated agency services"
+    );
+    assert.ok(
+      !scopedState.billingDraft?.issuerCompanyId || scopedState.billingDraft.issuerCompanyId === "casa-norte",
+      "client billing draft should stay inside allowed company"
+    );
+    const hostileScopedState = await putJson("/api/state", {
+      ...scopedState,
+      billingDraft: {
+        ...(scopedState.billingDraft || {}),
+        issuerCompanyId: "verde-lima",
+        clientId: "client-verde",
+        issuerEmail: "outside@example.com",
+      },
+    });
+    assert.notEqual(hostileScopedState.billingDraft?.issuerCompanyId, "verde-lima", "scoped users should not overwrite billing draft for another company");
     const forbiddenBillingResponse = await fetch(`${BASE_URL}/api/billing/send-document`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
