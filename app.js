@@ -377,6 +377,7 @@ const fallbackIconPaths = {
   "calendar-days": '<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',
   calendar: '<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+  "list-filter": '<path d="M3 6h18"/><path d="M6 12h12"/><path d="M10 18h4"/>',
   "columns-3": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
   "list-checks": '<path d="m3 7 2 2 4-4"/><path d="M11 6h10"/><path d="m3 17 2 2 4-4"/><path d="M11 16h10"/>',
   "panel-left-close": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 9l-3 3 3 3"/>',
@@ -3301,48 +3302,55 @@ function renderFinancePanel() {
   ];
   financePanel.innerHTML = `
     <section class="finance-shell">
-      <div class="finance-filter-bar">
-        <label>
-          <span>Mes</span>
-          <select data-finance-filter="month">
-            ${monthOptions.map(([value, label]) => `<option value="${value}" ${financeFilters.month === value ? "selected" : ""}>${label}</option>`).join("")}
-          </select>
-        </label>
-        <label>
-          <span>Año</span>
-          <select data-finance-filter="year">
-            ${financeYearOptions().map((year) => `<option value="${year}" ${financeFilters.year === year ? "selected" : ""}>${year === "all" ? "Todos" : year}</option>`).join("")}
-          </select>
-        </label>
-        <label>
-          <span>Empresa</span>
-          <select data-finance-filter="companyId">
-            <option value="all" ${financeFilters.companyId === "all" ? "selected" : ""}>Todas</option>
-            ${visibleCompanies.map((company) => `<option value="${company.id}" ${financeFilters.companyId === company.id ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
-          </select>
-        </label>
-        <label>
-          <span>Documento</span>
-          <select data-finance-filter="documentStatus">
-            ${["all", "Pendiente", "Pagada", "Vencida"].map((status) => `<option value="${status}" ${financeFilters.documentStatus === status ? "selected" : ""}>${status === "all" ? "Todos" : status}</option>`).join("")}
-          </select>
-        </label>
-        <label>
-          <span>Movimiento</span>
-          <select data-finance-filter="transactionType">
-            ${["all", "Ingreso", "Egreso"].map((type) => `<option value="${type}" ${financeFilters.transactionType === type ? "selected" : ""}>${type === "all" ? "Todos" : type}</option>`).join("")}
-          </select>
-        </label>
-        <label>
-          <span>Proveedor</span>
-          <select data-finance-filter="providerStatus">
-            ${["all", "Atrasado", "Próximo", "Programado"].map((status) => `<option value="${status}" ${financeFilters.providerStatus === status ? "selected" : ""}>${status === "all" ? "Todos" : status}</option>`).join("")}
-          </select>
-        </label>
-        <button class="secondary-button icon-button finance-filter-reset" type="button" data-finance-reset-filters aria-label="Restablecer filtros" title="Restablecer filtros">
-          <i data-lucide="rotate-ccw"></i>
-        </button>
-      </div>
+      <details class="finance-disclosure">
+        <summary>
+          <span><i data-lucide="list-filter"></i> Filtrar cuentas</span>
+          <small>Ver opciones</small>
+          <i data-lucide="chevron-down"></i>
+        </summary>
+        <div class="finance-filter-bar">
+          <label>
+            <span>Mes</span>
+            <select data-finance-filter="month">
+              ${monthOptions.map(([value, label]) => `<option value="${value}" ${financeFilters.month === value ? "selected" : ""}>${label}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            <span>Año</span>
+            <select data-finance-filter="year">
+              ${financeYearOptions().map((year) => `<option value="${year}" ${financeFilters.year === year ? "selected" : ""}>${year === "all" ? "Todos" : year}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            <span>Empresa</span>
+            <select data-finance-filter="companyId">
+              <option value="all" ${financeFilters.companyId === "all" ? "selected" : ""}>Todas</option>
+              ${visibleCompanies.map((company) => `<option value="${company.id}" ${financeFilters.companyId === company.id ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            <span>Documento</span>
+            <select data-finance-filter="documentStatus">
+              ${["all", "Pendiente", "Pagada", "Vencida"].map((status) => `<option value="${status}" ${financeFilters.documentStatus === status ? "selected" : ""}>${status === "all" ? "Todos" : status}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            <span>Movimiento</span>
+            <select data-finance-filter="transactionType">
+              ${["all", "Ingreso", "Egreso"].map((type) => `<option value="${type}" ${financeFilters.transactionType === type ? "selected" : ""}>${type === "all" ? "Todos" : type}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            <span>Proveedor</span>
+            <select data-finance-filter="providerStatus">
+              ${["all", "Atrasado", "Próximo", "Programado"].map((status) => `<option value="${status}" ${financeFilters.providerStatus === status ? "selected" : ""}>${status === "all" ? "Todos" : status}</option>`).join("")}
+            </select>
+          </label>
+          <button class="secondary-button icon-button finance-filter-reset" type="button" data-finance-reset-filters aria-label="Restablecer filtros" title="Restablecer filtros">
+            <i data-lucide="rotate-ccw"></i>
+          </button>
+        </div>
+      </details>
 
       <div class="finance-metrics">
         <article><span>Ingresos</span><strong>${formatMoney(income)}</strong></article>
@@ -3487,7 +3495,9 @@ function renderFinancePanel() {
             </div>
             <span class="pill muted">${filteredTransactions.length}</span>
           </header>
-          <div class="finance-form-grid transaction-form">
+          <details class="finance-inline-create">
+            <summary><i data-lucide="plus"></i> Registrar ingreso o egreso</summary>
+            <div class="finance-form-grid transaction-form">
             <label class="field compact">
               <span>Tipo</span>
               <select data-transaction-new="type">
@@ -3514,7 +3524,8 @@ function renderFinancePanel() {
               <input data-transaction-new="date" type="date" value="${escapeHtml(todayISO())}" />
             </label>
             <button class="secondary-button icon-text-button" type="button" data-transaction-create><i data-lucide="plus"></i>Agregar</button>
-          </div>
+            </div>
+          </details>
           <div class="finance-list">
             ${
               filteredTransactions.length
@@ -3549,14 +3560,17 @@ function renderFinancePanel() {
           </div>
           <span class="pill ${overdueProviders.length ? "danger" : "ready"}">${overdueProviders.length ? `${overdueProviders.length} atrasado${overdueProviders.length === 1 ? "" : "s"}` : `${upcomingProviders.length} próximos`}</span>
         </header>
-        <div class="finance-form-grid provider-form">
+        <details class="finance-inline-create">
+          <summary><i data-lucide="plus"></i> Agregar proveedor mensual</summary>
+          <div class="finance-form-grid provider-form">
           <label class="field compact"><span>Nombre</span><input data-provider-new="name" placeholder="Proveedor" /></label>
           <label class="field compact"><span>Categoría</span><input data-provider-new="category" placeholder="Hosting, Ads, software" /></label>
           <label class="field compact"><span>Empresa</span><select data-provider-new="companyId">${visibleCompanies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("")}</select></label>
           <label class="field compact"><span>Valor mensual</span><input data-provider-new="amount" type="number" min="0" placeholder="120000" /></label>
           <label class="field compact"><span>Próximo pago</span><input data-provider-new="nextPaymentDate" type="date" value="${escapeHtml(addDaysToDate(todayISO(), 30))}" /></label>
           <button class="secondary-button icon-text-button" type="button" data-provider-create><i data-lucide="plus"></i>Agregar</button>
-        </div>
+          </div>
+        </details>
         <div class="finance-list provider-list">
           ${
             filteredProviders.length
