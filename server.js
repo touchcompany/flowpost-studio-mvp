@@ -4143,6 +4143,31 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "DELETE" && parts[0] === "api" && parts[1] === "trash" && parts[2] === "companies" && parts[3]) {
+    if (!store.permanentlyDeleteCompany || !store.listDeletedCompanies) {
+      sendError(res, 501, "permanent delete unavailable");
+      return;
+    }
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const deletedCompanies = await store.listDeletedCompanies();
+    const company = deletedCompanies.find((item) => item.id === parts[3]);
+    if (!company) {
+      sendError(res, 404, "deleted company not found");
+      return;
+    }
+    if (isScopedSession(session)) {
+      const state = await store.getState();
+      const allowedCompanyIds = sessionOwnedCompanyIds({ ...state, companies: [...(state.companies || []), ...deletedCompanies] }, session);
+      if (!allowedCompanyIds.has(company.id)) {
+        sendError(res, 403, "company permanent delete forbidden");
+        return;
+      }
+    }
+    sendJson(res, 200, await store.permanentlyDeleteCompany(company.id));
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/trash/users") {
     if (!store.listDeletedProfiles) {
       sendJson(res, 200, []);
@@ -4424,6 +4449,15 @@ async function handleApi(req, res, url) {
         await store.saveState(db);
       }
       sendJson(res, 200, { deleted: true, id: company.id, activeCompanyId: db.activeCompanyId });
+      return;
+    }
+
+    if (req.method === "DELETE" && parts[3] === "permanent") {
+      if (!store.permanentlyDeleteCompany) {
+        sendError(res, 501, "permanent delete unavailable");
+        return;
+      }
+      sendJson(res, 200, await store.permanentlyDeleteCompany(company.id));
       return;
     }
 

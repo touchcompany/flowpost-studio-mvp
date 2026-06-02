@@ -804,6 +804,7 @@ let financeFilters = {
 };
 let companyListSearch = "";
 let companyListFilter = "all";
+let selectedCompanyDetailId = "";
 let billingDraft = {
   editingInvoiceId: "",
   documentType: "Cuenta de cobro",
@@ -9170,10 +9171,15 @@ function renderTrashPanel() {
                         <strong>${escapeHtml(company.name)}</strong>
                         <p>Eliminada ${escapeHtml(shortDateLabel((company.deletedAt || "").slice(0, 10)))} · recuperable hasta ${escapeHtml(shortDateLabel((company.deletionExpiresAt || "").slice(0, 10)))}</p>
                       </div>
-                      <button class="secondary-button icon-text-button" type="button" data-restore-company="${escapeHtml(company.id)}">
-                        <i data-lucide="rotate-ccw"></i>
-                        Restaurar
-                      </button>
+                      <div class="trash-row-actions">
+                        <button class="secondary-button icon-text-button" type="button" data-restore-company="${escapeHtml(company.id)}">
+                          <i data-lucide="rotate-ccw"></i>
+                          Restaurar
+                        </button>
+                        <button class="secondary-button icon-button compact danger" type="button" data-delete-company-permanent="${escapeHtml(company.id)}" aria-label="Eliminar definitivamente ${escapeHtml(company.name)}">
+                          <i data-lucide="trash-2"></i>
+                        </button>
+                      </div>
                     </article>
                   `
                 )
@@ -9696,6 +9702,154 @@ async function copyDeploymentCommand(type) {
   }
 }
 
+function companyDetailView(company) {
+  const client = clientForCompany(company.id);
+  const companyPosts = publications.filter((post) => post.companyId === company.id);
+  const companyInvoices = invoices.filter((invoice) => !invoice.deletedAt && (invoice.companyId === company.id || invoice.clientId === client?.id));
+  const companyVideos = company.videos || [];
+  const accounts = company.accounts || [];
+  const members = companyMembers(company.id);
+  const openInvoices = companyInvoices.filter((invoice) => invoice.status !== "Pagada");
+  const connectedAccounts = accounts.filter((account) => account.status === "Conectada");
+  return `
+    <section class="company-detail-view">
+      <header class="company-detail-view-head">
+        <button class="secondary-button icon-button compact" type="button" data-company-detail-back aria-label="Volver a empresas">
+          <i data-lucide="arrow-left"></i>
+        </button>
+        <span class="company-avatar detail" style="--company-color: ${escapeHtml(company.primaryColor || "#0095f6")}">
+          ${companyAvatarMarkup(company, "building-2")}
+        </span>
+        <div>
+          <span class="workspace-label">Detalle de empresa</span>
+          <h3>${escapeHtml(company.name)}</h3>
+          <p>${escapeHtml(company.handle || "Sin usuario")} · ${escapeHtml(company.description || "Completa la descripcion de esta empresa.")}</p>
+        </div>
+        <span class="pill done">Activa</span>
+      </header>
+
+      <div class="company-detail-actions">
+        <button class="primary-button icon-text-button" type="button" data-company-jump="calendar" aria-label="Abrir calendario"><i data-lucide="calendar-days"></i><span>Calendario</span></button>
+        <button class="secondary-button icon-text-button" type="button" data-company-jump="scripts" aria-label="Abrir guiones"><i data-lucide="notebook-pen"></i><span>Guiones</span></button>
+        <button class="secondary-button icon-text-button" type="button" data-company-jump="finances" aria-label="Abrir cuentas"><i data-lucide="wallet-cards"></i><span>Cuentas</span></button>
+        ${
+          isClientPortalSession()
+            ? ""
+            : `<button class="secondary-button icon-text-button" type="button" data-edit-company-id="${escapeHtml(company.id)}" aria-label="Editar empresa"><i data-lucide="pencil"></i><span>Editar</span></button>`
+        }
+      </div>
+
+      <section class="company-detail-stats">
+        <article><strong>${companyPosts.length}</strong><span>Publicaciones</span></article>
+        <article><strong>${openInvoices.length}</strong><span>Cobros abiertos</span></article>
+        <article><strong>${companyVideos.length}</strong><span>Recursos</span></article>
+        <article><strong>${connectedAccounts.length}/${accounts.length}</strong><span>Redes conectadas</span></article>
+      </section>
+
+      <div class="company-linked-grid">
+        <article class="company-info-card">
+          <span class="status-icon small"><i data-lucide="message-square-text"></i></span>
+          <div><strong>Identidad editorial</strong><p>${escapeHtml(company.voice || "Define el tono de voz para generar contenido consistente.")}</p></div>
+        </article>
+        <article class="company-info-card">
+          <span class="status-icon small"><i data-lucide="folder-open"></i></span>
+          <div><strong>Biblioteca vinculada</strong><p>${escapeHtml(company.mediaSource?.provider || "Sin proveedor")} · ${escapeHtml(company.mediaSource?.folder || "Sin carpeta configurada")}</p></div>
+        </article>
+        <article class="company-info-card">
+          <span class="status-icon small"><i data-lucide="receipt-text"></i></span>
+          <div><strong>Servicio y cobro</strong><p>${escapeHtml(client?.plan || "Sin plan")} · ${escapeHtml(client?.billingCycle || "Sin ciclo")} · ${client ? formatMoney(client.amount, client.currency) : "$ 0"}</p></div>
+        </article>
+        <article class="company-info-card">
+          <span class="status-icon small"><i data-lucide="users-round"></i></span>
+          <div><strong>Accesos</strong><p>${members.length} usuario${members.length === 1 ? "" : "s"} con permiso · ${escapeHtml(client?.email || "Sin correo de contacto")}</p></div>
+        </article>
+      </div>
+
+      <section class="company-detail-section">
+        <header><div><span class="workspace-label">Canales</span><h4>Redes sociales</h4></div><span class="pill muted">${accounts.length} configuradas</span></header>
+        <div class="company-account-list">
+          ${
+            accounts.length
+              ? accounts
+                  .map(
+                    (account) => `
+                      <article>
+                        ${networkPill(account.platform)}
+                        <div><strong>${escapeHtml(account.handle || company.handle || "Sin usuario")}</strong><p>${escapeHtml(account.note || "Lista para conectar OAuth.")}</p></div>
+                        <span class="pill ${account.status === "Conectada" ? "done" : "warning"}">${escapeHtml(account.status || "Pendiente")}</span>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : `<div class="empty-state compact"><strong>Sin redes</strong><p>Edita la empresa para agregar sus canales.</p></div>`
+          }
+        </div>
+      </section>
+
+      ${
+        isClientPortalSession()
+          ? ""
+          : `<section class="company-danger-zone">
+              <div><strong>Administrar empresa</strong><p>La papelera permite recuperar durante 30 dias. El borrado definitivo no se puede deshacer.</p></div>
+              <div>
+                <button class="secondary-button icon-text-button danger" type="button" data-company-delete="${escapeHtml(company.id)}"><i data-lucide="archive-x"></i><span>Mover a papelera</span></button>
+                <button class="secondary-button icon-text-button danger" type="button" data-company-delete-permanent="${escapeHtml(company.id)}"><i data-lucide="trash-2"></i><span>Eliminar definitivamente</span></button>
+              </div>
+            </section>`
+      }
+    </section>
+  `;
+}
+
+function removeCompanyRecordsFromBrowser(companyId) {
+  const keep = (items = []) => items.filter((item) => item.companyId !== companyId);
+  companies = companies.filter((company) => company.id !== companyId);
+  publications = keep(publications);
+  jobs = keep(jobs);
+  clients = keep(clients);
+  accessMembers = keep(accessMembers);
+  accessInvites = keep(accessInvites);
+  invoices = keep(invoices);
+  serviceOrders = keep(serviceOrders);
+  activityLog = keep(activityLog);
+  financeTransactions = keep(financeTransactions);
+  monthlyProviders = keep(monthlyProviders);
+  promptLibrary = keep(promptLibrary);
+  if (activeCompanyId === companyId) activeCompanyId = companies[0]?.id || "";
+}
+
+async function deleteCompanyFromWorkspace(companyId, permanent = false) {
+  const company = companies.find((item) => item.id === companyId);
+  if (!company) return;
+  if (companies.length <= 1) {
+    showToast("Crea otra empresa antes de eliminar la unica empresa activa.");
+    return;
+  }
+  const confirmed = window.confirm(
+    permanent
+      ? `Eliminar definitivamente ${company.name}? Se borraran sus publicaciones, recursos, cobros y accesos. Esta accion no se puede deshacer.`
+      : `${company.name} ira a la papelera durante 30 dias. Puedes restaurarla antes del vencimiento.`
+  );
+  if (!confirmed) return;
+  try {
+    if (window.location.protocol === "file:") {
+      removeCompanyRecordsFromBrowser(companyId);
+      persistState();
+    } else {
+      const endpoint = permanent ? `/api/companies/${encodeURIComponent(companyId)}/permanent` : `/api/companies/${encodeURIComponent(companyId)}`;
+      const response = await fetch(endpoint, { method: "DELETE", headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("delete failed");
+      await hydrateStateFromBackend();
+    }
+    selectedCompanyDetailId = "";
+    refreshCompanyContext();
+    if (!permanent) await refreshTrash(false);
+    showToast(permanent ? "Empresa eliminada definitivamente." : "Empresa enviada a papelera.");
+  } catch {
+    showToast("No se pudo eliminar la empresa.");
+  }
+}
+
 function renderCompanies() {
   const visibleCompanies = ensureActiveCompanyAccess();
   activeCompanyName.textContent = activeCompany().name;
@@ -9707,9 +9861,13 @@ function renderCompanies() {
     .join("");
   renderMobileCompanyMenu();
 
-  const active = activeCompany();
-  const activeClient = clients.find((client) => client.companyId === active.id);
-  const activeOpenInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === active.id && invoice.status !== "Pagada");
+  const selectedCompany = visibleCompanies.find((company) => company.id === selectedCompanyDetailId);
+  document.querySelector(".companies-layout")?.classList.toggle("detail-open", Boolean(selectedCompany));
+  if (selectedCompany) {
+    companiesGrid.innerHTML = companyDetailView(selectedCompany);
+    renderIcons();
+    return;
+  }
   const normalizedSearch = normalizeText(companyListSearch);
   const companyRows = visibleCompanies.filter((company) => {
     const client = clients.find((item) => item.companyId === company.id);
@@ -9724,39 +9882,6 @@ function renderCompanies() {
     return matchesSearch && matchesFilter;
   });
   companiesGrid.innerHTML = `
-    <section class="company-detail-panel">
-      <span class="company-avatar detail" style="--company-color: ${escapeHtml(active.primaryColor || "#0095f6")}">
-        ${companyAvatarMarkup(active, "building-2")}
-      </span>
-      <div>
-        <span class="workspace-label">Empresa activa</span>
-        <h3>${escapeHtml(active.name)}</h3>
-        <p>${escapeHtml(active.description || active.handle || "Sin descripcion")}</p>
-        <div class="company-networks">
-          ${(active.socialNetworks || active.accounts.map((account) => account.platform)).map((network) => networkPill(network)).join("")}
-        </div>
-        <div class="company-detail-actions">
-          <button class="secondary-button icon-text-button" type="button" data-company-jump="calendar">
-            <i data-lucide="calendar-days"></i>
-            <span class="company-detail-action-label">Calendario</span>
-          </button>
-          <button class="secondary-button icon-text-button" type="button" data-company-jump="finances">
-            <i data-lucide="wallet-cards"></i>
-            <span class="company-detail-action-label">Cuentas</span>
-          </button>
-          <button class="secondary-button icon-text-button" type="button" data-company-jump="scripts">
-            <i data-lucide="notebook-pen"></i>
-            <span class="company-detail-action-label">Guiones</span>
-          </button>
-        </div>
-      </div>
-      <div class="company-detail-stats">
-        <article><strong>${publications.filter((post) => post.companyId === active.id).length}</strong><span>Posts</span></article>
-        <article><strong>${activeOpenInvoices.length}</strong><span>Cobros</span></article>
-        <article><strong>${activeClient ? formatMoney(activeClient.amount, activeClient.currency) : "$ 0"}</strong><span>Plan</span></article>
-      </div>
-    </section>
-
     <section class="company-list-toolbar">
       <label class="field compact">
         <span>Buscar</span>
@@ -9791,7 +9916,7 @@ function renderCompanies() {
           const companyPosts = publications.filter((post) => post.companyId === company.id).length;
           return `
             <article class="company-chat-row ${isActive ? "active" : ""}">
-              <button class="company-row-main" type="button" data-company-id="${company.id}" ${isActive ? "disabled" : ""}>
+              <button class="company-row-main" type="button" data-company-id="${company.id}">
                 <span class="company-avatar list" style="--company-color: ${escapeHtml(company.primaryColor || "#0095f6")}">
                   ${companyAvatarMarkup(company, "building-2")}
                 </span>
@@ -10567,6 +10692,7 @@ mobileCompanyMenu?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-mobile-company-id]");
   if (!button) return;
   activeCompanyId = button.dataset.mobileCompanyId;
+  selectedCompanyDetailId = "";
   activeCompanySelect.value = activeCompanyId;
   closeMobileCompanyMenu();
   refreshCompanyContext();
@@ -11325,6 +11451,29 @@ accountsGrid.addEventListener("click", async (event) => {
       showToast("Empresa restaurada.");
     } catch {
       showToast("No se pudo restaurar la empresa.");
+      renderAccounts();
+    }
+    return;
+  }
+
+  const permanentDeleteCompanyButton = event.target.closest("[data-delete-company-permanent]");
+  if (permanentDeleteCompanyButton) {
+    const company = deletedCompanies.find((item) => item.id === permanentDeleteCompanyButton.dataset.deleteCompanyPermanent);
+    if (!company) return;
+    const confirmed = window.confirm(`Eliminar definitivamente ${company.name}? Esta accion no se puede deshacer.`);
+    if (!confirmed) return;
+    permanentDeleteCompanyButton.disabled = true;
+    try {
+      const response = await fetch(`/api/trash/companies/${encodeURIComponent(company.id)}`, {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("permanent delete failed");
+      await refreshTrash(false);
+      renderAccounts();
+      showToast("Empresa eliminada definitivamente.");
+    } catch {
+      showToast("No se pudo eliminar definitivamente la empresa.");
       renderAccounts();
     }
     return;
@@ -12349,10 +12498,30 @@ scriptModal.addEventListener("click", (event) => {
 
 activeCompanySelect.addEventListener("change", () => {
   activeCompanyId = activeCompanySelect.value;
+  selectedCompanyDetailId = "";
   refreshCompanyContext();
 });
 
-companiesGrid.addEventListener("click", (event) => {
+companiesGrid.addEventListener("click", async (event) => {
+  const backButton = event.target.closest("[data-company-detail-back]");
+  if (backButton) {
+    selectedCompanyDetailId = "";
+    renderCompanies();
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-company-delete]");
+  if (deleteButton) {
+    await deleteCompanyFromWorkspace(deleteButton.dataset.companyDelete, false);
+    return;
+  }
+
+  const permanentDeleteButton = event.target.closest("[data-company-delete-permanent]");
+  if (permanentDeleteButton) {
+    await deleteCompanyFromWorkspace(permanentDeleteButton.dataset.companyDeletePermanent, true);
+    return;
+  }
+
   const filterButton = event.target.closest("[data-company-filter]");
   if (filterButton) {
     companyListFilter = filterButton.dataset.companyFilter || "all";
@@ -12387,6 +12556,7 @@ companiesGrid.addEventListener("click", (event) => {
   const button = event.target.closest("[data-company-id]");
   if (!button) return;
   activeCompanyId = button.dataset.companyId;
+  selectedCompanyDetailId = activeCompanyId;
   refreshCompanyContext();
   showToast(`${activeCompany().name} ahora es la empresa activa.`);
 });
