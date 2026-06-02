@@ -8,6 +8,8 @@ const mobileMoreButton = document.querySelector("#mobileMoreButton");
 const mobileProfileNavIcon = document.querySelector("#mobileProfileNavIcon");
 const mobileMoreProfileName = document.querySelector("#mobileMoreProfileName");
 const mobileMoreProfileMeta = document.querySelector("#mobileMoreProfileMeta");
+const mobileMenuProfileAvatar = document.querySelector("#mobileMenuProfileAvatar");
+const mobileLogoutButton = document.querySelector("#mobileLogoutButton");
 const queueToggle = document.querySelector("#queueToggle");
 const form = document.querySelector("#composerForm");
 const captionInput = document.querySelector("#caption");
@@ -45,7 +47,9 @@ const publishButton = document.querySelector("#publishButton");
 const draftButton = document.querySelector("#draftButton");
 const newPostButton = document.querySelector("#newPostButton");
 const activeCompanyName = document.querySelector("#activeCompanyName");
+const activeCompanyButton = document.querySelector("#activeCompanyButton");
 const activeCompanySelect = document.querySelector("#activeCompanySelect");
+const mobileCompanyMenu = document.querySelector("#mobileCompanyMenu");
 const companyForm = document.querySelector("#companyForm");
 const companyNameInput = document.querySelector("#companyNameInput");
 const companyHandleInput = document.querySelector("#companyHandleInput");
@@ -53,6 +57,7 @@ const companyDescriptionInput = document.querySelector("#companyDescriptionInput
 const companyVoiceInput = document.querySelector("#companyVoiceInput");
 const companyNetworksInput = document.querySelector("#companyNetworksInput");
 const companyColorInput = document.querySelector("#companyColorInput");
+const companyAvatarInput = document.querySelector("#companyAvatarInput");
 const companySubmitButton = document.querySelector("#companySubmitButton");
 const companyCancelButton = document.querySelector("#companyCancelButton");
 const companiesGrid = document.querySelector("#companiesGrid");
@@ -376,6 +381,10 @@ const fallbackIconPaths = {
   "panel-right-close": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16M9 9l3 3-3 3"/>',
   "panel-right-open": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16M12 9l-3 3 3 3"/>',
   briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/>',
+  "briefcase-business": '<path d="M12 12h.01"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M22 13a18.2 18.2 0 0 1-20 0"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
+  "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+  "circle-user-round": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="8" r="4"/><path d="M4.93 19.07a8 8 0 0 1 14.14 0"/>',
+  "log-out": '<path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 19V5a2 2 0 0 0-2-2h-6"/>',
   palette: '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 22a10 10 0 1 1 10-10c0 3-2 4-4 4h-1.5a2 2 0 0 0-1.4 3.4c.8.8.2 2.6-1.1 2.6H12Z"/>',
   "badge-check": '<path d="M7 3h10l4 4v10l-4 4H7l-4-4V7l4-4Z"/><path d="m8 12 3 3 5-6"/>',
   sparkles: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m5 17 .8 2.2L8 20l-2.2.8L5 23l-.8-2.2L2 20l2.2-.8L5 17Z"/>',
@@ -1353,6 +1362,39 @@ function profileInitials(name = "") {
   return (initials || "T").toUpperCase();
 }
 
+function entityPhotoUrl(entity = {}) {
+  return entity.avatarUrl || entity.picture || entity.photoURL || "";
+}
+
+function avatarImageMarkup(photoUrl = "", alt = "") {
+  return photoUrl ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" />` : "";
+}
+
+function companyAvatarMarkup(company = {}, fallbackIcon = "briefcase-business") {
+  return avatarImageMarkup(entityPhotoUrl(company), company.name || "Empresa") || `<i data-lucide="${fallbackIcon}"></i>`;
+}
+
+function renderMobileCompanyMenu() {
+  if (!mobileCompanyMenu) return;
+  mobileCompanyMenu.innerHTML = ensureActiveCompanyAccess()
+    .map(
+      (company) => `
+        <button class="${company.id === activeCompanyId ? "active" : ""}" type="button" data-mobile-company-id="${escapeHtml(company.id)}">
+          <span class="company-avatar small" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
+            ${companyAvatarMarkup(company)}
+          </span>
+          <span>
+            <strong>${escapeHtml(company.name)}</strong>
+            <small>${escapeHtml(company.handle || "Marca activa")}</small>
+          </span>
+          ${company.id === activeCompanyId ? `<i data-lucide="check"></i>` : ""}
+        </button>
+      `
+    )
+    .join("");
+  renderIcons();
+}
+
 function updateMobileProfileNav() {
   const session = currentSession();
   const planLabel = session.planLabel || planLimits[currentPlan()]?.label || "Starter";
@@ -1363,6 +1405,9 @@ function updateMobileProfileNav() {
     mobileProfileNavIcon.innerHTML = photoUrl
       ? `<img src="${escapeHtml(photoUrl)}" alt="" />`
       : `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
+  }
+  if (mobileMenuProfileAvatar) {
+    mobileMenuProfileAvatar.innerHTML = avatarImageMarkup(photoUrl, session.name || "Tu perfil") || `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
   }
   if (mobileMoreProfileName) mobileMoreProfileName.textContent = session.name || "Tu perfil";
   if (mobileMoreProfileMeta) mobileMoreProfileMeta.textContent = `${roleLabel} · ${planLabel}`;
@@ -1437,8 +1482,10 @@ function renderAccount() {
 
   accountName.textContent = name;
   accountPlan.textContent = `${planLabel} · ${providerLabel}`;
-  accountAvatar.textContent = name.trim().charAt(0).toUpperCase() || "M";
+  const photoUrl = entityPhotoUrl(session);
+  accountAvatar.innerHTML = avatarImageMarkup(photoUrl, name) || `<span>${escapeHtml(profileInitials(name).slice(0, 2))}</span>`;
   logoutButton.textContent = session.id ? "Salir" : "Entrar";
+  updateMobileProfileNav();
   syncViewEntitlements();
   renderPlanPanel();
   renderBillingPanel();
@@ -2621,7 +2668,7 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
       <div class="client-command-main">
         <div class="client-brand-chip" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
           <span class="company-avatar large">
-            <i data-lucide="building-2"></i>
+            ${companyAvatarMarkup(company, "building-2")}
           </span>
         </div>
         <div>
@@ -2696,7 +2743,7 @@ function renderClientSwitcher(activeClients, pendingInvoices) {
             return `
               <button class="${client.id === selectedClient.id ? "active" : ""}" type="button" data-client-switch="${escapeHtml(client.id)}">
                 <span class="company-avatar small" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
-                  <i data-lucide="briefcase"></i>
+                  ${companyAvatarMarkup(company)}
                 </span>
                 <span>
                   <strong>${escapeHtml(client.name)}</strong>
@@ -2777,7 +2824,7 @@ function renderClientBillingPanel() {
           return `
             <article class="client-row">
               <span class="company-avatar small" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
-                <i data-lucide="briefcase"></i>
+                ${companyAvatarMarkup(company)}
               </span>
               <div>
                 <strong>${escapeHtml(client.name)}</strong>
@@ -2846,7 +2893,7 @@ function renderClientBillingPanel() {
                 <article class="client-profile-card">
                   <header class="client-profile-head">
                     <span class="company-avatar" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
-                      <i data-lucide="building-2"></i>
+                      ${companyAvatarMarkup(company, "building-2")}
                     </span>
                     <div>
                       <strong>${escapeHtml(client.name)}</strong>
@@ -3526,7 +3573,7 @@ function renderSettingsPanel() {
     <section class="settings-shell">
       <article class="settings-profile-card">
         <span class="company-avatar settings-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
-          <img src="favicon.svg" alt="" />
+          ${avatarImageMarkup(entityPhotoUrl(session), session.name || "Usuario Touch") || `<img src="favicon.svg" alt="" />`}
         </span>
         <div>
           <span class="workspace-label">Cuenta activa</span>
@@ -3537,6 +3584,22 @@ function renderSettingsPanel() {
           <i data-lucide="chevron-right"></i>
         </button>
       </article>
+
+      <section class="settings-group">
+        <header>
+          <span class="status-icon"><i data-lucide="circle-user-round"></i></span>
+          <div>
+            <h3>Perfil de usuario</h3>
+            <p>Tu imagen personal aparece en el acceso rápido y el menú inferior.</p>
+          </div>
+        </header>
+        <div class="settings-form-grid">
+          <label class="field compact wide">
+            <span>Foto de perfil</span>
+            <input data-settings-profile-field="avatarUrl" type="url" value="${escapeHtml(entityPhotoUrl(session))}" placeholder="https://.../perfil.jpg" />
+          </label>
+        </div>
+      </section>
 
       <section class="settings-group">
         <header>
@@ -3558,6 +3621,10 @@ function renderSettingsPanel() {
           <label class="field compact">
             <span>Color</span>
             <input data-settings-company-field="primaryColor" type="color" value="${escapeHtml(company.primaryColor || "#111111")}" />
+          </label>
+          <label class="field compact wide">
+            <span>Foto o logo</span>
+            <input data-settings-company-field="avatarUrl" type="url" value="${escapeHtml(entityPhotoUrl(company))}" placeholder="https://.../logo.jpg" />
           </label>
           <label class="field compact wide">
             <span>Descripción</span>
@@ -5750,6 +5817,11 @@ function closeMobileMoreMenu() {
   mobileMoreButton?.setAttribute("aria-expanded", "false");
 }
 
+function closeMobileCompanyMenu() {
+  activeCompanyButton?.setAttribute("aria-expanded", "false");
+  mobileCompanyMenu?.classList.remove("open");
+}
+
 function setView(viewName, options = {}) {
   let targetView = normalizeViewName(viewName);
   syncViewEntitlements();
@@ -6005,7 +6077,7 @@ function renderDashboard() {
     <section class="dashboard-hero">
       <div>
         <span class="company-avatar large" style="--company-color: ${escapeHtml(company.primaryColor || "#0095f6")}">
-          <i data-lucide="briefcase"></i>
+          ${companyAvatarMarkup(company)}
         </span>
         <div>
           <p class="workspace-label">Empresa activa</p>
@@ -9633,6 +9705,7 @@ function renderCompanies() {
         `<option value="${company.id}" ${company.id === activeCompanyId ? "selected" : ""}>${escapeHtml(company.name)}</option>`
     )
     .join("");
+  renderMobileCompanyMenu();
 
   const active = activeCompany();
   const activeClient = clients.find((client) => client.companyId === active.id);
@@ -9653,7 +9726,7 @@ function renderCompanies() {
   companiesGrid.innerHTML = `
     <section class="company-detail-panel">
       <span class="company-avatar detail" style="--company-color: ${escapeHtml(active.primaryColor || "#0095f6")}">
-        <i data-lucide="building-2"></i>
+        ${companyAvatarMarkup(active, "building-2")}
       </span>
       <div>
         <span class="workspace-label">Empresa activa</span>
@@ -9720,7 +9793,7 @@ function renderCompanies() {
             <article class="company-chat-row ${isActive ? "active" : ""}">
               <button class="company-row-main" type="button" data-company-id="${company.id}" ${isActive ? "disabled" : ""}>
                 <span class="company-avatar list" style="--company-color: ${escapeHtml(company.primaryColor || "#0095f6")}">
-                  <i data-lucide="building-2"></i>
+                  ${companyAvatarMarkup(company, "building-2")}
                 </span>
                 <span>
                   <strong>${escapeHtml(company.name)}</strong>
@@ -10480,15 +10553,45 @@ sidebarToggle.addEventListener("click", () => {
 mobileMoreButton?.addEventListener("click", () => {
   const isOpen = sidebar?.classList.toggle("more-open");
   mobileMoreButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  closeMobileCompanyMenu();
 });
 
-document.addEventListener("click", (event) => {
-  if (!sidebar?.classList.contains("more-open") || sidebar.contains(event.target)) return;
+activeCompanyButton?.addEventListener("click", () => {
+  const isOpen = !mobileCompanyMenu?.classList.contains("open");
+  mobileCompanyMenu?.classList.toggle("open", isOpen);
+  activeCompanyButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
   closeMobileMoreMenu();
 });
 
+mobileCompanyMenu?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-mobile-company-id]");
+  if (!button) return;
+  activeCompanyId = button.dataset.mobileCompanyId;
+  activeCompanySelect.value = activeCompanyId;
+  closeMobileCompanyMenu();
+  refreshCompanyContext();
+  showToast(`${activeCompany().name} ahora es la empresa activa.`);
+});
+
+accountAvatar?.addEventListener("click", () => {
+  const isOpen = !sidebar?.classList.contains("more-open");
+  sidebar?.classList.toggle("more-open", isOpen);
+  mobileMoreButton?.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  closeMobileCompanyMenu();
+});
+
+document.addEventListener("click", (event) => {
+  if (sidebar?.classList.contains("more-open") && !sidebar.contains(event.target) && !accountAvatar?.contains(event.target)) closeMobileMoreMenu();
+  if (mobileCompanyMenu?.classList.contains("open") && !mobileCompanyMenu.contains(event.target) && !activeCompanyButton?.contains(event.target)) {
+    closeMobileCompanyMenu();
+  }
+});
+
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeMobileMoreMenu();
+  if (event.key === "Escape") {
+    closeMobileMoreMenu();
+    closeMobileCompanyMenu();
+  }
 });
 
 queueToggle.addEventListener("click", () => {
@@ -11506,6 +11609,9 @@ settingsPanel?.addEventListener("click", (event) => {
 });
 
 settingsPanel?.addEventListener("input", (event) => {
+  const profileField = event.target.closest("[data-settings-profile-field]");
+  if (profileField) return;
+
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
@@ -11530,6 +11636,17 @@ settingsPanel?.addEventListener("input", (event) => {
 });
 
 settingsPanel?.addEventListener("change", (event) => {
+  const profileField = event.target.closest("[data-settings-profile-field]");
+  if (profileField) {
+    saveClientSession({ ...currentSession(), [profileField.dataset.settingsProfileField]: profileField.value.trim() }).then(() => {
+      renderAccount();
+      updateMobileProfileNav();
+      renderSettingsPanel();
+      showToast("Foto de perfil actualizada.");
+    });
+    return;
+  }
+
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     renderSettingsPanel();
@@ -12035,7 +12152,7 @@ automationCenterPanel.addEventListener("click", (event) => {
   }
 });
 
-logoutButton.addEventListener("click", async () => {
+async function logoutCurrentSession() {
   const session = currentSession();
   if (!session.id) {
     window.location.href = "login.html";
@@ -12050,7 +12167,10 @@ logoutButton.addEventListener("click", async () => {
   }
   localStorage.removeItem(SESSION_KEY);
   window.location.href = "login.html";
-});
+}
+
+logoutButton.addEventListener("click", logoutCurrentSession);
+mobileLogoutButton?.addEventListener("click", logoutCurrentSession);
 
 document.querySelectorAll("[data-connect-source]").forEach((button) => {
   button.addEventListener("click", async () => {
@@ -12257,6 +12377,7 @@ companiesGrid.addEventListener("click", (event) => {
     companyVoiceInput.value = company.voice || "";
     companyNetworksInput.value = (company.socialNetworks || []).join(", ");
     companyColorInput.value = company.primaryColor || "#0095f6";
+    companyAvatarInput.value = entityPhotoUrl(company);
     companySubmitButton.textContent = "Actualizar empresa";
     companyCancelButton.hidden = false;
     companyNameInput.focus();
@@ -12324,6 +12445,7 @@ companyForm.addEventListener("submit", (event) => {
             voice: companyVoiceInput.value.trim(),
             socialNetworks,
             primaryColor: companyColorInput.value,
+            avatarUrl: companyAvatarInput.value.trim(),
           }
         : company
     );
@@ -12347,6 +12469,7 @@ companyForm.addEventListener("submit", (event) => {
       description: companyDescriptionInput.value.trim(),
       voice: companyVoiceInput.value.trim(),
       primaryColor: companyColorInput.value,
+      avatarUrl: companyAvatarInput.value.trim(),
       socialNetworks,
       mediaSource: {
         provider: "Google Drive",
