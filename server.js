@@ -528,6 +528,66 @@ function smtpSafeHeader(value = "") {
   return String(value).replace(/[\r\n]+/g, " ").trim();
 }
 
+function pdfSafeText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
+function pdfLines(value = "", width = 88) {
+  return String(value)
+    .split(/\r?\n/)
+    .flatMap((line) => {
+      const words = line.trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return [""];
+      return words.reduce(
+        (lines, word) => {
+          const current = lines[lines.length - 1];
+          if (!current || `${current} ${word}`.length > width) lines.push(word);
+          else lines[lines.length - 1] = `${current} ${word}`;
+          return lines;
+        },
+        [""]
+      ).filter((item, index, lines) => item || lines.length === 1 || index > 0);
+    });
+}
+
+function simplePdfDocument(title = "Documento Touch Note", text = "") {
+  const lines = [title, "", ...pdfLines(text)].slice(0, 44);
+  const content = [
+    "BT",
+    "/F1 11 Tf",
+    "50 792 Td",
+    ...lines.flatMap((line, index) => (index ? ["0 -16 Td", `(${pdfSafeText(line)}) Tj`] : [`(${pdfSafeText(line)}) Tj`])),
+    "ET",
+  ].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf, "latin1"));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefOffset = Buffer.byteLength(pdf, "latin1");
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+    .join("");
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return Buffer.from(pdf, "latin1");
+}
+
 function smtpMessage({ from, to, subject, text, html, attachment }) {
   const safeFrom = smtpSafeHeader(from);
   const safeTo = smtpSafeHeader(to);
@@ -536,7 +596,12 @@ function smtpMessage({ from, to, subject, text, html, attachment }) {
   const plain = String(text || "").replace(/\r?\n/g, "\r\n");
   const bodyHtml = String(html || "").replace(/\r?\n/g, "\r\n");
   const attachmentName = smtpSafeHeader(attachment?.filename || "touch-note-documento.html").replace(/[^a-zA-Z0-9._-]+/g, "-");
-  const attachmentBody = attachment?.content ? Buffer.from(String(attachment.content), "utf8").toString("base64").match(/.{1,76}/g)?.join("\r\n") || "" : "";
+  const attachmentContent = attachment?.content
+    ? Buffer.isBuffer(attachment.content)
+      ? attachment.content
+      : Buffer.from(String(attachment.content), "utf8")
+    : null;
+  const attachmentBody = attachmentContent ? attachmentContent.toString("base64").match(/.{1,76}/g)?.join("\r\n") || "" : "";
   const lines = [
     `From: ${safeFrom}`,
     `To: ${safeTo}`,
@@ -3462,7 +3527,10 @@ async function handleApi(req, res, url) {
       const subject = String(payload.subject || "Documento de cobro Touch Note").slice(0, 160);
       const html = String(payload.html || "").slice(0, 120000);
       const text = String(payload.text || "Te compartimos tu documento de cobro.").slice(0, 5000);
-      const filename = String(payload.filename || "touch-note-documento.html").slice(0, 120);
+      const filename = String(payload.filename || "touch-note-documento.html")
+        .replace(/\.html?$/i, "")
+        .slice(0, 116)
+        .concat(".pdf");
       const result = await sendSmtpEmail({
         to,
         subject,
@@ -3471,8 +3539,8 @@ async function handleApi(req, res, url) {
         attachment: html
           ? {
               filename,
-              contentType: "text/html; charset=UTF-8",
-              content: html,
+              contentType: "application/pdf",
+              content: simplePdfDocument(subject, text),
             }
           : null,
       });
