@@ -304,6 +304,7 @@ const videoTones = ["mint", "sunset", "mocha", "orchid"];
 const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"];
 let backendEnabled = false;
 let backendProvider = "local";
+let stateSaveQueue = Promise.resolve();
 let provisioningStatus = null;
 let oauthStatus = null;
 let authStatus = null;
@@ -398,6 +399,9 @@ const fallbackIconPaths = {
   "user-plus": '<circle cx="9" cy="8" r="4"/><path d="M16 19a7 7 0 0 0-14 0"/><path d="M19 8v6M16 11h6"/>',
   crown: '<path d="m3 8 4 3 5-7 5 7 4-3-2 11H5L3 8Z"/><path d="M5 19h14"/>',
   receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 12h8M8 17h5"/>',
+  "receipt-text": '<path d="M5 3h14v18l-2-1.5L15 21l-3-1.5L9 21l-2-1.5L5 21V3Z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  "layout-grid": '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  "cloud-check": '<path d="M17.5 19H7a5 5 0 1 1 1.2-9.85A7 7 0 0 1 21 13.5"/><path d="m14 16 2 2 4-4"/>',
   "server-cog": '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 8h.01M7 17h.01"/><circle cx="16" cy="17" r="2"/><path d="M16 14v1M16 19v1M13 17h1M18 17h1"/>',
   github: '<path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7a5.2 5.2 0 0 0-1.4-3.6 4.8 4.8 0 0 0-.1-3.6s-1.1-.3-3.7 1.4a12.8 12.8 0 0 0-6.8 0C5.6 1.3 4.5 1.6 4.5 1.6a4.8 4.8 0 0 0-.1 3.6A5.2 5.2 0 0 0 3 8.8c0 5.2 3.1 6.4 6.1 6.7a3 3 0 0 0-.9 1.9c-.8.4-2.9 1-4.1-1.2 0 0-.8-1.4-2.2-1.5 0 0-1.4 0-.1.9 0 0 .9.4 1.6 2 0 0 .8 2.5 4.7 1.7V22"/>',
   "monitor-smartphone": '<path d="M18 8V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8"/><path d="M10 19v-4M7 19h5"/><rect x="14" y="11" width="8" height="11" rx="2"/>',
@@ -1046,16 +1050,23 @@ async function hydrateStateFromBackend() {
 
 function persistState() {
   if (backendEnabled) {
-    fetch("/api/state", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activeCompanyId, activeAgencyId, agencies, companies, publications, jobs, clients, accessMembers, accessInvites, promptLibrary, selectedAiProvider, invoices, billingDraft, agencyServices, serviceOrders, activityLog, financeTransactions, monthlyProviders, financeFilters }),
-    }).catch(() => {
-      backendEnabled = false;
-      updateConnectionStatus();
-      showToast("No se pudo sincronizar con el servidor. Revisa la conexion antes de continuar.");
-    });
-    return;
+    const payload = JSON.stringify(currentState());
+    stateSaveQueue = stateSaveQueue
+      .catch(() => {})
+      .then(async () => {
+        const response = await fetch("/api/state", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+        if (!response.ok) throw new Error("state sync failed");
+      })
+      .catch(() => {
+        backendEnabled = false;
+        updateConnectionStatus();
+        showToast("No se pudo sincronizar con el servidor. Revisa la conexion antes de continuar.");
+      });
+    return stateSaveQueue;
   }
 
   if (window.location.protocol === "file:") {
@@ -3589,12 +3600,40 @@ function renderSettingsPanel() {
         </button>
       </article>
 
-      <section class="settings-group">
+      <section class="settings-group settings-list settings-shortcuts">
+        <header class="settings-shortcuts-heading">
+          <span class="status-icon"><i data-lucide="layout-grid"></i></span>
+          <div>
+            <h3>Organiza tu espacio</h3>
+            <p>Entra directo a lo que quieres administrar.</p>
+          </div>
+        </header>
+        <div class="settings-shortcuts-grid">
+          <button type="button" data-settings-open="companies">
+            <span class="status-icon"><i data-lucide="building-2"></i></span>
+            <div><strong>Empresas</strong><small>Marcas, fotos y redes sociales.</small></div>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button type="button" data-settings-open="clients">
+            <span class="status-icon"><i data-lucide="users"></i></span>
+            <div><strong>Clientes</strong><small>Servicios, cobros y accesos.</small></div>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button type="button" data-settings-open="accounts">
+            <span class="status-icon"><i data-lucide="shield-check"></i></span>
+            <div><strong>Conexiones</strong><small>Google, Meta, APIs y seguridad.</small></div>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-group settings-profile-group">
         <header>
           <span class="status-icon"><i data-lucide="circle-user-round"></i></span>
           <div>
             <h3>Perfil de usuario</h3>
             <p>Tu imagen personal aparece en el acceso rápido y el menú inferior.</p>
+            <small class="settings-sync-note"><i data-lucide="cloud-check"></i> Se guarda para todos tus dispositivos.</small>
           </div>
         </header>
         <div class="settings-form-grid">
@@ -3605,12 +3644,13 @@ function renderSettingsPanel() {
         </div>
       </section>
 
-      <section class="settings-group">
+      <section class="settings-group settings-company-group">
         <header>
           <span class="status-icon"><i data-lucide="building-2"></i></span>
           <div>
             <h3>Empresa activa</h3>
             <p>Lo que ve el equipo al trabajar esta marca.</p>
+            <small class="settings-sync-note"><i data-lucide="cloud-check"></i> Cambios sincronizados automáticamente.</small>
           </div>
         </header>
         <div class="settings-form-grid">
@@ -3641,7 +3681,7 @@ function renderSettingsPanel() {
         </div>
       </section>
 
-      <section class="settings-group">
+      <section class="settings-group settings-billing-group">
         <header>
           <span class="status-icon"><i data-lucide="receipt-text"></i></span>
           <div>
@@ -3727,23 +3767,6 @@ function renderSettingsPanel() {
         </div>
       </section>
 
-      <section class="settings-group settings-list">
-        <button type="button" data-settings-open="companies">
-          <span class="status-icon"><i data-lucide="briefcase-business"></i></span>
-          <div><strong>Empresas</strong><small>Marcas, redes sociales y acceso por cliente.</small></div>
-          <i data-lucide="chevron-right"></i>
-        </button>
-        <button type="button" data-settings-open="clients">
-          <span class="status-icon"><i data-lucide="users"></i></span>
-          <div><strong>Clientes</strong><small>Servicios, cobros y usuarios vinculados.</small></div>
-          <i data-lucide="chevron-right"></i>
-        </button>
-        <button type="button" data-settings-open="accounts">
-          <span class="status-icon"><i data-lucide="shield-check"></i></span>
-          <div><strong>Accesos e integraciones</strong><small>Google, Facebook, Supabase, APIs y pruebas.</small></div>
-          <i data-lucide="chevron-right"></i>
-        </button>
-      </section>
     </section>
   `;
   renderIcons();
@@ -9858,7 +9881,7 @@ function companyDetailView(company) {
       <div class="company-detail-actions">
         <button class="primary-button icon-text-button" type="button" data-company-jump="calendar" aria-label="Abrir calendario"><i data-lucide="calendar-days"></i><span>Calendario</span></button>
         <button class="secondary-button icon-text-button" type="button" data-company-jump="scripts" aria-label="Abrir guiones"><i data-lucide="notebook-pen"></i><span>Guiones</span></button>
-        <button class="secondary-button icon-text-button" type="button" data-company-jump="finances" aria-label="Abrir cuentas"><i data-lucide="wallet-cards"></i><span>Cuentas</span></button>
+        <button class="secondary-button icon-text-button" type="button" data-company-jump="finances" aria-label="Abrir cuentas"><i data-lucide="receipt-text"></i><span>Cuentas</span></button>
         ${
           isClientPortalSession()
             ? ""
@@ -11911,7 +11934,7 @@ settingsPanel?.addEventListener("input", (event) => {
   persistState();
 });
 
-settingsPanel?.addEventListener("change", (event) => {
+settingsPanel?.addEventListener("change", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
     saveClientSession({ ...currentSession(), [profileField.dataset.settingsProfileField]: profileField.value.trim() }).then(() => {
@@ -11925,8 +11948,10 @@ settingsPanel?.addEventListener("change", (event) => {
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
+    await persistState();
     renderSettingsPanel();
     refreshCompanyContext();
+    showToast("Empresa actualizada y sincronizada.");
     return;
   }
 

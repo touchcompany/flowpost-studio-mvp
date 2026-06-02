@@ -19,6 +19,7 @@
 
 .settings-shell {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   max-width: 1080px;
 }
@@ -38,6 +39,14 @@
   gap: 16px;
   padding: 18px;
   border-radius: 28px;
+}
+
+.settings-profile-card,
+.settings-shortcuts,
+.settings-profile-group,
+.settings-company-group,
+.settings-billing-group {
+  grid-column: 1 / -1;
 }
 
 .settings-avatar {
@@ -117,6 +126,25 @@
   overflow: hidden;
 }
 
+.settings-shortcuts {
+  gap: 12px;
+  padding: 16px;
+}
+
+.settings-shortcuts-heading {
+  padding: 2px 4px 4px;
+}
+
+.settings-shortcuts-heading h3 {
+  font-size: 1.15rem;
+}
+
+.settings-shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .settings-list button {
   width: 100%;
   display: grid;
@@ -131,6 +159,13 @@
   cursor: pointer;
 }
 
+.settings-shortcuts-grid button {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
 .settings-list button:last-child {
   border-bottom: 0;
 }
@@ -138,6 +173,19 @@
 .settings-list strong,
 .settings-list small {
   display: block;
+}
+
+.settings-sync-note {
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
+  color: #17845f !important;
+  font-weight: 750;
+}
+
+.settings-sync-note svg {
+  width: 15px;
+  height: 15px;
 }
 
 .finance-shell {
@@ -347,6 +395,7 @@
 
 @media (max-width: 860px) {
   .settings-shell {
+    grid-template-columns: 1fr;
     gap: 14px;
   }
 
@@ -361,6 +410,10 @@
 
   .settings-form-grid .wide {
     grid-column: auto;
+  }
+
+  .settings-shortcuts-grid {
+    grid-template-columns: 1fr;
   }
 
   .settings-billing-preview {
