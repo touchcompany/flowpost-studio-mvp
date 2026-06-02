@@ -2660,7 +2660,7 @@ function clientHealthLabel(score) {
 }
 
 function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders) {
-  const selectedClient = clients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
+  const selectedClient = activeClients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
   if (!selectedClient) {
     return `
       <section class="client-command-center empty-state compact">
@@ -2741,7 +2741,7 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
 
 function renderClientSwitcher(activeClients, pendingInvoices) {
   if (!activeClients.length) return "";
-  const selectedClient = clients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
+  const selectedClient = activeClients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
   return `
     <section class="client-switcher" aria-label="Clientes de la agencia">
       <header>
@@ -2820,6 +2820,12 @@ function renderClientBillingPanel() {
   const pendingInvoices = invoices.filter((invoice) => !invoice.deletedAt && activeClientIds.has(invoice.clientId) && invoice.status !== "Pagada");
   const activeOrders = serviceOrders.filter((order) => order.agencyId === activeAgencyId);
   const monthlyTotal = activeClients.reduce((sum, client) => sum + Number(client.amount || 0), 0);
+  const selectedClient = activeClients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
+  const detailedClients = selectedClient ? [selectedClient] : [];
+  if (selectedClient && billingDraft.clientId !== selectedClient.id) {
+    billingDraft.clientId = selectedClient.id;
+    billingDraft.companyId = selectedClient.companyId;
+  }
 
   const compactHtml = `
     <div class="section-heading small">
@@ -2895,7 +2901,7 @@ function renderClientBillingPanel() {
           <article><span>Servicios comprados</span><strong>${activeOrders.length}</strong><p>Ordenes internas listas para pasar a pago y produccion.</p></article>
         </div>
         <div class="client-workspace-grid">
-          ${activeClients
+          ${detailedClients
             .map((client) => {
               const company = companies.find((item) => item.id === client.companyId);
               const companyPublications = publications.filter((publication) => publication.companyId === client.companyId);
