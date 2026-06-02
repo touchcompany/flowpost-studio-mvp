@@ -93,6 +93,19 @@ function sendHtml(res, status, html) {
   res.end(html);
 }
 
+function sendBinary(res, status, body, contentType = "application/octet-stream", filename = "") {
+  const content = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  const headers = {
+    "Content-Type": contentType,
+    "Content-Length": content.length,
+  };
+  if (filename) {
+    headers["Content-Disposition"] = `attachment; filename="${filename}"`;
+  }
+  res.writeHead(status, headers);
+  res.end(content);
+}
+
 function parseCookies(req) {
   return String(req.headers.cookie || "")
     .split(";")
@@ -3548,6 +3561,36 @@ async function handleApi(req, res, url) {
     } catch (error) {
       sendJson(res, 502, { ok: false, to, message: error.message });
     }
+    return;
+  }
+
+  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/billing/pdf") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const payload = await readBody(req);
+    const db = await store.getState();
+    const scopedDb = filterStateForSession(db, session);
+    const clientId = String(payload.clientId || "").trim();
+    const companyId = String(payload.companyId || "").trim();
+    const client = clientId ? (scopedDb.clients || []).find((item) => item.id === clientId) : null;
+    const companyAllowed = companyId ? (scopedDb.companies || []).some((company) => company.id === companyId) : Boolean(client);
+    if (clientId && !client) {
+      sendError(res, 403, "client not available for this account");
+      return;
+    }
+    if (companyId && !companyAllowed) {
+      sendError(res, 403, "company not available for this account");
+      return;
+    }
+    const subject = String(payload.subject || "Documento de cobro Touch Note").slice(0, 160);
+    const text = String(payload.text || "Documento de cobro Touch Note").slice(0, 10000);
+    const filename = String(payload.filename || "touch-note-documento.pdf")
+      .replace(/\.html?$/i, "")
+      .replace(/\.pdf$/i, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .slice(0, 116)
+      .concat(".pdf");
+    sendBinary(res, 200, simplePdfDocument(subject, text), "application/pdf", filename);
     return;
   }
 

@@ -40,6 +40,8 @@ Tambien puedes revisar SMTP en `/api/mail/status` y enviar una prueba con `POST 
 
 Las cuentas de cobro y facturas pueden enviarse desde la app con `POST /api/billing/send-document`. El backend valida la sesion, bloquea documentos de clientes o empresas que no pertenezcan a esa cuenta y adjunta un PDF real con el resumen del cobro. El cuerpo del correo conserva la vista HTML detallada. Si SMTP no esta listo, la interfaz cae a correo manual (`mailto`) para que el flujo no se rompa.
 
+La descarga directa usa `POST /api/billing/pdf` con la misma validacion de cuenta. En iPhone y iPad, la app intenta abrir la hoja nativa para compartir el PDF con WhatsApp u otra aplicacion. En escritorio descarga el archivo y abre WhatsApp con el mensaje listo para adjuntarlo.
+
 ## Siguiente capa tecnica
 
 1. Mantener `DATA_PROVIDER=supabase` en produccion.

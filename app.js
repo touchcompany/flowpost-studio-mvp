@@ -3442,7 +3442,10 @@ function renderFinancePanel() {
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
                             <p>${escapeHtml(client?.name || "Cliente")} · recuperable hasta ${escapeHtml(shortDateLabel((invoice.deletionExpiresAt || "").slice(0, 10)))}</p>
                           </div>
-                          <button class="secondary-button icon-button compact" type="button" data-finance-invoice-restore="${escapeHtml(invoice.id)}" aria-label="Recuperar documento"><i data-lucide="archive-restore"></i></button>
+                          <div class="finance-row-actions">
+                            <button class="secondary-button icon-button compact" type="button" data-finance-invoice-restore="${escapeHtml(invoice.id)}" aria-label="Recuperar documento"><i data-lucide="archive-restore"></i></button>
+                            <button class="secondary-button icon-button compact danger" type="button" data-finance-invoice-delete-permanent="${escapeHtml(invoice.id)}" aria-label="Eliminar documento definitivamente"><i data-lucide="trash-2"></i></button>
+                          </div>
                         </article>
                       `;
                     })
@@ -4794,6 +4797,22 @@ function restoreFinanceInvoice(invoiceId) {
   showToast("Documento recuperado.");
 }
 
+function deleteFinanceInvoicePermanent(invoiceId) {
+  const invoice = invoices.find((item) => item.id === invoiceId && item.deletedAt);
+  if (!invoice) return;
+  if (!window.confirm(`Eliminar definitivamente ${invoice.number || billingDocumentNumber(invoice)}? Esta accion no se puede deshacer.`)) return;
+  invoices = invoices.filter((item) => item.id !== invoiceId);
+  financeTransactions = financeTransactions.filter((transaction) => transaction.invoiceId !== invoiceId);
+  if (billingDraft.editingInvoiceId === invoiceId) {
+    billingDraft.editingInvoiceId = "";
+    billingDraft.currentNumber = "";
+  }
+  persistState();
+  renderFinancePanel();
+  renderClientBillingPanel();
+  showToast("Documento eliminado definitivamente.");
+}
+
 function openFinanceDocumentPdf(invoiceId) {
   const invoice = invoices.find((item) => item.id === invoiceId && !item.deletedAt);
   const documentData = financeDocumentFromInvoice(invoice);
@@ -5175,6 +5194,50 @@ function billingDocumentFileName(documentData = currentBillingDocument()) {
   return `${label}-${clientName}-${number}.html`;
 }
 
+function billingDocumentPdfFileName(documentData = currentBillingDocument()) {
+  return billingDocumentFileName(documentData).replace(/\.html?$/i, ".pdf");
+}
+
+function billingDocumentPlainText(documentData = currentBillingDocument()) {
+  if (!documentData) return "";
+  const client = clients.find((item) => item.id === documentData.clientId) || {};
+  const issuer = companies.find((company) => company.id === documentData.issuerCompanyId) || activeCompany();
+  const subtotal = billingDocumentSubtotal(documentData);
+  const services = (documentData.lines || [])
+    .map((line) => {
+      const service = serviceById(line.serviceId);
+      const quantity = Number(line.quantity || 1);
+      return `${service.name || "Servicio"} x${quantity}: ${formatMoney(Number(line.price || 0) * quantity, "COP")}`;
+    })
+    .join("\n");
+  const payment = documentData.paymentBank || documentData.paymentAccountNumber
+    ? `\nDATOS PARA PAGO\n${documentData.paymentBank || "Entidad de pago"}\n${documentData.paymentAccountType || "Cuenta"} ${documentData.paymentAccountNumber || ""}\nTitular: ${documentData.paymentAccountHolder || issuer.name || ""}`
+    : "";
+  return `${documentData.documentType || "Cuenta de cobro"} No. ${billingDocumentNumber(documentData)}
+
+EMISOR
+${issuer.name || "Touch Note"}
+${documentData.issuerNit ? `NIT/ID: ${documentData.issuerNit}` : ""}
+${documentData.issuerPhone ? `Celular: ${documentData.issuerPhone}` : ""}
+${documentData.issuerEmail ? `Correo: ${documentData.issuerEmail}` : ""}
+
+CLIENTE
+${client.name || "Cliente"}
+${documentData.clientNit ? `NIT/ID: ${documentData.clientNit}` : ""}
+${documentData.clientPhone ? `Celular: ${documentData.clientPhone}` : ""}
+${documentData.clientEmail || client.email ? `Correo: ${documentData.clientEmail || client.email}` : ""}
+
+Emision: ${documentData.issueDate || ""}
+Vence: ${documentData.dueDate || ""}
+
+DETALLE
+${services || "Servicios contratados"}
+
+TOTAL: ${formatMoney(subtotal, "COP")}${payment}
+
+${documentData.observations || ""}`.trim();
+}
+
 function billingDocumentHtml(documentData = currentBillingDocument()) {
   if (!documentData) return "";
   const client = clients.find((item) => item.id === documentData.clientId) || {};
@@ -5332,6 +5395,54 @@ function downloadBillingDocumentHtml(documentData = currentBillingDocument()) {
   showToast("Documento descargado. Puedes abrirlo e imprimirlo como PDF.");
 }
 
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function fetchBillingPdfBlob(documentData = currentBillingDocument()) {
+  if (!documentData || window.location.protocol === "file:") return null;
+  const client = clients.find((item) => item.id === documentData.clientId);
+  const response = await fetch("/api/billing/pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/pdf" },
+    body: JSON.stringify({
+      subject: `${documentData.documentType || "Documento"} ${billingDocumentNumber(documentData)}`,
+      text: billingDocumentPlainText(documentData),
+      filename: billingDocumentPdfFileName(documentData),
+      clientId: documentData.clientId || client?.id || "",
+      companyId: documentData.companyId || client?.companyId || "",
+      documentId: documentData.id || "",
+    }),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.error || result.message || "No se pudo generar el PDF.");
+  }
+  return response.blob();
+}
+
+async function downloadBillingPdf(documentData = currentBillingDocument()) {
+  try {
+    const blob = await fetchBillingPdfBlob(documentData);
+    if (!blob) {
+      downloadBillingDocumentHtml(documentData);
+      return;
+    }
+    downloadBlob(blob, billingDocumentPdfFileName(documentData));
+    showToast("PDF descargado.");
+  } catch {
+    downloadBillingDocumentHtml(documentData);
+    showToast("No se pudo descargar el PDF directo. Dejé la versión imprimible.");
+  }
+}
+
 function openBillingPdf(documentData = currentBillingDocument()) {
   const html = billingDocumentHtml(documentData);
   if (!html) {
@@ -5386,7 +5497,7 @@ async function documentAction(action) {
     return;
   }
   if (action === "download") {
-    downloadBillingDocumentHtml(documentData);
+    await downloadBillingPdf(documentData);
     return;
   }
   if (action === "copy") {
@@ -5442,19 +5553,35 @@ async function documentAction(action) {
     renderClientBillingPanel();
     return;
   }
-  downloadBillingDocumentHtml(documentData);
   const paymentDetail =
     documentData?.paymentBank || documentData?.paymentAccountNumber
       ? `\nPago: ${documentData?.paymentBank || "Entidad de pago"} · ${documentData?.paymentAccountType || "Cuenta"} ${documentData?.paymentAccountNumber || ""} · Titular: ${documentData?.paymentAccountHolder || ""}`
       : "";
-  const whatsappText = encodeURIComponent(
-    `Buen día ${client?.contact || client?.name || ""}, te comparto la ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
+  const whatsappMessage =
+    `Buen dia ${client?.contact || client?.name || ""}, te comparto la ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
       subtotal,
       "COP"
-    )}.\n\nEmisión: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`
-  );
-  window.open(`https://wa.me/${recipientPhone}?text=${whatsappText}`, "_blank", "noopener,noreferrer");
-  showToast(`${recipientPhone ? "WhatsApp del cliente abierto" : "WhatsApp preparado"}. Adjunta el documento descargado: ${documentNumber}.`);
+    )}.\n\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`;
+  try {
+    const blob = await fetchBillingPdfBlob(documentData);
+    const file = blob ? new File([blob], billingDocumentPdfFileName(documentData), { type: "application/pdf" }) : null;
+    if (file && navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      await navigator.share({
+        files: [file],
+        title: `${documentType} ${documentNumber}`,
+        text: whatsappMessage,
+      });
+      showToast("PDF listo para compartir por WhatsApp.");
+      return;
+    }
+    if (blob) downloadBlob(blob, billingDocumentPdfFileName(documentData));
+    else downloadBillingDocumentHtml(documentData);
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    downloadBillingDocumentHtml(documentData);
+  }
+  window.open(`https://wa.me/${recipientPhone}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+  showToast(`${recipientPhone ? "WhatsApp del cliente abierto" : "WhatsApp preparado"}. Adjunta el PDF descargado: ${documentNumber}.`);
 }
 
 function updateClientProfile(clientId, field, value) {
@@ -11870,6 +11997,12 @@ financePanel?.addEventListener("click", (event) => {
   const restoreInvoiceButton = event.target.closest("[data-finance-invoice-restore]");
   if (restoreInvoiceButton) {
     restoreFinanceInvoice(restoreInvoiceButton.dataset.financeInvoiceRestore);
+    return;
+  }
+
+  const permanentDeleteInvoiceButton = event.target.closest("[data-finance-invoice-delete-permanent]");
+  if (permanentDeleteInvoiceButton) {
+    deleteFinanceInvoicePermanent(permanentDeleteInvoiceButton.dataset.financeInvoiceDeletePermanent);
     return;
   }
 

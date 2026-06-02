@@ -12690,22 +12690,20 @@ input[type="file"] {
   }
 
   .finance-filter-bar {
-    grid-template-columns: repeat(6, minmax(126px, 1fr)) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    overflow-x: auto;
+    overflow: visible;
     border-radius: 18px;
-    scrollbar-width: none;
   }
 
-  .finance-filter-bar::-webkit-scrollbar,
   .finance-metrics::-webkit-scrollbar {
     display: none;
   }
 
   .finance-filter-bar .finance-filter-reset {
-    position: sticky;
-    right: 0;
-    min-width: 40px;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
     background: #fff;
   }
 
