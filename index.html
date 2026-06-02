@@ -596,30 +596,38 @@
                 <input id="companyHandleInput" type="text" placeholder="@marca" />
               </label>
 
-              <label class="field">
-                <span>Descripcion</span>
-                <textarea id="companyDescriptionInput" rows="3" placeholder="Marca de cafe, lifestyle, eventos..."></textarea>
-              </label>
+              <details class="company-form-more" id="companyFormMore">
+                <summary>
+                  <span><i data-lucide="sliders-horizontal"></i> Identidad, redes y foto</span>
+                  <i data-lucide="chevron-down"></i>
+                </summary>
+                <div>
+                  <label class="field">
+                    <span>Descripcion</span>
+                    <textarea id="companyDescriptionInput" rows="3" placeholder="Marca de cafe, lifestyle, eventos..."></textarea>
+                  </label>
 
-              <label class="field">
-                <span>Tono de voz</span>
-                <input id="companyVoiceInput" type="text" placeholder="Cercano, premium, divertido" />
-              </label>
+                  <label class="field">
+                    <span>Tono de voz</span>
+                    <input id="companyVoiceInput" type="text" placeholder="Cercano, premium, divertido" />
+                  </label>
 
-              <label class="field">
-                <span>Redes sociales</span>
-                <input id="companyNetworksInput" type="text" placeholder="Instagram, Facebook, TikTok" />
-              </label>
+                  <label class="field">
+                    <span>Redes sociales</span>
+                    <input id="companyNetworksInput" type="text" placeholder="Instagram, Facebook, TikTok" />
+                  </label>
 
-              <label class="field color-field">
-                <span>Color principal</span>
-                <input id="companyColorInput" type="color" value="#0095f6" />
-              </label>
+                  <label class="field color-field">
+                    <span>Color principal</span>
+                    <input id="companyColorInput" type="color" value="#0095f6" />
+                  </label>
 
-              <label class="field">
-                <span>Foto de empresa</span>
-                <input id="companyAvatarInput" type="url" placeholder="https://.../logo.jpg" />
-              </label>
+                  <label class="field">
+                    <span>Foto de empresa</span>
+                    <input id="companyAvatarInput" type="url" placeholder="https://.../logo.jpg" />
+                  </label>
+                </div>
+              </details>
 
               <button class="primary-button" id="companySubmitButton" type="submit">Crear empresa</button>
               <button class="secondary-button" id="companyCancelButton" type="button" hidden>Cancelar edicion</button>

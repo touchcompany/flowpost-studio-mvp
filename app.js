@@ -60,6 +60,7 @@ const companyColorInput = document.querySelector("#companyColorInput");
 const companyAvatarInput = document.querySelector("#companyAvatarInput");
 const companySubmitButton = document.querySelector("#companySubmitButton");
 const companyCancelButton = document.querySelector("#companyCancelButton");
+const companyFormMore = document.querySelector("#companyFormMore");
 const companiesGrid = document.querySelector("#companiesGrid");
 const coverStyleInput = document.querySelector("#coverStyle");
 const coverTitleInput = document.querySelector("#coverTitle");
@@ -367,6 +368,7 @@ let pendingJobs = [];
 const fallbackIconPaths = {
   home: '<path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  "arrow-left": '<path d="m19 12-14 0"/><path d="m11 18-6-6 6-6"/>',
   "plus-square": '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',
   "building-2": '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>',
   clapperboard: '<path d="M4 11h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z"/><path d="M4 11 6 3h12l2 8"/><path d="m8 3 4 8M14 3l4 8"/>',
@@ -395,6 +397,7 @@ const fallbackIconPaths = {
   cloud: '<path d="M17.5 19H7a5 5 0 1 1 1.2-9.85A7 7 0 0 1 21 13.5 3.5 3.5 0 0 1 17.5 19Z"/>',
   "folder-open": '<path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 13h18l-2 6H5l-2-6Z"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+  "users-round": '<path d="M18 21a8 8 0 0 0-12 0"/><circle cx="12" cy="7" r="4"/><path d="M22 18a5 5 0 0 0-3-4.58"/><path d="M2 18a5 5 0 0 1 3-4.58"/>',
   "user-round": '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
   "user-plus": '<circle cx="9" cy="8" r="4"/><path d="M16 19a7 7 0 0 0-14 0"/><path d="M19 8v6M16 11h6"/>',
   crown: '<path d="m3 8 4 3 5-7 5 7 4-3-2 11H5L3 8Z"/><path d="M5 19h14"/>',
@@ -402,6 +405,7 @@ const fallbackIconPaths = {
   "receipt-text": '<path d="M5 3h14v18l-2-1.5L15 21l-3-1.5L9 21l-2-1.5L5 21V3Z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
   "layout-grid": '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
   "cloud-check": '<path d="M17.5 19H7a5 5 0 1 1 1.2-9.85A7 7 0 0 1 21 13.5"/><path d="m14 16 2 2 4-4"/>',
+  "sliders-horizontal": '<path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/>',
   "server-cog": '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 8h.01M7 17h.01"/><circle cx="16" cy="17" r="2"/><path d="M16 14v1M16 19v1M13 17h1M18 17h1"/>',
   github: '<path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7a5.2 5.2 0 0 0-1.4-3.6 4.8 4.8 0 0 0-.1-3.6s-1.1-.3-3.7 1.4a12.8 12.8 0 0 0-6.8 0C5.6 1.3 4.5 1.6 4.5 1.6a4.8 4.8 0 0 0-.1 3.6A5.2 5.2 0 0 0 3 8.8c0 5.2 3.1 6.4 6.1 6.7a3 3 0 0 0-.9 1.9c-.8.4-2.9 1-4.1-1.2 0 0-.8-1.4-2.2-1.5 0 0-1.4 0-.1.9 0 0 .9.4 1.6 2 0 0 .8 2.5 4.7 1.7V22"/>',
   "monitor-smartphone": '<path d="M18 8V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8"/><path d="M10 19v-4M7 19h5"/><rect x="14" y="11" width="8" height="11" rx="2"/>',
@@ -415,6 +419,7 @@ const fallbackIconPaths = {
   activity: '<path d="M22 12h-4l-3 8L9 4l-3 8H2"/>',
   "loader-2": '<path d="M21 12a9 9 0 1 1-6.2-8.6"/>',
   "notebook-pen": '<path d="M6 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z"/><path d="M8 2v20M13 14l4-4 2 2-4 4-3 1 1-3Z"/>',
+  "message-square-text": '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 8h8M8 12h6"/>',
   "credit-card": '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
   "radio-tower": '<path d="M4.9 16.1a10 10 0 0 1 0-8.2M19.1 7.9a10 10 0 0 1 0 8.2M8.5 13a4 4 0 0 1 0-2M15.5 11a4 4 0 0 1 0 2"/><path d="M12 12h.01M12 13v8M9 21h6"/>',
   "trash-2": '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
@@ -446,6 +451,7 @@ const fallbackIconPaths = {
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   "refresh-cw": '<path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8"/><path d="M21 3v5h-5"/>',
   "archive-restore": '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/><path d="m9 17 3-3 3 3"/>',
+  "archive-x": '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="m10 13 4 4M14 13l-4 4"/>',
   "rotate-ccw": '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/>',
   "plug-zap": '<path d="M13 2 7 12h5l-1 10 6-12h-5l1-8Z"/><path d="M6 3v4M10 3v4M8 7v3"/>',
   workflow: '<rect x="3" y="4" width="6" height="6" rx="2"/><rect x="15" y="14" width="6" height="6" rx="2"/><path d="M9 7h2a3 3 0 0 1 3 3v4"/><path d="m12 12 2 2 2-2"/><path d="M15 17H9a3 3 0 0 1-3-3v-4"/>',
@@ -10031,6 +10037,11 @@ function renderCompanies() {
       (companyListFilter === "ready" && pending === 0);
     return matchesSearch && matchesFilter;
   });
+  const pendingCompanies = visibleCompanies.filter((company) =>
+    invoices.some((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada")
+  ).length;
+  const readyCompanies = visibleCompanies.length - pendingCompanies;
+  const activeCompanyPosts = publications.filter((post) => post.companyId === activeCompanyId).length;
   companiesGrid.innerHTML = `
     <section class="company-list-toolbar">
       <label class="field compact">
@@ -10092,6 +10103,31 @@ function renderCompanies() {
         .join("")
           : `<div class="empty-state compact"><strong>Sin empresas</strong><p>Cambia el filtro o crea una nueva empresa.</p></div>`
       }
+    </section>
+
+    <section class="company-list-overview">
+      <header>
+        <div>
+          <span class="workspace-label">Resumen</span>
+          <h3>Tu espacio de marcas</h3>
+          <p>Entra a una empresa para ver sus redes, cobros, biblioteca y accesos vinculados.</p>
+        </div>
+        <button class="secondary-button icon-text-button" type="button" data-company-id="${escapeHtml(activeCompanyId)}">
+          <i data-lucide="arrow-right"></i>
+          Abrir activa
+        </button>
+      </header>
+      <div class="company-overview-metrics">
+        <article><strong>${visibleCompanies.length}</strong><span>Empresas</span></article>
+        <article><strong>${pendingCompanies}</strong><span>Con cobros</span></article>
+        <article><strong>${readyCompanies}</strong><span>Al dia</span></article>
+        <article><strong>${activeCompanyPosts}</strong><span>Piezas activas</span></article>
+      </div>
+      <div class="company-overview-actions">
+        <button type="button" data-company-jump="calendar"><i data-lucide="calendar-days"></i><span>Planear contenido</span></button>
+        <button type="button" data-company-jump="scripts"><i data-lucide="notebook-pen"></i><span>Crear guion</span></button>
+        <button type="button" data-company-jump="finances"><i data-lucide="receipt-text"></i><span>Revisar cobros</span></button>
+      </div>
     </section>
   `;
   renderIcons();
@@ -12707,6 +12743,7 @@ companiesGrid.addEventListener("click", async (event) => {
     companyAvatarInput.value = entityPhotoUrl(company);
     companySubmitButton.textContent = "Actualizar empresa";
     companyCancelButton.hidden = false;
+    companyFormMore.open = true;
     companyNameInput.focus();
     return;
   }
@@ -12738,6 +12775,7 @@ companyCancelButton.addEventListener("click", () => {
   companyColorInput.value = "#0095f6";
   companySubmitButton.textContent = "Crear empresa";
   companyCancelButton.hidden = true;
+  companyFormMore.open = false;
 });
 
 companyForm.addEventListener("submit", (event) => {
@@ -12782,6 +12820,7 @@ companyForm.addEventListener("submit", (event) => {
     companyColorInput.value = "#0095f6";
     companySubmitButton.textContent = "Crear empresa";
     companyCancelButton.hidden = true;
+    companyFormMore.open = false;
     refreshCompanyContext();
     showToast(`${name} actualizada.`);
     return;
@@ -12828,6 +12867,7 @@ companyForm.addEventListener("submit", (event) => {
   ];
   activeCompanyId = id;
   companyForm.reset();
+  companyFormMore.open = false;
   refreshCompanyContext();
   showToast(`${name} creada con Instagram pendiente de conexion.`);
 });
