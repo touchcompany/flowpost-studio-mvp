@@ -2156,8 +2156,12 @@ function serviceOrderStatusClass(status) {
   return "info";
 }
 
+function billingDocumentSubtotal(documentData = billingDraft) {
+  return (documentData?.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.price || 0), 0);
+}
+
 function billingDraftSubtotal() {
-  return billingDraft.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.price || 0), 0);
+  return billingDocumentSubtotal(billingDraft);
 }
 
 function billingDocumentNumberFromDraft() {
@@ -5174,8 +5178,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
 </html>`;
 }
 
-function downloadBillingDocumentHtml() {
-  const documentData = currentBillingDocument();
+function downloadBillingDocumentHtml(documentData = currentBillingDocument()) {
   const html = billingDocumentHtml(documentData);
   if (!html) {
     showToast("Selecciona un cliente para descargar el documento.");
@@ -5230,34 +5233,38 @@ function whatsappPhone(value) {
 }
 
 async function documentAction(action) {
-  const subtotal = billingDraftSubtotal();
-  const client = clients.find((item) => item.id === billingDraft.clientId);
   const documentData = currentBillingDocument();
+  if (!documentData) {
+    showToast("Selecciona un cliente y un documento.");
+    return;
+  }
+  const subtotal = billingDocumentSubtotal(documentData);
+  const client = clients.find((item) => item.id === documentData?.clientId);
   const documentNumber = billingDocumentNumber(documentData);
-  const documentType = documentData?.documentType || billingDraft.documentType;
-  const recipientEmail = billingDraft.clientEmail || client?.email || "";
-  const recipientPhone = whatsappPhone(billingDraft.clientPhone || client?.phone);
+  const documentType = documentData?.documentType || "Cuenta de cobro";
+  const recipientEmail = documentData?.clientEmail || client?.email || "";
+  const recipientPhone = whatsappPhone(documentData?.clientPhone || client?.phone);
   const message = `${documentType} ${documentNumber} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
   if (action === "pdf") {
-    openBillingPdf();
+    openBillingPdf(documentData);
     return;
   }
   if (action === "download") {
-    downloadBillingDocumentHtml();
+    downloadBillingDocumentHtml(documentData);
     return;
   }
   if (action === "copy") {
-    const lines = billingDraft.lines
+    const lines = (documentData?.lines || [])
       .map((line) => `${serviceById(line.serviceId).name} x${line.quantity || 1}: ${formatMoney(Number(line.price || 0) * Number(line.quantity || 1), "COP")}`)
       .join("\n");
-    navigator.clipboard?.writeText(`${message}\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, "COP")}\nPago: ${billingDraft.paymentBank || "Banco por definir"} · ${billingDraft.paymentAccountType || "Cuenta"} ${billingDraft.paymentAccountNumber || ""}`);
+    navigator.clipboard?.writeText(`${message}\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, "COP")}\nPago: ${documentData?.paymentBank || "Banco por definir"} · ${documentData?.paymentAccountType || "Cuenta"} ${documentData?.paymentAccountNumber || ""}`);
     showToast("Resumen del documento copiado.");
     return;
   }
   if (action === "email") {
     const html = billingDocumentHtml(documentData);
     const emailSubject = `${message}`;
-    const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}\nTotal: ${formatMoney(subtotal, "COP")}`;
+    const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}\nTotal: ${formatMoney(subtotal, "COP")}`;
     if (window.location.protocol !== "file:" && !mailStatus) {
       try {
         const statusResponse = await fetch("/api/mail/status", { headers: { Accept: "application/json" } });
@@ -5301,14 +5308,14 @@ async function documentAction(action) {
   }
   downloadBillingDocumentHtml(documentData);
   const paymentDetail =
-    billingDraft.paymentBank || billingDraft.paymentAccountNumber
-      ? `\nPago: ${billingDraft.paymentBank || "Entidad de pago"} · ${billingDraft.paymentAccountType || "Cuenta"} ${billingDraft.paymentAccountNumber || ""} · Titular: ${billingDraft.paymentAccountHolder || ""}`
+    documentData?.paymentBank || documentData?.paymentAccountNumber
+      ? `\nPago: ${documentData?.paymentBank || "Entidad de pago"} · ${documentData?.paymentAccountType || "Cuenta"} ${documentData?.paymentAccountNumber || ""} · Titular: ${documentData?.paymentAccountHolder || ""}`
       : "";
   const whatsappText = encodeURIComponent(
     `Buen día ${client?.contact || client?.name || ""}, te comparto la ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
       subtotal,
       "COP"
-    )}.\n\nEmisión: ${billingDraft.issueDate}\nVence: ${billingDraft.dueDate}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`
+    )}.\n\nEmisión: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`
   );
   window.open(`https://wa.me/${recipientPhone}?text=${whatsappText}`, "_blank", "noopener,noreferrer");
   showToast(`${recipientPhone ? "WhatsApp del cliente abierto" : "WhatsApp preparado"}. Adjunta el documento descargado: ${documentNumber}.`);
