@@ -2210,11 +2210,10 @@ function syncBillingDraftDefaults() {
   }
 }
 
-function applyIssuerBillingProfile(companyId = billingDraft.issuerCompanyId, options = {}) {
+function issuerBillingProfile(companyId = billingDraft.issuerCompanyId) {
   const issuer = companies.find((company) => company.id === companyId);
-  if (!issuer) return;
-  const profile = issuer.billingProfile || {};
-  const defaults = {
+  if (!issuer) return {};
+  return {
     documentType: "Cuenta de cobro",
     numberPrefix: "CC",
     nextNumber: 1,
@@ -2227,10 +2226,16 @@ function applyIssuerBillingProfile(companyId = billingDraft.issuerCompanyId, opt
     paymentAccountHolder: issuer.name || "",
     autoGenerate: false,
     autoFrequency: "Mensual",
+    ...(issuer.billingProfile || {}),
   };
+}
+
+function applyIssuerBillingProfile(companyId = billingDraft.issuerCompanyId, options = {}) {
+  const profile = issuerBillingProfile(companyId);
+  if (!Object.keys(profile).length) return;
   issuerBillingProfileFields.forEach((field) => {
     if (options.force || billingDraft[field] === "" || billingDraft[field] === null || billingDraft[field] === undefined) {
-      billingDraft[field] = profile[field] ?? defaults[field];
+      billingDraft[field] = profile[field];
     }
   });
   if (options.force) billingDraft.currentNumber = "";
@@ -3068,12 +3073,14 @@ function financeFilteredInvoices() {
 }
 
 function financeFilteredTransactions() {
-  return financeTransactions.filter(
-    (transaction) =>
-      financeCompanyMatches(transaction.companyId) &&
-      financeDateMatches(transaction.date) &&
-      (financeFilters.transactionType === "all" || transaction.type === financeFilters.transactionType)
-  );
+  return financeTransactions
+    .filter(
+      (transaction) =>
+        financeCompanyMatches(transaction.companyId) &&
+        financeDateMatches(transaction.date) &&
+        (financeFilters.transactionType === "all" || transaction.type === financeFilters.transactionType)
+    )
+    .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
 }
 
 function financeFilteredProviders() {
@@ -3141,6 +3148,7 @@ function financeDocumentFromInvoice(invoice) {
   if (!invoice) return null;
   const client = clients.find((item) => item.id === invoice.clientId);
   const issuerCompanyId = invoice.issuerCompanyId || billingDraft.issuerCompanyId || invoice.companyId || activeCompanyId;
+  const issuerProfile = issuerBillingProfile(issuerCompanyId);
   return {
     ...invoice,
     issuerCompanyId,
@@ -3148,18 +3156,18 @@ function financeDocumentFromInvoice(invoice) {
     number: invoice.number || billingDocumentNumber(invoice),
     issueDate: invoice.issueDate || todayISO(),
     dueDate: invoice.dueDate || addDaysToDate(todayISO(), 5),
-    observations: invoice.observations || billingDraft.observations,
-    signatureName: invoice.signatureName || billingDraft.signatureName,
-    issuerNit: invoice.issuerNit || billingDraft.issuerNit,
-    issuerPhone: invoice.issuerPhone || billingDraft.issuerPhone,
-    issuerEmail: invoice.issuerEmail || billingDraft.issuerEmail,
-    paymentBank: invoice.paymentBank || billingDraft.paymentBank,
-    paymentAccountType: invoice.paymentAccountType || billingDraft.paymentAccountType,
-    paymentAccountNumber: invoice.paymentAccountNumber || billingDraft.paymentAccountNumber,
-    paymentAccountHolder: invoice.paymentAccountHolder || billingDraft.paymentAccountHolder,
-    clientNit: invoice.clientNit || billingDraft.clientNit,
-    clientPhone: invoice.clientPhone || billingDraft.clientPhone,
-    clientEmail: invoice.clientEmail || client?.email || billingDraft.clientEmail,
+    observations: invoice.observations || "",
+    signatureName: invoice.signatureName || "",
+    issuerNit: invoice.issuerNit || issuerProfile.issuerNit || "",
+    issuerPhone: invoice.issuerPhone || issuerProfile.issuerPhone || "",
+    issuerEmail: invoice.issuerEmail || issuerProfile.issuerEmail || "",
+    paymentBank: invoice.paymentBank || issuerProfile.paymentBank || "",
+    paymentAccountType: invoice.paymentAccountType || issuerProfile.paymentAccountType || "",
+    paymentAccountNumber: invoice.paymentAccountNumber || issuerProfile.paymentAccountNumber || "",
+    paymentAccountHolder: invoice.paymentAccountHolder || issuerProfile.paymentAccountHolder || "",
+    clientNit: invoice.clientNit || client?.nit || "",
+    clientPhone: invoice.clientPhone || client?.phone || "",
+    clientEmail: invoice.clientEmail || client?.email || "",
     lines: invoice.lines?.length ? invoice.lines : [{ serviceId: client?.serviceId || "pro", quantity: 1, price: invoice.amount || 0 }],
   };
 }
@@ -4371,9 +4379,9 @@ function generateClientInvoice(clientId) {
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
       paymentAccountHolder: billingDraft.paymentAccountHolder,
-      clientNit: client.nit || billingDraft.clientNit,
-      clientPhone: client.phone || billingDraft.clientPhone,
-      clientEmail: client.email || billingDraft.clientEmail,
+      clientNit: client.nit || "",
+      clientPhone: client.phone || "",
+      clientEmail: client.email || "",
       autoGenerate: true,
       autoFrequency: client.billingCycle || billingDraft.autoFrequency || "Mensual",
     },
@@ -4381,6 +4389,7 @@ function generateClientInvoice(clientId) {
   ];
   billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
   billingDraft.currentNumber = "";
+  persistIssuerBillingProfile();
   clients = clients.map((item) => (item.id === client.id ? { ...item, nextInvoiceDate: nextBillingCycleDate(client.nextInvoiceDate || issueDate, client.billingCycle) } : item));
   persistState();
   renderClientBillingPanel();
@@ -4423,9 +4432,9 @@ function ensureRecurringBillingDocuments() {
         paymentAccountType: billingDraft.paymentAccountType,
         paymentAccountNumber: billingDraft.paymentAccountNumber,
         paymentAccountHolder: billingDraft.paymentAccountHolder,
-        clientNit: client.nit || billingDraft.clientNit,
-        clientPhone: client.phone || billingDraft.clientPhone,
-        clientEmail: client.email || billingDraft.clientEmail,
+        clientNit: client.nit || "",
+        clientPhone: client.phone || "",
+        clientEmail: client.email || "",
         autoGenerate: true,
         autoFrequency: client.billingCycle || billingDraft.autoFrequency || "Mensual",
         lines: [{ serviceId: client.serviceId || "starter", quantity: 1, price: client.amount || service.price }],
@@ -4439,7 +4448,10 @@ function ensureRecurringBillingDocuments() {
     );
     created += 1;
   });
-  if (created) persistState();
+  if (created) {
+    persistIssuerBillingProfile();
+    persistState();
+  }
   return created;
 }
 
@@ -4483,14 +4495,15 @@ function createFinanceDocument() {
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
       paymentAccountHolder: billingDraft.paymentAccountHolder,
-      clientNit: client.nit || billingDraft.clientNit,
-      clientPhone: client.phone || billingDraft.clientPhone,
-      clientEmail: client.email || billingDraft.clientEmail,
+      clientNit: client.nit || "",
+      clientPhone: client.phone || "",
+      clientEmail: client.email || "",
     },
     ...invoices,
   ];
   billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
   billingDraft.currentNumber = "";
+  persistIssuerBillingProfile();
   billingDraft.clientId = client.id;
   syncBillingDraftClientContact(client.id);
   billingDraft.lines = [{ serviceId, quantity: 1, price: amount }];
@@ -4742,15 +4755,16 @@ function purchaseServiceForClient(serviceId) {
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
       paymentAccountHolder: billingDraft.paymentAccountHolder,
-      clientNit: client.nit || billingDraft.clientNit,
-      clientPhone: client.phone || billingDraft.clientPhone,
-      clientEmail: client.email || billingDraft.clientEmail,
+      clientNit: client.nit || "",
+      clientPhone: client.phone || "",
+      clientEmail: client.email || "",
       serviceOrderId: order.id,
     },
     ...invoices,
   ];
   billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
   billingDraft.currentNumber = "";
+  persistIssuerBillingProfile();
   billingDraft.clientId = client.id;
   billingDraft.lines = [{ serviceId: service.id, quantity: 1, price: service.price }];
   billingDraft.description = service.name;
@@ -4802,6 +4816,8 @@ function createServiceOrderFromPurchase(purchase, client) {
   const dueDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString().slice(0, 10);
   const serviceName = purchase.serviceName || service.name;
   const amount = Number(purchase.amount || service.price || 0);
+  syncBillingDraftDefaults();
+  const documentNumber = billingDocumentNumberFromDraft();
   const order = {
     id: `order-${client.id}-${purchase.id || purchase.serviceId}-${Date.now()}`,
     agencyId: activeAgencyId,
@@ -4832,6 +4848,7 @@ function createServiceOrderFromPurchase(purchase, client) {
       companyId: client.companyId,
       issuerCompanyId: activeCompanyId,
       documentType: "Cuenta de cobro",
+      number: documentNumber,
       concept: serviceName,
       amount,
       currency: order.currency,
@@ -4839,10 +4856,23 @@ function createServiceOrderFromPurchase(purchase, client) {
       issueDate: new Date().toISOString().slice(0, 10),
       dueDate,
       lines: [{ serviceId: order.serviceId, quantity: 1, price: amount }],
+      issuerNit: billingDraft.issuerNit,
+      issuerPhone: billingDraft.issuerPhone,
+      issuerEmail: billingDraft.issuerEmail,
+      paymentBank: billingDraft.paymentBank,
+      paymentAccountType: billingDraft.paymentAccountType,
+      paymentAccountNumber: billingDraft.paymentAccountNumber,
+      paymentAccountHolder: billingDraft.paymentAccountHolder,
+      clientNit: client.nit || "",
+      clientPhone: client.phone || "",
+      clientEmail: client.email || "",
       serviceOrderId: order.id,
     },
     ...invoices,
   ];
+  billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+  billingDraft.currentNumber = "";
+  persistIssuerBillingProfile();
   addActivity("billing", "Cuenta de cobro generada", `${serviceName} para ${client.name}.`, { companyId: client.companyId, clientId: client.id });
 }
 
@@ -4915,6 +4945,7 @@ function saveBillingDocument() {
   }
   if (isNewDocument) {
     billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
+    persistIssuerBillingProfile();
   }
   billingDraft.editingInvoiceId = document.id;
   billingDraft.currentNumber = document.number;
