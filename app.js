@@ -3315,6 +3315,45 @@ function renderFinanceNextStepCard(invoice) {
   `;
 }
 
+function renderFinancePriorityStrip(filteredInvoices, filteredProviders, income, expenses) {
+  const nextInvoice = filteredInvoices.find((invoice) => financeInvoiceStatus(invoice) !== "Pagada");
+  const nextProvider = filteredProviders.find((provider) => ["Atrasado", "Próximo"].includes(financeProviderStatus(provider))) || filteredProviders[0];
+  const balance = income - expenses;
+  const invoiceClient = nextInvoice ? clients.find((item) => item.id === nextInvoice.clientId) : null;
+  const providerStatus = nextProvider ? financeProviderStatus(nextProvider) : "";
+  return `
+    <section class="finance-priority-strip" aria-label="Prioridades financieras">
+      <article>
+        <span class="finance-priority-icon"><i data-lucide="receipt-text"></i></span>
+        <div>
+          <small>Por cobrar</small>
+          <strong>${nextInvoice ? formatMoney(nextInvoice.amount, nextInvoice.currency || "COP") : "Todo al día"}</strong>
+          <p>${nextInvoice ? `${escapeHtml(invoiceClient?.name || "Cliente")} · vence ${escapeHtml(shortDateLabel(nextInvoice.dueDate))}` : "No hay documentos pendientes en este filtro."}</p>
+        </div>
+        ${nextInvoice ? `<button class="secondary-button icon-button compact" type="button" data-finance-focus-invoice="${escapeHtml(nextInvoice.id)}" aria-label="Ver documento"><i data-lucide="chevron-right"></i></button>` : ""}
+      </article>
+      <article>
+        <span class="finance-priority-icon"><i data-lucide="landmark"></i></span>
+        <div>
+          <small>Próximo pago</small>
+          <strong>${nextProvider ? formatMoney(nextProvider.amount, nextProvider.currency || "COP") : "Sin proveedores"}</strong>
+          <p>${nextProvider ? `${escapeHtml(nextProvider.name)} · ${escapeHtml(providerStatus)} · ${escapeHtml(shortDateLabel(nextProvider.nextPaymentDate))}` : "Agrega proveedores recurrentes para controlar egresos."}</p>
+        </div>
+        ${nextProvider ? `<button class="secondary-button icon-button compact" type="button" data-finance-show-provider-due="${escapeHtml(providerStatus)}" aria-label="Ver proveedores"><i data-lucide="chevron-right"></i></button>` : ""}
+      </article>
+      <article class="${balance < 0 ? "is-negative" : "is-positive"}">
+        <span class="finance-priority-icon"><i data-lucide="${balance < 0 ? "arrow-down-left" : "arrow-up-right"}"></i></span>
+        <div>
+          <small>Balance filtrado</small>
+          <strong>${formatMoney(balance)}</strong>
+          <p>${balance < 0 ? "Los egresos superan los ingresos del periodo." : "Ingresos por encima de los egresos del periodo."}</p>
+        </div>
+        <button class="secondary-button icon-button compact" type="button" data-finance-reset-filters aria-label="Ver todo"><i data-lucide="rotate-ccw"></i></button>
+      </article>
+    </section>
+  `;
+}
+
 function renderFinancePanel() {
   if (!financePanel) return;
   purgeExpiredFinanceInvoices();
@@ -3416,6 +3455,8 @@ function renderFinancePanel() {
         </button>
         <article><span>Balance</span><strong>${formatMoney(income - expenses)}</strong></article>
       </div>
+
+      ${renderFinancePriorityStrip(filteredInvoices, filteredProviders, income, expenses)}
 
       <section class="finance-create-card">
         <header>
@@ -12106,6 +12147,22 @@ financePanel?.addEventListener("click", (event) => {
   const overdueButton = event.target.closest("[data-finance-show-overdue]");
   if (overdueButton) {
     financeFilters.documentStatus = "Vencida";
+    persistState();
+    renderFinancePanel();
+    return;
+  }
+
+  const providerDueButton = event.target.closest("[data-finance-show-provider-due]");
+  if (providerDueButton) {
+    financeFilters.providerStatus = providerDueButton.dataset.financeShowProviderDue || "Próximo";
+    persistState();
+    renderFinancePanel();
+    return;
+  }
+
+  const focusInvoiceButton = event.target.closest("[data-finance-focus-invoice]");
+  if (focusInvoiceButton) {
+    financeFocusInvoiceId = focusInvoiceButton.dataset.financeFocusInvoice;
     persistState();
     renderFinancePanel();
     return;
