@@ -483,10 +483,12 @@ const fallbackIconPaths = {
   "chevron-right": '<path d="m9 18 6-6-6-6"/>',
   "corner-down-left": '<path d="M20 4v7a4 4 0 0 1-4 4H5"/><path d="m9 11-4 4 4 4"/>',
   "external-link": '<path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+  "file-check-2": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-5"/>',
   "file-down": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M12 12v6"/><path d="m9 15 3 3 3-3"/>',
   "layout-dashboard": '<rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/>',
   "library-big": '<path d="M4 19.5V4a2 2 0 0 1 2-2h11v20H6a2 2 0 0 1-2-2.5Z"/><path d="M8 6h5M8 10h6"/><path d="M17 6h3v16h-3"/>',
   "mail-check": '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/><path d="m9 16 2 2 4-5"/>',
+  "mail-warning": '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/><path d="M12 10v4M12 17h.01"/>',
   megaphone: '<path d="M3 11v2a2 2 0 0 0 2 2h3l8 4V5L8 9H5a2 2 0 0 0-2 2Z"/><path d="M8 15v4a2 2 0 0 0 4 0v-2"/>',
   "message-square": '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/>',
   "message-square-plus": '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/><path d="M12 8v6M9 11h6"/>',
@@ -497,6 +499,9 @@ const fallbackIconPaths = {
   "shield-alert": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M12 8v5M12 17h.01"/>',
   "square-pen": '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 16 1-4 7-7 3 3-7 7-4 1Z"/><path d="m14 7 3 3"/>',
   "user-round-check": '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 13.5-5.8"/><path d="m16 19 2 2 4-5"/>',
+  "arrow-up-right": '<path d="M7 17 17 7"/><path d="M7 7h10v10"/>',
+  "arrow-down-left": '<path d="M17 7 7 17"/><path d="M17 17H7V7"/>',
+  landmark: '<path d="M3 21h18"/><path d="M5 21V10h14v11"/><path d="M4 10h16"/><path d="m12 3 8 5H4l8-5Z"/><path d="M8 14v3M12 14v3M16 14v3"/>',
 };
 
 function fallbackIcon(name) {
@@ -813,6 +818,7 @@ let financeFilters = {
   transactionType: "all",
   providerStatus: "all",
 };
+let financeFocusInvoiceId = "";
 let companyListSearch = "";
 let companyListFilter = "all";
 let selectedCompanyDetailId = "";
@@ -3266,6 +3272,49 @@ function financeDocumentFromInvoice(invoice) {
   };
 }
 
+function renderFinanceNextStepCard(invoice) {
+  if (!invoice) return "";
+  const client = clients.find((item) => item.id === invoice.clientId);
+  const company = companies.find((item) => item.id === invoice.companyId);
+  const status = financeInvoiceStatus(invoice);
+  const documentLabel = invoice.documentType || "Cuenta de cobro";
+  const documentNumber = invoice.number || billingDocumentNumber(invoice);
+  const isPaid = status === "Pagada";
+  return `
+    <section class="finance-next-card ${status === "Vencida" ? "is-overdue" : ""} ${isPaid ? "is-paid" : ""}">
+      <div class="finance-next-icon">
+        <i data-lucide="${documentLabel === "Factura" ? "file-check-2" : "receipt-text"}"></i>
+      </div>
+      <div class="finance-next-main">
+        <span>Siguiente paso</span>
+        <h3>${escapeHtml(documentLabel)} ${escapeHtml(documentNumber)}</h3>
+        <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
+      </div>
+      <div class="finance-next-total">
+        <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
+        <span class="pill ${financeInvoiceStatusClass(status)}">${escapeHtml(status)}</span>
+      </div>
+      <div class="finance-next-actions">
+        <button class="secondary-button icon-text-button" type="button" data-finance-edit="${escapeHtml(invoice.id)}">
+          <i data-lucide="pencil"></i>
+          Editar
+        </button>
+        <button class="secondary-button icon-button" type="button" data-finance-pdf="${escapeHtml(invoice.id)}" aria-label="Abrir PDF" title="Abrir PDF">
+          <i data-lucide="file-down"></i>
+        </button>
+        <button class="primary-button icon-button" type="button" data-finance-whatsapp="${escapeHtml(invoice.id)}" aria-label="Enviar por WhatsApp" title="Enviar por WhatsApp">
+          <i data-lucide="send"></i>
+        </button>
+        ${
+          isPaid
+            ? ""
+            : `<button class="secondary-button icon-button" type="button" data-finance-invoice-paid="${escapeHtml(invoice.id)}" aria-label="Marcar pagada" title="Marcar pagada"><i data-lucide="check"></i></button>`
+        }
+      </div>
+    </section>
+  `;
+}
+
 function renderFinancePanel() {
   if (!financePanel) return;
   purgeExpiredFinanceInvoices();
@@ -3285,6 +3334,11 @@ function renderFinancePanel() {
   const recurringInvoices = filteredInvoices.filter((item) => item.autoGenerate);
   const recurringClients = activeClients.filter((item) => item.nextInvoiceDate);
   const deletedInvoices = financeDeletedInvoices().filter((invoice) => financeCompanyMatches(invoice.companyId));
+  const focusInvoice =
+    filteredInvoices.find((invoice) => invoice.id === financeFocusInvoiceId) ||
+    filteredInvoices.find((invoice) => financeInvoiceStatus(invoice) === "Vencida") ||
+    filteredInvoices.find((invoice) => financeInvoiceStatus(invoice) !== "Pagada") ||
+    filteredInvoices[0];
   const monthOptions = [
     ["all", "Todos"],
     ["1", "Enero"],
@@ -3405,6 +3459,8 @@ function renderFinancePanel() {
           </button>
         </div>
       </section>
+
+      ${renderFinanceNextStepCard(focusInvoice)}
 
       <div class="finance-grid">
         <section class="finance-list-card">
@@ -4585,9 +4641,10 @@ function ensureRecurringBillingDocuments() {
     const issueDate = client.nextInvoiceDate;
     const documentNumber = billingDocumentNumberFromDraft();
     const service = serviceById(client.serviceId);
+    const invoiceId = `invoice-${client.id}-${Date.now()}-${created}`;
     invoices = [
       {
-        id: `invoice-${client.id}-${Date.now()}-${created}`,
+        id: invoiceId,
         agencyId: activeAgencyId,
         clientId: client.id,
         companyId: client.companyId,
@@ -4618,6 +4675,7 @@ function ensureRecurringBillingDocuments() {
       },
       ...invoices,
     ];
+    financeFocusInvoiceId = invoiceId;
     billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
     billingDraft.currentNumber = "";
     clients = clients.map((item) =>
@@ -4649,9 +4707,10 @@ function createFinanceDocument() {
   const amount = Number(financePanel?.querySelector('[data-finance-new="amount"]')?.value || service.price || client.amount || 0);
   const dueDate = financePanel?.querySelector('[data-finance-new="dueDate"]')?.value || addDaysToDate(todayISO(), 5);
   const documentNumber = billingDocumentNumberFromDraft();
+  const invoiceId = `invoice-${client.id}-${Date.now()}`;
   invoices = [
     {
-      id: `invoice-${client.id}-${Date.now()}`,
+      id: invoiceId,
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
@@ -4681,6 +4740,7 @@ function createFinanceDocument() {
   billingDraft.nextNumber = Math.max(Number(billingDraft.nextNumber || 1) + 1, 1);
   billingDraft.currentNumber = "";
   persistIssuerBillingProfile();
+  financeFocusInvoiceId = invoiceId;
   billingDraft.clientId = client.id;
   syncBillingDraftClientContact(client.id);
   billingDraft.lines = [{ serviceId, quantity: 1, price: amount }];
@@ -4814,6 +4874,7 @@ function markInvoicePaid(invoiceId) {
     ...financeTransactions,
   ];
   addActivity("billing", "Cobro pagado", "Se marco un documento como pagado.", { companyId: invoice.companyId, clientId: invoice.clientId });
+  financeFocusInvoiceId = invoiceId;
   persistState();
   renderClientBillingPanel();
   renderFinancePanel();
@@ -4830,6 +4891,7 @@ function deleteFinanceInvoice(invoiceId) {
       ? { ...item, deletedAt: deletedAt.toISOString(), deletionExpiresAt: deletionExpiresAt.toISOString() }
       : item
   );
+  if (financeFocusInvoiceId === invoiceId) financeFocusInvoiceId = "";
   persistState();
   renderFinancePanel();
   renderClientBillingPanel();
@@ -4840,6 +4902,7 @@ function restoreFinanceInvoice(invoiceId) {
   const invoice = invoices.find((item) => item.id === invoiceId && item.deletedAt);
   if (!invoice) return;
   invoices = invoices.map((item) => (item.id === invoiceId ? { ...item, deletedAt: "", deletionExpiresAt: "" } : item));
+  financeFocusInvoiceId = invoiceId;
   persistState();
   renderFinancePanel();
   renderClientBillingPanel();
@@ -4856,6 +4919,7 @@ function deleteFinanceInvoicePermanent(invoiceId) {
     billingDraft.editingInvoiceId = "";
     billingDraft.currentNumber = "";
   }
+  if (financeFocusInvoiceId === invoiceId) financeFocusInvoiceId = "";
   persistState();
   renderFinancePanel();
   renderClientBillingPanel();
@@ -4869,6 +4933,7 @@ function openFinanceDocumentPdf(invoiceId) {
     showToast("No encontre ese documento.");
     return;
   }
+  financeFocusInvoiceId = invoiceId;
   openBillingPdf(documentData);
 }
 
@@ -4894,6 +4959,7 @@ function editFinanceInvoice(invoiceId) {
     showToast("No encontre ese documento.");
     return;
   }
+  financeFocusInvoiceId = invoiceId;
   renderClientBillingPanel();
   setView("clients");
   showToast(`${documentData.documentType} abierta para editar.`);
@@ -4905,6 +4971,7 @@ function prepareFinanceWhatsapp(invoiceId) {
     showToast("No encontre ese documento.");
     return;
   }
+  financeFocusInvoiceId = invoiceId;
   documentAction("whatsapp");
 }
 
