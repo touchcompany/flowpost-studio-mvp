@@ -3283,10 +3283,46 @@ function financeDocumentFromInvoice(invoice) {
   };
 }
 
+function financeInvoiceParties(invoice) {
+  const client = clients.find((item) => item.id === invoice?.clientId);
+  const receiverCompany = companies.find((item) => item.id === (invoice?.companyId || client?.companyId));
+  const issuerCompany = companies.find((item) => item.id === (invoice?.issuerCompanyId || billingDraft.issuerCompanyId)) || companies.find((item) => item.id === activeCompanyId);
+  return {
+    client,
+    issuerCompany,
+    receiverCompany,
+    issuerName: issuerCompany?.name || "Emisor",
+    receiverName: receiverCompany?.name || client?.name || "Cliente receptor",
+  };
+}
+
+function renderFinancePartyFlow(invoice, options = {}) {
+  if (!invoice) return "";
+  const { issuerName, receiverName, issuerCompany, receiverCompany } = financeInvoiceParties(invoice);
+  const compact = options.compact ? " compact" : "";
+  return `
+    <div class="finance-party-flow${compact}" aria-label="Relación del documento">
+      <span>
+        <small>Emite</small>
+        <strong>${escapeHtml(issuerName)}</strong>
+      </span>
+      <i data-lucide="arrow-right"></i>
+      <span>
+        <small>Recibe</small>
+        <strong>${escapeHtml(receiverName)}</strong>
+      </span>
+      ${
+        options.showMeta
+          ? `<em>${escapeHtml(issuerCompany?.nit || issuerCompany?.handle || "Datos de emisor")} · ${escapeHtml(receiverCompany?.handle || "empresa vinculada")}</em>`
+          : ""
+      }
+    </div>
+  `;
+}
+
 function renderFinanceNextStepCard(invoice) {
   if (!invoice) return "";
-  const client = clients.find((item) => item.id === invoice.clientId);
-  const company = companies.find((item) => item.id === invoice.companyId);
+  const { client, receiverCompany } = financeInvoiceParties(invoice);
   const status = financeInvoiceStatus(invoice);
   const documentLabel = invoice.documentType || "Cuenta de cobro";
   const documentNumber = invoice.number || billingDocumentNumber(invoice);
@@ -3299,7 +3335,8 @@ function renderFinanceNextStepCard(invoice) {
       <div class="finance-next-main">
         <span>Siguiente paso</span>
         <h3>${escapeHtml(documentLabel)} ${escapeHtml(documentNumber)}</h3>
-        <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
+        <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(receiverCompany?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
+        ${renderFinancePartyFlow(invoice, { showMeta: true })}
       </div>
       <div class="finance-next-total">
         <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
@@ -3531,15 +3568,15 @@ function renderFinancePanel() {
               filteredInvoices.length
                 ? filteredInvoices
                     .map((invoice) => {
-                      const client = clients.find((item) => item.id === invoice.clientId);
-                      const company = companies.find((item) => item.id === invoice.companyId);
+                      const { client, receiverCompany } = financeInvoiceParties(invoice);
                       const status = financeInvoiceStatus(invoice);
                       return `
                         <article class="finance-row ${status === "Pagada" ? "is-paid" : ""} ${status === "Vencida" ? "is-overdue" : ""}">
                           <span class="finance-avatar"><i data-lucide="${invoice.documentType === "Factura" ? "file-check-2" : "receipt-text"}"></i></span>
                           <div>
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
-                            <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(company?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
+                            <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(receiverCompany?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
+                            ${renderFinancePartyFlow(invoice, { compact: true })}
                           </div>
                           <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
                           <span class="pill ${financeInvoiceStatusClass(status)}">${escapeHtml(status)}</span>
