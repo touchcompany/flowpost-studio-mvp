@@ -19,9 +19,10 @@
 
 .settings-shell {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  max-width: 1080px;
+  grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
+  gap: 14px;
+  max-width: 1120px;
+  align-items: start;
 }
 
 .settings-profile-card,
@@ -37,16 +38,16 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  padding: 18px;
-  border-radius: 28px;
+  padding: 16px;
+  border-radius: 26px;
 }
 
-.settings-profile-card,
-.settings-shortcuts,
-.settings-profile-group,
-.settings-company-group,
 .settings-billing-group {
   grid-column: 1 / -1;
+}
+
+.settings-shortcuts {
+  align-self: stretch;
 }
 
 .settings-avatar {
@@ -64,7 +65,7 @@
 .settings-profile-card h3,
 .settings-group h3 {
   margin: 0;
-  font-size: clamp(1.3rem, 2vw, 2rem);
+  font-size: clamp(1.05rem, 1.4vw, 1.34rem);
   letter-spacing: 0;
 }
 
@@ -77,9 +78,9 @@
 
 .settings-group {
   display: grid;
-  gap: 18px;
-  padding: 20px;
-  border-radius: 30px;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 26px;
 }
 
 .settings-group > header {
@@ -91,12 +92,12 @@
 
 .settings-form-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .settings-form-grid .wide {
-  grid-column: span 3;
+  grid-column: 1 / -1;
 }
 
 .settings-billing-preview {
@@ -128,7 +129,7 @@
 
 .settings-shortcuts {
   gap: 12px;
-  padding: 16px;
+  padding: 14px;
 }
 
 .settings-shortcuts-heading {
@@ -161,6 +162,7 @@
 
 .settings-shortcuts-grid button {
   min-width: 0;
+  min-height: 92px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.68);

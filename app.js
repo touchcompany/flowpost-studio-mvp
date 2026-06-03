@@ -3854,6 +3854,17 @@ function renderSettingsPanel() {
   renderIcons();
 }
 
+async function syncSettingsCompanyField(field, rawValue, options = {}) {
+  const value = options.trim ? String(rawValue || "").trim() : rawValue;
+  companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: value } : company));
+  activeCompanyName.textContent = activeCompany().name || "";
+  refreshCompanyContext();
+  renderCompanies();
+  renderDashboard();
+  updatePreview();
+  await persistState();
+}
+
 function automationBlueprint(service) {
   const id = service?.id || "";
   const generic = [
@@ -12030,19 +12041,14 @@ settingsPanel?.addEventListener("click", (event) => {
   setView(target);
 });
 
-settingsPanel?.addEventListener("input", (event) => {
+settingsPanel?.addEventListener("input", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) return;
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: companyField.value } : company));
-    activeCompanyName.textContent = activeCompany().name;
-    persistState();
-    renderCompanies();
-    renderDashboard();
-    updatePreview();
+    await syncSettingsCompanyField(field, companyField.value);
     return;
   }
 
@@ -12071,9 +12077,8 @@ settingsPanel?.addEventListener("change", async (event) => {
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
-    await persistState();
+    await syncSettingsCompanyField(companyField.dataset.settingsCompanyField, companyField.value, { trim: companyField.type === "url" });
     renderSettingsPanel();
-    refreshCompanyContext();
     showToast("Empresa actualizada y sincronizada.");
     return;
   }
