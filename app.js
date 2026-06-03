@@ -3718,11 +3718,13 @@ function renderSettingsPanel() {
   const session = currentSession();
   const issuerCompany = companies.find((item) => item.id === billingDraft.issuerCompanyId) || company;
   const documentNumberPreview = billingDocumentNumberFromDraft();
+  const userPhotoUrl = entityPhotoUrl(session);
+  const companyPhotoUrl = entityPhotoUrl(company);
   settingsPanel.innerHTML = `
     <section class="settings-shell">
       <article class="settings-profile-card">
         <span class="company-avatar settings-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
-          ${avatarImageMarkup(entityPhotoUrl(session), session.name || "Usuario Touch") || `<img src="favicon.svg" alt="" />`}
+          ${avatarImageMarkup(userPhotoUrl, session.name || "Usuario Touch") || `<img src="favicon.svg" alt="" />`}
         </span>
         <div>
           <span class="workspace-label">Cuenta activa</span>
@@ -3761,6 +3763,8 @@ function renderSettingsPanel() {
         </div>
       </section>
 
+      ${renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUrl, companyPhotoUrl })}
+
       <section class="settings-group settings-profile-group">
         <header>
           <span class="status-icon"><i data-lucide="circle-user-round"></i></span>
@@ -3771,10 +3775,16 @@ function renderSettingsPanel() {
           </div>
         </header>
         <div class="settings-form-grid">
-          <label class="field compact wide">
-            <span>Foto de perfil</span>
-            <input data-settings-profile-field="avatarUrl" type="text" value="${escapeHtml(entityPhotoUrl(session))}" placeholder="/content/uploads/perfil.jpg" />
-          </label>
+          <div class="settings-media-field wide">
+            <span class="settings-media-preview company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
+              ${avatarImageMarkup(userPhotoUrl, session.name || "Usuario Touch") || `<i data-lucide="user-round"></i>`}
+            </span>
+            <label class="field compact">
+              <span>Foto de perfil</span>
+              <input data-settings-profile-field="avatarUrl" type="text" value="${escapeHtml(userPhotoUrl)}" placeholder="/content/uploads/perfil.jpg o https://..." />
+              <small>Pega una URL completa o una ruta del sitio. Se normaliza antes de guardar.</small>
+            </label>
+          </div>
         </div>
       </section>
 
@@ -3800,10 +3810,16 @@ function renderSettingsPanel() {
             <span>Color</span>
             <input data-settings-company-field="primaryColor" type="color" value="${escapeHtml(company.primaryColor || "#111111")}" />
           </label>
-          <label class="field compact wide">
-            <span>Foto o logo</span>
-            <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(entityPhotoUrl(company))}" placeholder="/content/uploads/logo.jpg" />
-          </label>
+          <div class="settings-media-field wide">
+            <span class="settings-media-preview company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
+              ${avatarImageMarkup(companyPhotoUrl, company.name || "Empresa") || `<i data-lucide="briefcase-business"></i>`}
+            </span>
+            <label class="field compact">
+              <span>Foto o logo</span>
+              <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(companyPhotoUrl)}" placeholder="/content/uploads/logo.jpg o https://..." />
+              <small>Esta imagen se usa en empresa, calendario, clientes, cobros y menú móvil.</small>
+            </label>
+          </div>
           <label class="field compact wide">
             <span>Descripción</span>
             <textarea data-settings-company-field="description">${escapeHtml(company.description || "")}</textarea>
@@ -3905,6 +3921,65 @@ function renderSettingsPanel() {
     </section>
   `;
   renderIcons();
+}
+
+function renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUrl, companyPhotoUrl }) {
+  const companySocials = Array.isArray(company.socials) ? company.socials : [];
+  const connectedAccounts = socialAccounts.filter((account) => account.connected || account.status === "Conectado").length;
+  const paymentReady = Boolean(billingDraft.paymentBank && billingDraft.paymentAccountNumber && billingDraft.paymentAccountHolder);
+  const steps = [
+    {
+      icon: "user-round",
+      title: "Perfil",
+      done: Boolean(userPhotoUrl && session.email),
+      detail: userPhotoUrl ? "Foto visible en tus dispositivos." : "Agrega tu foto para reconocer tu cuenta.",
+    },
+    {
+      icon: "briefcase-business",
+      title: "Empresa",
+      done: Boolean(company.name && companyPhotoUrl && company.description),
+      detail: companyPhotoUrl ? `${company.name || "Empresa"} tiene imagen.` : "Completa logo, descripción y tono.",
+    },
+    {
+      icon: "receipt-text",
+      title: "Cobros",
+      done: paymentReady,
+      detail: paymentReady ? `${issuerCompany.name || "Emisor"} listo para cobrar.` : "Configura NIT, banco y numeración.",
+    },
+    {
+      icon: "plug-zap",
+      title: "Conexiones",
+      done: connectedAccounts > 0 || companySocials.length > 0,
+      detail: connectedAccounts ? `${connectedAccounts} conexión activa.` : `${companySocials.length || 0} redes registradas.`,
+    },
+  ];
+
+  return `
+    <section class="settings-group settings-setup-guide">
+      <header>
+        <span class="status-icon"><i data-lucide="list-checks"></i></span>
+        <div>
+          <h3>Deja tu espacio listo</h3>
+          <p>Lo mínimo para que empresa, cobros, contenido y accesos se sientan completos.</p>
+        </div>
+      </header>
+      <div class="settings-setup-grid">
+        ${steps
+          .map(
+            (step) => `
+              <article class="${step.done ? "done" : ""}">
+                <span class="status-icon small"><i data-lucide="${step.done ? "check" : step.icon}"></i></span>
+                <div>
+                  <strong>${escapeHtml(step.title)}</strong>
+                  <small>${escapeHtml(step.detail)}</small>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function renderIssuerProfileManager(activeIssuerCompany) {
