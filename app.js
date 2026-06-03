@@ -3816,13 +3816,14 @@ function renderSettingsPanel() {
           <div>
             <span>Próximo documento</span>
             <strong>${escapeHtml(documentNumberPreview)}</strong>
-            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerCompany.name || "Empresa")}</small>
+            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerCompany.name || "Empresa")} · Recibe la empresa o cliente elegido al crearla.</small>
           </div>
           <button class="primary-button icon-text-button" type="button" data-settings-open="clients">
             <i data-lucide="file-text"></i>
             Crear cobro
           </button>
         </div>
+        ${renderIssuerProfileManager(issuerCompany)}
         <div class="settings-form-grid">
           <label class="field compact">
             <span>Tipo</span>
@@ -3893,6 +3894,61 @@ function renderSettingsPanel() {
     </section>
   `;
   renderIcons();
+}
+
+function renderIssuerProfileManager(activeIssuerCompany) {
+  const activeIssuerId = activeIssuerCompany?.id || billingDraft.issuerCompanyId;
+  const cards = companies
+    .map((company) => {
+      const profile = issuerBillingProfile(company.id);
+      const isActive = company.id === activeIssuerId;
+      const nit = profile.issuerNit || company.nit || "Sin NIT";
+      const paymentParts = [profile.paymentBank, profile.paymentAccountType, profile.paymentAccountNumber].filter(Boolean);
+      const contactParts = [profile.issuerEmail || company.email, profile.issuerPhone || company.phone].filter(Boolean);
+      return `
+        <article class="issuer-profile-card ${isActive ? "active" : ""}">
+          <span class="issuer-profile-icon company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
+            ${avatarImageMarkup(entityPhotoUrl(company), company.name || "Empresa") || `<i data-lucide="receipt-text"></i>`}
+          </span>
+          <div class="issuer-profile-copy">
+            <strong>${escapeHtml(company.name || "Empresa sin nombre")}</strong>
+            <small>${escapeHtml(nit)}</small>
+            <p>${escapeHtml(paymentParts.join(" · ") || "Cuenta de pago pendiente")}</p>
+            <p>${escapeHtml(contactParts.join(" · ") || "Contacto pendiente")}</p>
+          </div>
+          <div class="issuer-profile-actions">
+            ${
+              isActive
+                ? `<span class="status-pill success">Emisor activo</span>`
+                : `<button class="secondary-button icon-button compact" type="button" data-settings-issuer-use="${company.id}" aria-label="Usar ${escapeHtml(company.name || "empresa")} como emisor"><i data-lucide="check-circle-2"></i></button>`
+            }
+            <button class="secondary-button icon-button compact" type="button" data-settings-issuer-edit="${company.id}" aria-label="Editar datos de ${escapeHtml(company.name || "empresa")}">
+              <i data-lucide="pencil"></i>
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  return `
+    <section class="issuer-profile-manager">
+      <header class="issuer-profile-head">
+        <div>
+          <span class="workspace-label">Perfiles de empresa</span>
+          <h4>Emisores para cuentas de cobro</h4>
+          <p>Elige qué perfil envía el documento. La empresa receptora se selecciona al crear cada cuenta o factura.</p>
+        </div>
+        <button class="secondary-button icon-text-button compact" type="button" data-settings-open="companies">
+          <i data-lucide="plus"></i>
+          Crear perfil
+        </button>
+      </header>
+      <div class="issuer-profile-list">
+        ${cards}
+      </div>
+    </section>
+  `;
 }
 
 async function syncSettingsCompanyField(field, rawValue, options = {}) {
@@ -12109,7 +12165,31 @@ billingPanel.addEventListener("click", (event) => {
   }
 });
 
-settingsPanel?.addEventListener("click", (event) => {
+settingsPanel?.addEventListener("click", async (event) => {
+  const useIssuerButton = event.target.closest("[data-settings-issuer-use]");
+  if (useIssuerButton) {
+    billingDraft.issuerCompanyId = useIssuerButton.dataset.settingsIssuerUse;
+    applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
+    persistIssuerBillingProfile();
+    await persistState();
+    renderSettingsPanel();
+    renderClientBillingPanel();
+    showToast("Perfil emisor actualizado.");
+    return;
+  }
+
+  const editIssuerButton = event.target.closest("[data-settings-issuer-edit]");
+  if (editIssuerButton) {
+    billingDraft.issuerCompanyId = editIssuerButton.dataset.settingsIssuerEdit;
+    applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
+    persistIssuerBillingProfile();
+    await persistState();
+    renderSettingsPanel();
+    setTimeout(() => settingsPanel.querySelector('[data-settings-billing-field="issuerNit"]')?.focus(), 50);
+    showToast("Edita los datos del emisor seleccionado.");
+    return;
+  }
+
   const openButton = event.target.closest("[data-settings-open]");
   if (!openButton) return;
   const target = openButton.dataset.settingsOpen;

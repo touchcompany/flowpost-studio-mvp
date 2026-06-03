@@ -121,6 +121,98 @@
   letter-spacing: 0;
 }
 
+.issuer-profile-manager {
+  display: grid;
+  gap: 12px;
+}
+
+.issuer-profile-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.issuer-profile-head h4 {
+  margin: 2px 0 0;
+  font-size: 1.18rem;
+  letter-spacing: 0;
+}
+
+.issuer-profile-head p {
+  max-width: 680px;
+}
+
+.issuer-profile-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.issuer-profile-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.issuer-profile-card.active {
+  border-color: rgba(15, 118, 110, 0.32);
+  box-shadow: 0 18px 44px rgba(15, 118, 110, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(217, 239, 233, 0.58));
+}
+
+.issuer-profile-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  flex: 0 0 auto;
+}
+
+.issuer-profile-icon img,
+.issuer-profile-icon svg {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.issuer-profile-copy {
+  min-width: 0;
+}
+
+.issuer-profile-copy strong,
+.issuer-profile-copy small,
+.issuer-profile-copy p {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issuer-profile-copy strong {
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.issuer-profile-copy small,
+.issuer-profile-copy p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.issuer-profile-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .settings-list {
   padding: 8px;
   gap: 0;
@@ -651,6 +743,26 @@
 
   .settings-billing-preview {
     grid-template-columns: 1fr;
+  }
+
+  .issuer-profile-head,
+  .issuer-profile-list {
+    grid-template-columns: 1fr;
+  }
+
+  .issuer-profile-head {
+    align-items: stretch;
+  }
+
+  .issuer-profile-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .issuer-profile-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .finance-filter-bar,
