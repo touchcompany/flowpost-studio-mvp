@@ -1387,8 +1387,19 @@ function profileInitials(name = "") {
   return (initials || "T").toUpperCase();
 }
 
+function normalizeMediaUrl(value = "") {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "";
+  if (/^(https?:|data:|blob:|file:)/i.test(rawValue)) return rawValue;
+  const withoutLeadingDots = rawValue.replace(/^\.+/, "");
+  if (!withoutLeadingDots) return "";
+  if (withoutLeadingDots.startsWith("/")) return withoutLeadingDots;
+  if (withoutLeadingDots.includes("/")) return `/${withoutLeadingDots}`;
+  return withoutLeadingDots;
+}
+
 function entityPhotoUrl(entity = {}) {
-  return entity.avatarUrl || entity.picture || entity.photoURL || "";
+  return normalizeMediaUrl(entity.avatarUrl || entity.picture || entity.photoURL || entity.metadata?.avatarUrl || "");
 }
 
 function avatarImageMarkup(photoUrl = "", alt = "") {
@@ -3762,7 +3773,7 @@ function renderSettingsPanel() {
         <div class="settings-form-grid">
           <label class="field compact wide">
             <span>Foto de perfil</span>
-            <input data-settings-profile-field="avatarUrl" type="url" value="${escapeHtml(entityPhotoUrl(session))}" placeholder="https://.../perfil.jpg" />
+            <input data-settings-profile-field="avatarUrl" type="text" value="${escapeHtml(entityPhotoUrl(session))}" placeholder="/content/uploads/perfil.jpg" />
           </label>
         </div>
       </section>
@@ -3791,7 +3802,7 @@ function renderSettingsPanel() {
           </label>
           <label class="field compact wide">
             <span>Foto o logo</span>
-            <input data-settings-company-field="avatarUrl" type="url" value="${escapeHtml(entityPhotoUrl(company))}" placeholder="https://.../logo.jpg" />
+            <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(entityPhotoUrl(company))}" placeholder="/content/uploads/logo.jpg" />
           </label>
           <label class="field compact wide">
             <span>Descripción</span>
@@ -3952,7 +3963,7 @@ function renderIssuerProfileManager(activeIssuerCompany) {
 }
 
 async function syncSettingsCompanyField(field, rawValue, options = {}) {
-  const value = options.trim ? String(rawValue || "").trim() : rawValue;
+  const value = field === "avatarUrl" ? normalizeMediaUrl(rawValue) : options.trim ? String(rawValue || "").trim() : rawValue;
   companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: value } : company));
   activeCompanyName.textContent = activeCompany().name || "";
   refreshCompanyContext();
@@ -4214,14 +4225,17 @@ function renderStorePanel() {
   if (!storePanel) return;
   ensureAgencyClients();
   ensureServiceOrderAutomations();
+  const session = currentSession();
+  const storeAdmin = isTouchSuperAdmin(session);
   const portalMode = isClientPortalSession();
   const portalClient = clientForCompany();
-  const clientsForStore = portalMode && portalClient ? [portalClient] : activeAgencyClients();
-  const selectedClient = portalMode ? portalClient : clients.find((client) => client.id === billingDraft.clientId) || clientsForStore[0];
-  const activeOrders = serviceOrders.filter((order) => order.agencyId === activeAgencyId);
+  const clientsForStore = storeAdmin ? activeAgencyClients() : portalMode && portalClient ? [portalClient] : [clientForCompany()].filter(Boolean);
+  const selectedClient = storeAdmin ? clients.find((client) => client.id === billingDraft.clientId) || clientsForStore[0] : portalClient || clientsForStore[0];
+  const servicesForStore = storeAdmin ? activeAgencyServices() : activeAgencyServices().filter((service) => service.clientVisible !== false);
+  const activeOrders = storeAdmin ? serviceOrders.filter((order) => order.agencyId === activeAgencyId) : selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const selectedOrders = selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const revenue = activeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
-  const groups = [...new Set(activeAgencyServices().map((service) => service.group || "Servicio"))];
+  const groups = [...new Set(servicesForStore.map((service) => service.group || "Servicio"))];
   const cpanelPlans = provisioningStatus?.cpanel?.plans || {};
   const planOptions = [...new Set([cpanelPlans.defaultPlan, cpanelPlans.hostingPlan, cpanelPlans.websitePlan, serviceProvisionDraft.hostingPlan].filter(Boolean))];
 
@@ -4230,15 +4244,20 @@ function renderStorePanel() {
       <div>
         <span class="status-icon large"><i data-lucide="shopping-bag"></i></span>
         <div>
-          <h2>Servicios vendibles de ${escapeHtml(activeAgency().name)}</h2>
-          <p>${portalMode ? "Compra servicios disponibles y activa nuevos modulos dentro de tu panel." : "Elige cliente, compra un servicio y Touch Note crea la orden interna con cuenta de cobro."}</p>
+          <span class="workspace-label">${storeAdmin ? "Super admin" : "Panel del cliente"}</span>
+          <h2>${storeAdmin ? `Administrador de servicios de ${escapeHtml(activeAgency().name)}` : "Mis servicios y pedidos"}</h2>
+          <p>${
+            storeAdmin
+              ? "Gestiona lo que se vende en la página pública, asigna servicios a clientes y recibe pedidos en operación."
+              : "Revisa los servicios comprados, pedidos activos y planes disponibles para tu empresa."
+          }</p>
         </div>
       </div>
       ${
-        portalMode
+        !storeAdmin
           ? `<span class="pill ready">${escapeHtml(selectedClient?.name || activeCompany().name)}</span>`
           : `<label class="field compact store-client-picker">
-              <span>Comprar para</span>
+              <span>Asignar a</span>
               <select data-store-client>
                 ${clientsForStore.map((client) => `<option value="${client.id}" ${client.id === selectedClient?.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`).join("")}
               </select>
@@ -4247,13 +4266,13 @@ function renderStorePanel() {
     </section>
 
     ${
-      portalMode
+      storeAdmin
         ? `<section class="store-provision-box">
             <div>
-              <span class="status-icon"><i data-lucide="globe-2"></i></span>
+              <span class="status-icon"><i data-lucide="plug-zap"></i></span>
               <div>
-                <strong>Datos para web, hosting o dominio</strong>
-                <p>Si vas a solicitar hosting, pagina web o dominio, completa estos datos antes de comprar.</p>
+                <strong>Provisionamiento automático</strong>
+                <p>Para hosting, web y dominios se usan estos datos al llamar cPanel/WHM o eNom.</p>
               </div>
             </div>
             <label class="field compact">
@@ -4265,8 +4284,19 @@ function renderStorePanel() {
               Verificar dominio
             </button>
             <label class="field compact">
-              <span>Email tecnico</span>
+              <span>Email técnico</span>
               <input data-provision-field="contactEmail" type="email" placeholder="admin@cliente.com" value="${escapeHtml(serviceProvisionDraft.contactEmail || selectedClient?.email || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Plan cPanel</span>
+              ${
+                planOptions.length
+                  ? `<select data-provision-field="hostingPlan">
+                      <option value="">Automático</option>
+                      ${planOptions.map((plan) => `<option value="${escapeHtml(plan)}" ${serviceProvisionDraft.hostingPlan === plan ? "selected" : ""}>${escapeHtml(plan)}</option>`).join("")}
+                    </select>`
+                  : `<input data-provision-field="hostingPlan" type="text" placeholder="default" value="${escapeHtml(serviceProvisionDraft.hostingPlan)}" />`
+              }
             </label>
             <label class="field compact">
               <span>Años dominio</span>
@@ -4280,65 +4310,31 @@ function renderStorePanel() {
                   </article>`
                 : ""
             }
+          </section>
+          ${renderStoreAdminDesk({ selectedClient, services: servicesForStore, activeOrders })}`
+        : `<section class="store-provision-box customer">
+            <div>
+              <span class="status-icon"><i data-lucide="sparkles"></i></span>
+              <div>
+                <strong>Servicios disponibles para tu empresa</strong>
+                <p>Cuando compres o solicites algo, quedará visible como pedido y se habilitarán los módulos correspondientes.</p>
+              </div>
+            </div>
           </section>`
-        : `<section class="store-provision-box">
-      <div>
-        <span class="status-icon"><i data-lucide="plug-zap"></i></span>
-        <div>
-          <strong>Provisionamiento automático</strong>
-          <p>Para hosting, web y dominios se usan estos datos al llamar cPanel/WHM o eNom.</p>
-        </div>
-      </div>
-      <label class="field compact">
-        <span>Dominio</span>
-        <input data-provision-field="domain" type="text" placeholder="cliente.com" value="${escapeHtml(serviceProvisionDraft.domain)}" />
-      </label>
-      <button class="secondary-button icon-text-button" type="button" data-check-domain>
-        <i data-lucide="globe-2"></i>
-        Verificar dominio
-      </button>
-      <label class="field compact">
-        <span>Email técnico</span>
-        <input data-provision-field="contactEmail" type="email" placeholder="admin@cliente.com" value="${escapeHtml(serviceProvisionDraft.contactEmail || selectedClient?.email || "")}" />
-      </label>
-      <label class="field compact">
-        <span>Plan cPanel</span>
-        ${
-          planOptions.length
-            ? `<select data-provision-field="hostingPlan">
-                <option value="">Automático</option>
-                ${planOptions.map((plan) => `<option value="${escapeHtml(plan)}" ${serviceProvisionDraft.hostingPlan === plan ? "selected" : ""}>${escapeHtml(plan)}</option>`).join("")}
-              </select>`
-            : `<input data-provision-field="hostingPlan" type="text" placeholder="default" value="${escapeHtml(serviceProvisionDraft.hostingPlan)}" />`
-        }
-      </label>
-      <label class="field compact">
-        <span>Años dominio</span>
-        <input data-provision-field="years" type="number" min="1" max="10" inputmode="numeric" value="${escapeHtml(serviceProvisionDraft.years || "1")}" />
-      </label>
-      ${
-        serviceProvisionDraft.domainCheck
-          ? `<article class="domain-check-result ${serviceProvisionDraft.domainCheck.available ? "available" : "blocked"}">
-              <strong>${escapeHtml(serviceProvisionDraft.domainCheck.domain || serviceProvisionDraft.domain || "Dominio")}</strong>
-              <p>${escapeHtml(serviceProvisionDraft.domainCheck.message || "Consulta realizada.")}</p>
-            </article>`
-          : ""
-      }
-    </section>`
     }
 
     <section class="store-summary">
-      <article><span>Servicios</span><strong>${activeAgencyServices().length}</strong></article>
-      <article><span>${portalMode ? "Tus compras" : "Compras agencia"}</span><strong>${portalMode ? selectedOrders.length : activeOrders.length}</strong></article>
+      <article><span>${storeAdmin ? "Catálogo" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
+      <article><span>${storeAdmin ? "Pedidos agencia" : "Tus pedidos"}</span><strong>${storeAdmin ? activeOrders.length : selectedOrders.length}</strong></article>
       <article><span>Cliente actual</span><strong>${selectedOrders.length}</strong></article>
-      <article><span>${portalMode ? "Invertido" : "Valor vendido"}</span><strong>${formatMoney(portalMode ? selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0) : revenue, "COP")}</strong></article>
+      <article><span>${storeAdmin ? "Valor vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0), "COP")}</strong></article>
     </section>
 
     <section class="store-layout">
       <div class="store-catalog">
         ${groups
           .map((group) => {
-            const services = activeAgencyServices().filter((service) => (service.group || "Servicio") === group);
+            const services = servicesForStore.filter((service) => (service.group || "Servicio") === group);
             return `
               <section class="store-group">
                 <header>
@@ -4355,11 +4351,19 @@ function renderStorePanel() {
                             <h4>${escapeHtml(service.name)}</h4>
                             <p>${escapeHtml(service.group)} para ${escapeHtml(selectedClient?.name || "cliente")}.</p>
                           </div>
+                          ${storeAdmin ? `<span class="store-visibility-pill ${service.clientVisible === false ? "private" : ""}">${service.clientVisible === false ? "Privado" : "Público"}</span>` : ""}
                           <strong>${formatMoney(service.price, "COP")}</strong>
-                          <button class="primary-button icon-text-button" type="button" data-store-buy="${service.id}" ${selectedClient ? "" : "disabled"}>
-                            <i data-lucide="shopping-bag"></i>
-                            ${portalMode ? "Solicitar" : "Comprar"}
-                          </button>
+                          <div class="store-card-actions">
+                            <button class="primary-button icon-text-button" type="button" data-store-buy="${service.id}" ${selectedClient ? "" : "disabled"}>
+                              <i data-lucide="${storeAdmin ? "badge-plus" : "shopping-bag"}"></i>
+                              ${storeAdmin ? "Asignar" : "Solicitar"}
+                            </button>
+                            ${
+                              storeAdmin
+                                ? `<button class="secondary-button icon-button compact" type="button" data-store-service-toggle="${service.id}" aria-label="Cambiar visibilidad"><i data-lucide="${service.clientVisible === false ? "eye-off" : "eye"}"></i></button>`
+                                : ""
+                            }
+                          </div>
                         </article>
                       `
                     )
@@ -4398,7 +4402,7 @@ function renderStorePanel() {
           }
         </div>
         ${
-          portalMode
+          !storeAdmin
             ? `<button class="secondary-button icon-text-button" type="button" data-store-open-accounts>
                 <i data-lucide="layout-dashboard"></i>
                 Ver mi acceso
@@ -5275,6 +5279,42 @@ function applyPendingLandingPurchases() {
   renderStorePanel();
   renderAutomationCenter();
   showToast(`${purchases.length} compra${purchases.length === 1 ? "" : "s"} agregada${purchases.length === 1 ? "" : "s"} al cliente ${client.name}.`);
+}
+
+function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
+  const publicServices = services.filter((service) => service.clientVisible !== false);
+  const privateServices = services.length - publicServices.length;
+  const pendingOrders = activeOrders.filter((order) => ["Solicitado", "En proceso", "Pendiente"].includes(order.status)).length;
+  return `
+    <section class="store-admin-desk">
+      <article class="store-admin-card featured">
+        <span class="status-icon"><i data-lucide="panel-top"></i></span>
+        <div>
+          <strong>Catálogo público sincronizado</strong>
+          <p>Los servicios marcados como visibles son los que se venden desde la página externa. Aquí llegan las solicitudes y también puedes asignarlas manualmente.</p>
+        </div>
+      </article>
+      <article class="store-admin-card">
+        <span>Visibles</span>
+        <strong>${publicServices.length}</strong>
+        <small>${privateServices} privados</small>
+      </article>
+      <article class="store-admin-card">
+        <span>Pedidos activos</span>
+        <strong>${pendingOrders}</strong>
+        <small>${escapeHtml(selectedClient?.name || "Sin cliente")}</small>
+      </article>
+      <div class="store-admin-form">
+        <input data-store-new-service="name" placeholder="Nuevo servicio o producto" />
+        <input data-store-new-service="group" placeholder="Categoría" />
+        <input data-store-new-service="price" type="number" min="0" placeholder="Valor COP" />
+        <button class="primary-button icon-text-button" type="button" data-add-store-service>
+          <i data-lucide="plus"></i>
+          Agregar
+        </button>
+      </div>
+    </section>
+  `;
 }
 
 function saveBillingDocument() {
@@ -12224,7 +12264,8 @@ settingsPanel?.addEventListener("input", async (event) => {
 settingsPanel?.addEventListener("change", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
-    saveClientSession({ ...currentSession(), [profileField.dataset.settingsProfileField]: profileField.value.trim() }).then(() => {
+    const value = profileField.dataset.settingsProfileField === "avatarUrl" ? normalizeMediaUrl(profileField.value) : profileField.value.trim();
+    saveClientSession({ ...currentSession(), [profileField.dataset.settingsProfileField]: value }).then(() => {
       renderAccount();
       updateMobileProfileNav();
       renderSettingsPanel();
@@ -12679,6 +12720,51 @@ clientWorkspacePanel.addEventListener("change", (event) => {
 });
 
 storePanel.addEventListener("click", (event) => {
+  const addStoreServiceButton = event.target.closest("[data-add-store-service]");
+  if (addStoreServiceButton) {
+    if (!isTouchSuperAdmin()) {
+      showToast("Solo el super admin puede administrar el catálogo.");
+      return;
+    }
+    const name = storePanel.querySelector('[data-store-new-service="name"]')?.value.trim();
+    const group = storePanel.querySelector('[data-store-new-service="group"]')?.value.trim() || "Servicio";
+    const price = Number(storePanel.querySelector('[data-store-new-service="price"]')?.value || 0);
+    if (!name || !price) {
+      showToast("Agrega nombre y valor del servicio.");
+      return;
+    }
+    agencyServices = [
+      ...agencyServices,
+      {
+        id: `${slugify(name)}-${Date.now()}`,
+        agencyId: activeAgencyId,
+        name,
+        group,
+        price,
+        clientVisible: true,
+      },
+    ];
+    persistState();
+    renderStorePanel();
+    showToast("Servicio agregado al catálogo público.");
+    return;
+  }
+
+  const toggleServiceButton = event.target.closest("[data-store-service-toggle]");
+  if (toggleServiceButton) {
+    if (!isTouchSuperAdmin()) {
+      showToast("Solo el super admin puede cambiar la visibilidad.");
+      return;
+    }
+    agencyServices = agencyServices.map((service) =>
+      service.id === toggleServiceButton.dataset.storeServiceToggle ? { ...service, clientVisible: service.clientVisible === false } : service
+    );
+    persistState();
+    renderStorePanel();
+    showToast("Visibilidad del servicio actualizada.");
+    return;
+  }
+
   const checkDomainButton = event.target.closest("[data-check-domain]");
   if (checkDomainButton) {
     checkDomainAvailability();
