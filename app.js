@@ -10024,6 +10024,11 @@ function companyDetailView(company) {
       </header>
 
       <div class="company-detail-actions">
+        ${
+          company.id === activeCompanyId
+            ? `<span class="company-active-note"><i data-lucide="check-circle-2"></i><span>Empresa activa</span></span>`
+            : `<button class="primary-button icon-text-button" type="button" data-company-use="${escapeHtml(company.id)}" aria-label="Usar empresa"><i data-lucide="mouse-pointer-click"></i><span>Usar empresa</span></button>`
+        }
         <button class="primary-button icon-text-button" type="button" data-company-jump="calendar" aria-label="Abrir calendario"><i data-lucide="calendar-days"></i><span>Calendario</span></button>
         <button class="secondary-button icon-text-button" type="button" data-company-jump="scripts" aria-label="Abrir guiones"><i data-lucide="notebook-pen"></i><span>Guiones</span></button>
         <button class="secondary-button icon-text-button" type="button" data-company-jump="finances" aria-label="Abrir cuentas"><i data-lucide="receipt-text"></i><span>Cuentas</span></button>
@@ -12878,6 +12883,15 @@ companiesGrid.addEventListener("click", async (event) => {
     return;
   }
 
+  const useButton = event.target.closest("[data-company-use]");
+  if (useButton) {
+    activeCompanyId = useButton.dataset.companyUse;
+    selectedCompanyDetailId = activeCompanyId;
+    refreshCompanyContext();
+    showToast(`${activeCompany().name} ahora es la empresa activa.`);
+    return;
+  }
+
   const editButton = event.target.closest("[data-edit-company-id]");
   if (editButton) {
     const company = companies.find((item) => item.id === editButton.dataset.editCompanyId);
@@ -12899,10 +12913,8 @@ companiesGrid.addEventListener("click", async (event) => {
 
   const button = event.target.closest("[data-company-id]");
   if (!button) return;
-  activeCompanyId = button.dataset.companyId;
-  selectedCompanyDetailId = activeCompanyId;
-  refreshCompanyContext();
-  showToast(`${activeCompany().name} ahora es la empresa activa.`);
+  selectedCompanyDetailId = button.dataset.companyId;
+  renderCompanies();
 });
 
 companiesGrid.addEventListener("input", (event) => {

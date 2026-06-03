@@ -2963,6 +2963,26 @@ input[type="file"]:focus {
   font-size: 1.05rem;
 }
 
+.company-active-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(21, 128, 61, 0.14);
+  border-radius: 15px;
+  background: rgba(240, 253, 244, 0.86);
+  color: #166534;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.company-active-note svg {
+  width: 18px;
+  height: 18px;
+}
+
 .company-account-list {
   display: grid;
   overflow: hidden;
@@ -12667,14 +12687,16 @@ input[type="file"] {
     padding-bottom: 2px;
   }
 
-  .company-detail-view .company-detail-actions button {
+  .company-detail-view .company-detail-actions button,
+  .company-detail-view .company-active-note {
     flex: 0 0 42px;
     width: 42px;
     min-height: 42px;
     padding: 0;
   }
 
-  .company-detail-view .company-detail-actions span {
+  .company-detail-view .company-detail-actions button span,
+  .company-detail-view .company-active-note span {
     display: none;
   }
 
