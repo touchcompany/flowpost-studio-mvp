@@ -10006,6 +10006,11 @@ function companyDetailView(company) {
   const members = companyMembers(company.id);
   const openInvoices = companyInvoices.filter((invoice) => invoice.status !== "Pagada");
   const connectedAccounts = accounts.filter((account) => account.status === "Conectada");
+  const nextPost = companyPosts
+    .filter((post) => post.status !== "Publicado")
+    .sort((left, right) => `${left.date || ""} ${left.time || ""}`.localeCompare(`${right.date || ""} ${right.time || ""}`))[0];
+  const nextInvoice = openInvoices.sort((left, right) => String(left.dueDate || "").localeCompare(String(right.dueDate || "")))[0];
+  const primaryContact = client?.contact || client?.name || company.name;
   return `
     <section class="company-detail-view">
       <header class="company-detail-view-head">
@@ -10044,6 +10049,33 @@ function companyDetailView(company) {
         <article><strong>${openInvoices.length}</strong><span>Cobros abiertos</span></article>
         <article><strong>${companyVideos.length}</strong><span>Recursos</span></article>
         <article><strong>${connectedAccounts.length}/${accounts.length}</strong><span>Redes conectadas</span></article>
+      </section>
+
+      <section class="company-operating-strip">
+        <article>
+          <span class="status-icon small"><i data-lucide="calendar-check"></i></span>
+          <div>
+            <small>Próximo contenido</small>
+            <strong>${escapeHtml(nextPost?.title || "Sin pieza programada")}</strong>
+            <p>${nextPost ? `${escapeHtml(shortDateLabel(nextPost.date))} · ${escapeHtml(nextPost.time || "Sin hora")} · ${escapeHtml(nextPost.status || "Idea")}` : "Crea una pieza desde Calendario o Guiones."}</p>
+          </div>
+        </article>
+        <article>
+          <span class="status-icon small"><i data-lucide="receipt-text"></i></span>
+          <div>
+            <small>Próximo cobro</small>
+            <strong>${nextInvoice ? formatMoney(nextInvoice.amount, nextInvoice.currency || "COP") : "Al día"}</strong>
+            <p>${nextInvoice ? `${escapeHtml(nextInvoice.number || billingDocumentNumber(nextInvoice))} · vence ${escapeHtml(shortDateLabel(nextInvoice.dueDate))}` : "No hay documentos pendientes."}</p>
+          </div>
+        </article>
+        <article>
+          <span class="status-icon small"><i data-lucide="user-round-check"></i></span>
+          <div>
+            <small>Responsable</small>
+            <strong>${escapeHtml(primaryContact)}</strong>
+            <p>${escapeHtml(client?.email || client?.phone || "Agrega correo, NIT y teléfono desde Clientes.")}</p>
+          </div>
+        </article>
       </section>
 
       <div class="company-linked-grid">
