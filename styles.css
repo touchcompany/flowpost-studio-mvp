@@ -11145,6 +11145,74 @@ input[type="file"] {
   font: inherit;
 }
 
+.store-orders-board {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 48px rgba(17, 17, 17, 0.05);
+}
+
+.store-orders-board > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.store-orders-board h3,
+.store-orders-board p {
+  margin: 0;
+}
+
+.store-orders-board h3 {
+  font-size: 1.1rem;
+}
+
+.store-orders-board p {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.store-order-board-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.store-order-board-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 18px;
+  background: rgba(250, 250, 250, 0.86);
+}
+
+.store-order-board-row strong,
+.store-order-board-row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-order-board-row small {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.store-order-row-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .store-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
@@ -11695,6 +11763,20 @@ input[type="file"] {
   .store-admin-desk,
   .store-admin-form {
     grid-template-columns: 1fr;
+  }
+
+  .store-orders-board > header,
+  .store-order-board-list {
+    grid-template-columns: 1fr;
+  }
+
+  .store-order-board-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .store-order-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
 
   .automation-aside {

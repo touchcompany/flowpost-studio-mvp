@@ -4330,6 +4330,8 @@ function renderStorePanel() {
       <article><span>${storeAdmin ? "Valor vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0), "COP")}</strong></article>
     </section>
 
+    ${renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, selectedOrders })}
+
     <section class="store-layout">
       <div class="store-catalog">
         ${groups
@@ -5312,6 +5314,56 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
           <i data-lucide="plus"></i>
           Agregar
         </button>
+      </div>
+    </section>
+  `;
+}
+
+function renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, selectedOrders }) {
+  const orders = storeAdmin ? activeOrders.slice(0, 6) : selectedOrders;
+  const title = storeAdmin ? "Pedidos recibidos" : "Servicios activos";
+  const detail = storeAdmin
+    ? "Atiende solicitudes, marca avances y cambia de cliente sin salir de Tienda."
+    : "Aquí ves lo que ya está comprado o solicitado para esta empresa.";
+  return `
+    <section class="store-orders-board">
+      <header>
+        <div>
+          <span class="workspace-label">${storeAdmin ? "Operación" : escapeHtml(selectedClient?.name || "Tu empresa")}</span>
+          <h3>${title}</h3>
+          <p>${detail}</p>
+        </div>
+        ${storeAdmin ? `<button class="secondary-button icon-text-button compact" type="button" data-store-open-clients><i data-lucide="users"></i> Clientes</button>` : ""}
+      </header>
+      <div class="store-order-board-list">
+        ${
+          orders.length
+            ? orders
+                .map((order) => {
+                  const client = clients.find((item) => item.id === order.clientId);
+                  const nextStatus = order.status === "Completado" ? "En proceso" : order.status === "En proceso" ? "Completado" : "En proceso";
+                  return `
+                    <article class="store-order-board-row">
+                      <span class="status-icon small"><i data-lucide="${serviceIcon(serviceById(order.serviceId))}"></i></span>
+                      <div>
+                        <strong>${escapeHtml(order.serviceName)}</strong>
+                        <small>${escapeHtml(client?.name || selectedClient?.name || "Cliente")} · ${formatMoney(order.amount, order.currency || "COP")}</small>
+                      </div>
+                      <span class="pill ${serviceOrderStatusClass(order.status)}">${escapeHtml(order.status)}</span>
+                      ${
+                        storeAdmin
+                          ? `<div class="store-order-row-actions">
+                              <button class="secondary-button icon-button compact" type="button" data-store-focus-client="${escapeHtml(order.clientId)}" aria-label="Ver cliente"><i data-lucide="arrow-up-right"></i></button>
+                              <button class="secondary-button icon-button compact" type="button" data-store-order-status="${escapeHtml(order.id)}" data-next-status="${escapeHtml(nextStatus)}" aria-label="Actualizar estado"><i data-lucide="${nextStatus === "Completado" ? "check" : "play"}"></i></button>
+                            </div>`
+                          : ""
+                      }
+                    </article>
+                  `;
+                })
+                .join("")
+            : `<div class="empty-state compact"><strong>${storeAdmin ? "Sin pedidos aún" : "Sin servicios activos"}</strong><p>${storeAdmin ? "Cuando alguien compre desde la página o asignes un servicio, aparecerá aquí." : "Solicita un servicio para activar tu operación."}</p></div>`
+        }
       </div>
     </section>
   `;
@@ -12762,6 +12814,21 @@ storePanel.addEventListener("click", (event) => {
     persistState();
     renderStorePanel();
     showToast("Visibilidad del servicio actualizada.");
+    return;
+  }
+
+  const focusClientButton = event.target.closest("[data-store-focus-client]");
+  if (focusClientButton) {
+    billingDraft.clientId = focusClientButton.dataset.storeFocusClient;
+    persistState();
+    renderStorePanel();
+    showToast("Cliente seleccionado en Tienda.");
+    return;
+  }
+
+  const orderStatusButton = event.target.closest("[data-store-order-status]");
+  if (orderStatusButton) {
+    markServiceOrderStatus(orderStatusButton.dataset.storeOrderStatus, orderStatusButton.dataset.nextStatus);
     return;
   }
 
