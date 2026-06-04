@@ -1402,12 +1402,19 @@ function normalizeMediaUrl(value = "") {
   return withoutLeadingDots;
 }
 
-function absoluteMediaPreviewUrl(value = "") {
+function publicMediaUrl(value = "") {
   const normalized = normalizeMediaUrl(value);
   if (!normalized) return "";
   if (/^(https?:|data:|blob:|file:)/i.test(normalized)) return normalized;
   const base = window.location.protocol === "file:" ? "https://app.touch.com.co" : window.location.origin;
   return normalized.startsWith("/") ? `${base}${normalized}` : `${base}/${normalized}`;
+}
+
+function absoluteMediaPreviewUrl(value = "") {
+  const normalized = normalizeMediaUrl(value);
+  if (!normalized) return "";
+  if (/^(https?:|data:|blob:|file:)/i.test(normalized)) return normalized;
+  return publicMediaUrl(normalized);
 }
 
 function mediaUrlHelperMarkup(value = "", label = "imagen") {
@@ -4128,7 +4135,7 @@ function renderIssuerProfileManager(issuerProfile = currentIssuerProfile()) {
 }
 
 async function syncSettingsCompanyField(field, rawValue, options = {}) {
-  const value = field === "avatarUrl" ? normalizeMediaUrl(rawValue) : options.trim ? String(rawValue || "").trim() : rawValue;
+  const value = field === "avatarUrl" ? publicMediaUrl(rawValue) : options.trim ? String(rawValue || "").trim() : rawValue;
   companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: value } : company));
   activeCompanyName.textContent = activeCompany().name || "";
   refreshCompanyContext();
@@ -12577,12 +12584,19 @@ settingsPanel?.addEventListener("click", async (event) => {
 
 settingsPanel?.addEventListener("input", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
-  if (profileField) return;
+  if (profileField) {
+    if (profileField.dataset.settingsProfileField !== "avatarUrl") return;
+    const value = publicMediaUrl(profileField.value);
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...currentSession(), avatarUrl: value }));
+    renderAccount();
+    updateMobileProfileNav();
+    return;
+  }
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    await syncSettingsCompanyField(field, field === "avatarUrl" ? normalizeMediaUrl(companyField.value) : companyField.value);
+    await syncSettingsCompanyField(field, field === "avatarUrl" ? publicMediaUrl(companyField.value) : companyField.value);
     return;
   }
 
@@ -12599,20 +12613,21 @@ settingsPanel?.addEventListener("input", async (event) => {
 settingsPanel?.addEventListener("change", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
-    const value = profileField.dataset.settingsProfileField === "avatarUrl" ? normalizeMediaUrl(profileField.value) : profileField.value.trim();
-    saveClientSession({ ...currentSession(), [profileField.dataset.settingsProfileField]: value }).then(() => {
-      renderAccount();
-      updateMobileProfileNav();
-      renderSettingsPanel();
-      showToast("Foto de perfil actualizada.");
-    });
+    const field = profileField.dataset.settingsProfileField;
+    const value = field === "avatarUrl" ? publicMediaUrl(profileField.value) : profileField.value.trim();
+    const savedSession = await saveClientSession({ ...currentSession(), [field]: value });
+    profileField.value = savedSession[field] || value;
+    renderAccount();
+    updateMobileProfileNav();
+    renderSettingsPanel();
+    showToast("Perfil actualizado en tu cuenta.");
     return;
   }
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    await syncSettingsCompanyField(field, field === "avatarUrl" ? normalizeMediaUrl(companyField.value) : companyField.value, { trim: true });
+    await syncSettingsCompanyField(field, field === "avatarUrl" ? publicMediaUrl(companyField.value) : companyField.value, { trim: true });
     renderSettingsPanel();
     showToast("Empresa actualizada y sincronizada.");
     return;
