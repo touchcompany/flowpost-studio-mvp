@@ -1466,20 +1466,23 @@ function renderMobileCompanyMenu() {
 
 function updateMobileProfileNav() {
   const session = currentSession();
+  const loadingSession = document.body.classList.contains("session-loading") && !session.id;
   const planLabel = session.planLabel || planLimits[currentPlan()]?.label || "Starter";
   const roleLabel = session.roleLabel || roleProfiles[session.role]?.label || "Cuenta";
   const photoUrl = session.avatarUrl || session.picture || session.photoURL || "";
   const initials = profileInitials(session.name);
   if (mobileProfileNavIcon) {
-    mobileProfileNavIcon.innerHTML = photoUrl
+    mobileProfileNavIcon.innerHTML = loadingSession
+      ? ""
+      : photoUrl
       ? `<img src="${escapeHtml(photoUrl)}" alt="" />`
       : `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
   }
   if (mobileMenuProfileAvatar) {
-    mobileMenuProfileAvatar.innerHTML = avatarImageMarkup(photoUrl, session.name || "Tu perfil") || `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
+    mobileMenuProfileAvatar.innerHTML = loadingSession ? `<img src="favicon.svg" alt="" />` : avatarImageMarkup(photoUrl, session.name || "Tu perfil") || `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
   }
-  if (mobileMoreProfileName) mobileMoreProfileName.textContent = session.name || "Tu perfil";
-  if (mobileMoreProfileMeta) mobileMoreProfileMeta.textContent = `${roleLabel} · ${planLabel}`;
+  if (mobileMoreProfileName) mobileMoreProfileName.textContent = loadingSession ? "Cargando cuenta" : session.name || "Tu perfil";
+  if (mobileMoreProfileMeta) mobileMoreProfileMeta.textContent = loadingSession ? "Sincronizando perfil" : `${roleLabel} · ${planLabel}`;
 }
 
 function featureEnabled(feature, session = currentSession()) {
@@ -1545,15 +1548,17 @@ function canCreatePublication() {
 
 function renderAccount() {
   const session = currentSession();
+  const loadingSession = document.body.classList.contains("session-loading") && !session.id;
   const name = session.name || "Invitado MVP";
   const planLabel = session.planLabel || "Starter";
   const providerLabel = `${session.roleLabel || "Empresa"} · ${session.provider ? `Cuenta ${session.provider}` : "Sin login"}`;
 
-  accountName.textContent = name;
-  accountPlan.textContent = `${planLabel} · ${providerLabel}`;
+  accountName.textContent = loadingSession ? "" : name;
+  accountPlan.textContent = loadingSession ? "" : `${planLabel} · ${providerLabel}`;
   const photoUrl = entityPhotoUrl(session);
-  accountAvatar.innerHTML = avatarImageMarkup(photoUrl, name) || `<span>${escapeHtml(profileInitials(name).slice(0, 2))}</span>`;
-  logoutButton.textContent = session.id ? "Salir" : "Entrar";
+  accountAvatar.innerHTML = loadingSession ? "" : avatarImageMarkup(photoUrl, name) || `<span>${escapeHtml(profileInitials(name).slice(0, 2))}</span>`;
+  logoutButton.textContent = loadingSession ? "" : session.id ? "Salir" : "Entrar";
+  if (!loadingSession) document.body.classList.remove("session-loading");
   updateMobileProfileNav();
   syncViewEntitlements();
   renderPlanPanel();

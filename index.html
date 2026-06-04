@@ -21,7 +21,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body class="session-loading">
     <div class="app-shell" id="appShell">
       <aside class="sidebar" aria-label="Navegacion principal">
         <div class="sidebar-head">
@@ -75,7 +75,7 @@
             Cuentas
           </a>
           <button class="nav-item mobile-more-button" id="mobileMoreButton" type="button" aria-expanded="false" aria-controls="mobileMoreMenu">
-            <span class="nav-icon mobile-profile-avatar" id="mobileProfileNavIcon"><i data-lucide="user-round"></i></span>
+            <span class="nav-icon mobile-profile-avatar" id="mobileProfileNavIcon" aria-hidden="true"></span>
             <span id="mobileProfileNavLabel">Tú</span>
           </button>
           <a class="nav-item" href="#automations" data-view-link="automations">
@@ -178,12 +178,12 @@
             <i data-lucide="plus"></i>
           </button>
           <section class="account-chip" id="accountChip" aria-label="Cuenta activa">
-            <button class="account-avatar" id="accountAvatar" type="button" aria-label="Abrir perfil">M</button>
+            <button class="account-avatar" id="accountAvatar" type="button" aria-label="Abrir perfil"></button>
             <div>
-              <strong id="accountName">Invitado MVP</strong>
-              <p id="accountPlan">Plan local</p>
+              <strong id="accountName"></strong>
+              <p id="accountPlan"></p>
             </div>
-            <button type="button" id="logoutButton">Salir</button>
+            <button type="button" id="logoutButton"></button>
           </section>
         </header>
 
