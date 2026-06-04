@@ -883,15 +883,19 @@
 .finance-party-flow.compact {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  width: min(100%, 440px);
+  width: min(100%, 520px);
   margin-top: 6px;
   padding: 6px 8px;
   border-radius: 14px;
-  background: rgba(17, 17, 17, 0.035);
+  background: linear-gradient(135deg, rgba(17, 17, 17, 0.035), rgba(0, 149, 246, 0.055));
 }
 
 .finance-party-flow.compact strong {
   max-width: none;
+}
+
+.finance-party-flow.compact em {
+  margin-top: 2px;
 }
 
 .finance-next-total {

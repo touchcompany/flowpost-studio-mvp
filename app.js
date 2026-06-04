@@ -3678,8 +3678,8 @@ function renderFinancePanel() {
                           <span class="finance-avatar"><i data-lucide="${invoice.documentType === "Factura" ? "file-check-2" : "receipt-text"}"></i></span>
                           <div>
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
-                            <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(receiverCompany?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
-                            ${renderFinancePartyFlow(invoice, { compact: true })}
+                            <p>${escapeHtml(invoice.issuerName || issuerProfile.issuerName || "Tu cuenta")} cobra a ${escapeHtml(client?.name || receiverCompany?.name || "Cliente")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
+                            ${renderFinancePartyFlow(invoice, { compact: true, showMeta: true })}
                           </div>
                           <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
                           <span class="pill ${financeInvoiceStatusClass(status)}">${escapeHtml(status)}</span>
