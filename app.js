@@ -1391,6 +1391,7 @@ function normalizeMediaUrl(value = "") {
   const rawValue = String(value || "").trim();
   if (!rawValue) return "";
   if (/^(https?:|data:|blob:|file:)/i.test(rawValue)) return rawValue;
+  if (/^www\./i.test(rawValue)) return `https://${rawValue}`;
   const withoutLeadingDots = rawValue.replace(/^\.+/, "");
   if (!withoutLeadingDots) return "";
   if (withoutLeadingDots.startsWith("/")) return withoutLeadingDots;
@@ -1398,12 +1399,44 @@ function normalizeMediaUrl(value = "") {
   return withoutLeadingDots;
 }
 
+function absoluteMediaPreviewUrl(value = "") {
+  const normalized = normalizeMediaUrl(value);
+  if (!normalized) return "";
+  if (/^(https?:|data:|blob:|file:)/i.test(normalized)) return normalized;
+  const base = window.location.protocol === "file:" ? "https://app.touch.com.co" : window.location.origin;
+  return normalized.startsWith("/") ? `${base}${normalized}` : `${base}/${normalized}`;
+}
+
+function mediaUrlHelperMarkup(value = "", label = "imagen") {
+  const normalized = normalizeMediaUrl(value);
+  const absoluteUrl = absoluteMediaPreviewUrl(normalized);
+  if (!normalized) {
+    return `
+      <div class="settings-media-helper empty">
+        <span><i data-lucide="image-plus"></i> Pega una URL publica para que se vea en todos tus dispositivos.</span>
+      </div>
+    `;
+  }
+  const isRelative = normalized.startsWith("/");
+  return `
+    <div class="settings-media-helper">
+      <span>
+        <i data-lucide="${isRelative ? "folder-sync" : "link-2"}"></i>
+        ${isRelative ? `Ruta del sitio: debe existir en ${escapeHtml(absoluteUrl)}` : `Enlace externo listo para previsualizar.`}
+      </span>
+      <a href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">Probar ${escapeHtml(label)}</a>
+    </div>
+  `;
+}
+
 function entityPhotoUrl(entity = {}) {
   return normalizeMediaUrl(entity.avatarUrl || entity.picture || entity.photoURL || entity.metadata?.avatarUrl || "");
 }
 
 function avatarImageMarkup(photoUrl = "", alt = "") {
-  return photoUrl ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" />` : "";
+  return photoUrl
+    ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" onerror="this.closest('.company-avatar')?.classList.add('is-broken-media'); this.remove();" />`
+    : "";
 }
 
 function companyAvatarMarkup(company = {}, fallbackIcon = "briefcase-business") {
@@ -3119,13 +3152,15 @@ function renderClientBillingPanel() {
 }
 
 function serviceIcon(service) {
-  const group = String(service.group || "").toLowerCase();
-  if (group.includes("web")) return service.id === "domain" ? "badge-check" : service.id === "hosting" ? "server" : "globe-2";
-  if (group.includes("publicidad")) return "megaphone";
-  if (group.includes("produccion")) return "clapperboard";
-  if (group.includes("automat")) return "bot";
-  if (group.includes("ia")) return "wand-sparkles";
-  return "sparkles";
+  const text = `${service?.id || ""} ${service?.name || ""} ${service?.group || ""}`.toLowerCase();
+  if (/dominio|domain/.test(text)) return "globe-2";
+  if (/hosting|server|cpanel|whm/.test(text)) return "server-cog";
+  if (/web|landing|sitio|pagina/.test(text)) return "layout-template";
+  if (/reel|video|produccion|producción/.test(text)) return "clapperboard";
+  if (/ads|campana|campaña|publicidad|meta|facebook|instagram/.test(text)) return "megaphone";
+  if (/chat|soporte|bot|automat/.test(text)) return "message-circle";
+  if (/guion|guión|ia|copy|contenido/.test(text)) return "pen-line";
+  return "package-check";
 }
 
 function financeDateMatches(dateValue) {
@@ -3837,6 +3872,7 @@ function renderSettingsPanel() {
               <span>Foto de perfil</span>
               <input data-settings-profile-field="avatarUrl" type="text" value="${escapeHtml(userPhotoUrl)}" placeholder="/content/uploads/perfil.jpg o https://..." />
               <small>Pega una URL completa o una ruta del sitio. Se normaliza antes de guardar.</small>
+              ${mediaUrlHelperMarkup(userPhotoUrl, "perfil")}
             </label>
           </div>
         </div>
@@ -3872,6 +3908,7 @@ function renderSettingsPanel() {
               <span>Foto o logo</span>
               <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(companyPhotoUrl)}" placeholder="/content/uploads/logo.jpg o https://..." />
               <small>Esta imagen se usa en empresa, calendario, clientes, cobros y menú móvil.</small>
+              ${mediaUrlHelperMarkup(companyPhotoUrl, "logo")}
             </label>
           </div>
           <label class="field compact wide">
@@ -4394,6 +4431,8 @@ function renderStorePanel() {
       }
     </section>
 
+    ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue })}
+
     ${
       storeAdmin
         ? `<section class="store-provision-box">
@@ -4547,6 +4586,85 @@ function renderStorePanel() {
     </section>
   `;
   renderIcons();
+}
+
+function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], revenue = 0 }) {
+  const visibleOrders = storeAdmin ? activeOrders : selectedOrders;
+  const publicServices = servicesForStore.filter((service) => service.clientVisible !== false).length;
+  const catalogValue = servicesForStore.reduce((sum, service) => sum + Number(service.price || 0), 0);
+  const capabilities = [
+    {
+      icon: "sparkles",
+      title: "Contenido e IA",
+      text: "Guiones, carruseles, reels, imagenes y recursos por empresa.",
+    },
+    {
+      icon: "globe-2",
+      title: "Web, hosting y dominios",
+      text: "Servicios digitales listos para conectar con cPanel, WHM y eNom.",
+    },
+    {
+      icon: "receipt-text",
+      title: "Cobros y entregas",
+      text: "Pedidos, cuentas de cobro, estados y seguimiento para cada cliente.",
+    },
+  ];
+
+  return `
+    <section class="store-experience-hero">
+      <div class="store-experience-copy">
+        <span class="workspace-label">${storeAdmin ? "Tienda publica + panel admin" : "Servicios activos"}</span>
+        <h3>${storeAdmin ? "Convierte tu catalogo en una operacion vendible" : `Panel comercial de ${escapeHtml(selectedClient?.name || activeCompany().name)}`}</h3>
+        <p>${
+          storeAdmin
+            ? "Publica servicios, asigna productos manualmente, recibe pedidos y conecta la entrega con clientes, cobros y automatizaciones."
+            : "Aqui ves lo comprado, lo disponible para solicitar y lo que tu agencia esta preparando para tu empresa."
+        }</p>
+        <div class="store-experience-actions">
+          <button class="primary-button icon-text-button" type="button" data-store-open-clients>
+            <i data-lucide="${storeAdmin ? "users" : "layout-dashboard"}"></i>
+            ${storeAdmin ? "Ver clientes" : "Ver mi panel"}
+          </button>
+          <button class="secondary-button icon-text-button" type="button" data-store-open-finances>
+            <i data-lucide="receipt-text"></i>
+            Cobros
+          </button>
+        </div>
+      </div>
+      <div class="store-experience-metrics">
+        <article>
+          <span>${storeAdmin ? "Catalogo" : "Disponibles"}</span>
+          <strong>${servicesForStore.length}</strong>
+          <small>${publicServices} visibles</small>
+        </article>
+        <article>
+          <span>${storeAdmin ? "Pedidos" : "Compras"}</span>
+          <strong>${visibleOrders.length}</strong>
+          <small>${storeAdmin ? formatMoney(revenue, "COP") : "por empresa"}</small>
+        </article>
+        <article>
+          <span>Valor base</span>
+          <strong>${formatMoney(catalogValue, "COP")}</strong>
+          <small>catalogo activo</small>
+        </article>
+      </div>
+      <div class="store-capability-strip">
+        ${capabilities
+          .map(
+            (item) => `
+              <article>
+                <span><i data-lucide="${item.icon}"></i></span>
+                <div>
+                  <strong>${item.title}</strong>
+                  <small>${item.text}</small>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function allAutomationOrders() {
@@ -12441,7 +12559,7 @@ settingsPanel?.addEventListener("input", async (event) => {
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    await syncSettingsCompanyField(field, companyField.value);
+    await syncSettingsCompanyField(field, field === "avatarUrl" ? normalizeMediaUrl(companyField.value) : companyField.value);
     return;
   }
 
@@ -12471,7 +12589,8 @@ settingsPanel?.addEventListener("change", async (event) => {
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
-    await syncSettingsCompanyField(companyField.dataset.settingsCompanyField, companyField.value, { trim: companyField.type === "url" });
+    const field = companyField.dataset.settingsCompanyField;
+    await syncSettingsCompanyField(field, field === "avatarUrl" ? normalizeMediaUrl(companyField.value) : companyField.value, { trim: true });
     renderSettingsPanel();
     showToast("Empresa actualizada y sincronizada.");
     return;
@@ -13013,6 +13132,12 @@ storePanel.addEventListener("click", (event) => {
   const openAccountsButton = event.target.closest("[data-store-open-accounts]");
   if (openAccountsButton) {
     setView("accounts");
+  }
+
+  const openFinancesButton = event.target.closest("[data-store-open-finances]");
+  if (openFinancesButton) {
+    renderFinancePanel();
+    setView("finances");
   }
 });
 
