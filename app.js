@@ -3189,6 +3189,30 @@ function serviceIcon(service) {
   return "package-check";
 }
 
+function serviceStoreDescription(service, selectedClient) {
+  const clientName = selectedClient?.name || "tu cliente";
+  const text = `${service?.id || ""} ${service?.name || ""} ${service?.group || ""}`.toLowerCase();
+  if (/hosting|server|cpanel|whm/.test(text)) return `Hosting administrado, acceso y entrega técnica para ${clientName}.`;
+  if (/dominio|domain/.test(text)) return `Registro, DNS y seguimiento de renovación para ${clientName}.`;
+  if (/web|landing|sitio|pagina/.test(text)) return `Página web lista para publicar, medir y conectar con el ecosistema.`;
+  if (/reel|video|produccion|producción/.test(text)) return `Producción y entrega de piezas listas para campañas y redes.`;
+  if (/ads|campana|campaña|publicidad|meta|facebook|instagram/.test(text)) return `Campaña con brief, creativos, configuración y control de avance.`;
+  if (/chat|soporte|bot|automat/.test(text)) return `Automatización y soporte conectado al flujo comercial del cliente.`;
+  if (/guion|guión|ia|copy|contenido/.test(text)) return `Guiones, ideas y copy con IA guardados por empresa.`;
+  return `${service?.group || "Servicio"} operativo para ${clientName}.`;
+}
+
+function serviceOrderForCard(service, selectedOrders = []) {
+  return selectedOrders.find((order) => order.serviceId === service.id && order.status !== "Completado") || selectedOrders.find((order) => order.serviceId === service.id) || null;
+}
+
+function serviceCardStatus(service, order) {
+  if (order?.status === "Completado") return { label: "Activo", className: "ready", icon: "check" };
+  if (order) return { label: order.status || "En proceso", className: "warning", icon: "loader-circle" };
+  if (service.clientVisible === false) return { label: "Privado", className: "private", icon: "lock" };
+  return { label: "Disponible", className: "available", icon: "sparkles" };
+}
+
 function financeDateMatches(dateValue) {
   if (!dateValue) return true;
   const date = new Date(`${String(dateValue).slice(0, 10)}T12:00:00`);
@@ -4519,30 +4543,49 @@ function renderStorePanel() {
                 </header>
                 <div class="store-service-grid">
                   ${services
-                    .map(
-                      (service) => `
-                        <article class="store-service-card">
-                          <span class="store-service-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
-                          <div>
-                            <h4>${escapeHtml(service.name)}</h4>
-                            <p>${escapeHtml(service.group)} para ${escapeHtml(selectedClient?.name || "cliente")}.</p>
+                    .map((service) => {
+                      const serviceOrder = serviceOrderForCard(service, selectedOrders);
+                      const status = serviceCardStatus(service, serviceOrder);
+                      const canBuy = Boolean(selectedClient) && !serviceOrder;
+                      return `
+                        <article class="store-service-card ${serviceOrder ? "has-order" : ""}">
+                          <div class="store-service-head">
+                            <span class="store-service-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
+                            <span class="store-visibility-pill ${status.className}">
+                              <i data-lucide="${status.icon}"></i>
+                              ${escapeHtml(status.label)}
+                            </span>
                           </div>
-                          ${storeAdmin ? `<span class="store-visibility-pill ${service.clientVisible === false ? "private" : ""}">${service.clientVisible === false ? "Privado" : "Público"}</span>` : ""}
-                          <strong>${formatMoney(service.price, "COP")}</strong>
+                          <div class="store-service-copy">
+                            <h4>${escapeHtml(service.name)}</h4>
+                            <p>${escapeHtml(serviceStoreDescription(service, selectedClient))}</p>
+                          </div>
+                          <div class="store-service-meta">
+                            <span>${escapeHtml(service.group || "Servicio")}</span>
+                            <strong>${formatMoney(service.price, "COP")}</strong>
+                          </div>
+                          ${
+                            serviceOrder
+                              ? `<div class="store-service-progress">
+                                  <span style="--progress: ${orderAutomationProgress(serviceOrder)}%"></span>
+                                  <small>${orderAutomationProgress(serviceOrder)}% automático · ${escapeHtml(serviceOrder.status || "En proceso")}</small>
+                                </div>`
+                              : ""
+                          }
                           <div class="store-card-actions">
-                            <button class="primary-button icon-text-button" type="button" data-store-buy="${service.id}" ${selectedClient ? "" : "disabled"}>
+                            <button class="${canBuy ? "primary-button" : "secondary-button"} icon-text-button" type="button" data-store-buy="${service.id}" ${canBuy ? "" : "disabled"}>
                               <i data-lucide="${storeAdmin ? "badge-plus" : "shopping-bag"}"></i>
-                              ${storeAdmin ? "Asignar" : "Solicitar"}
+                              ${serviceOrder ? "Ya asignado" : storeAdmin ? "Asignar" : "Solicitar"}
                             </button>
                             ${
                               storeAdmin
-                                ? `<button class="secondary-button icon-button compact" type="button" data-store-service-toggle="${service.id}" aria-label="Cambiar visibilidad"><i data-lucide="${service.clientVisible === false ? "eye-off" : "eye"}"></i></button>`
+                                ? `<button class="secondary-button icon-button compact" type="button" data-store-service-toggle="${service.id}" aria-label="${service.clientVisible === false ? "Publicar servicio" : "Ocultar servicio"}"><i data-lucide="${service.clientVisible === false ? "eye-off" : "eye"}"></i></button>`
                                 : ""
                             }
                           </div>
                         </article>
-                      `
-                    )
+                      `;
+                    })
                     .join("")}
                 </div>
               </section>
