@@ -825,7 +825,8 @@ let selectedCompanyDetailId = "";
 let billingDraft = {
   editingInvoiceId: "",
   documentType: "Cuenta de cobro",
-  issuerCompanyId: "casa-norte",
+  issuerProfileId: "",
+  issuerCompanyId: "",
   clientId: "client-casa-norte",
   numberPrefix: "CC",
   nextNumber: 1,
@@ -835,6 +836,7 @@ let billingDraft = {
   dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4).toISOString().slice(0, 10),
   observations: "",
   signatureName: "",
+  issuerName: "",
   issuerNit: "",
   issuerPhone: "",
   issuerEmail: "admin@touch.com.co",
@@ -856,6 +858,7 @@ const issuerBillingProfileFields = [
   "documentType",
   "numberPrefix",
   "nextNumber",
+  "issuerName",
   "issuerNit",
   "issuerPhone",
   "issuerEmail",
@@ -2314,20 +2317,17 @@ function nextBillingCycleDate(dateString, cycle = "Mensual", minimumDate = today
 
 function syncBillingDraftDefaults() {
   ensureAgencyClients();
-  if (!companies.some((company) => company.id === billingDraft.issuerCompanyId)) {
-    billingDraft.issuerCompanyId = activeCompanyId || companies[0]?.id || "";
-  }
   if (!clients.some((client) => client.id === billingDraft.clientId)) {
     billingDraft.clientId = activeAgencyClients()[0]?.id || clients[0]?.id || "";
   }
   const client = clients.find((item) => item.id === billingDraft.clientId);
-  const issuer = companies.find((company) => company.id === billingDraft.issuerCompanyId);
-  applyIssuerBillingProfile(billingDraft.issuerCompanyId);
+  const issuer = currentIssuerProfile();
+  applyIssuerBillingProfile();
   if (!billingDraft.numberPrefix) billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
   if (!billingDraft.nextNumber) billingDraft.nextNumber = 1;
   if (!billingDraft.currentNumber) billingDraft.currentNumber = billingDocumentNumberFromDraft();
-  if (!billingDraft.issuerEmail && issuer?.email) billingDraft.issuerEmail = issuer.email;
-  if (!billingDraft.paymentAccountHolder && issuer?.name) billingDraft.paymentAccountHolder = issuer.name;
+  if (!billingDraft.issuerEmail && issuer?.issuerEmail) billingDraft.issuerEmail = issuer.issuerEmail;
+  if (!billingDraft.paymentAccountHolder && issuer?.paymentAccountHolder) billingDraft.paymentAccountHolder = issuer.paymentAccountHolder;
   if (!billingDraft.clientEmail && client?.email) billingDraft.clientEmail = client.email;
   if (!billingDraft.autoFrequency && client?.billingCycle) billingDraft.autoFrequency = client.billingCycle;
   if (!billingDraft.lines.length) {
@@ -2335,28 +2335,39 @@ function syncBillingDraftDefaults() {
   }
 }
 
-function issuerBillingProfile(companyId = billingDraft.issuerCompanyId) {
-  const issuer = companies.find((company) => company.id === companyId);
-  if (!issuer) return {};
-  return {
+function currentIssuerProfile() {
+  const session = currentSession();
+  const profile = session.metadata?.billingProfile || {};
+  const issuerName = profile.issuerName || session.name || activeAgency().name || "Touch Note";
+  const mergedProfile = {
     documentType: "Cuenta de cobro",
     numberPrefix: "CC",
     nextNumber: 1,
-    issuerNit: issuer.nit || "",
-    issuerPhone: issuer.phone || "",
-    issuerEmail: issuer.email || "",
+    issuerName,
+    issuerNit: profile.issuerNit || session.nit || "",
+    issuerPhone: profile.issuerPhone || session.phone || "",
+    issuerEmail: profile.issuerEmail || session.email || activeAgency().billingEmail || "",
     paymentBank: "",
     paymentAccountType: "Cuenta de ahorros",
     paymentAccountNumber: "",
-    paymentAccountHolder: issuer.name || "",
+    paymentAccountHolder: issuerName,
     autoGenerate: false,
     autoFrequency: "Mensual",
-    ...(issuer.billingProfile || {}),
+    ...profile,
+  };
+  return {
+    ...mergedProfile,
+    issuerName: mergedProfile.issuerName || issuerName,
+    paymentAccountHolder: mergedProfile.paymentAccountHolder || issuerName,
   };
 }
 
-function applyIssuerBillingProfile(companyId = billingDraft.issuerCompanyId, options = {}) {
-  const profile = issuerBillingProfile(companyId);
+function issuerBillingProfile() {
+  return currentIssuerProfile();
+}
+
+function applyIssuerBillingProfile(_issuerId = "current-user", options = {}) {
+  const profile = currentIssuerProfile();
   if (!Object.keys(profile).length) return;
   issuerBillingProfileFields.forEach((field) => {
     if (options.force || billingDraft[field] === "" || billingDraft[field] === null || billingDraft[field] === undefined) {
@@ -2367,16 +2378,20 @@ function applyIssuerBillingProfile(companyId = billingDraft.issuerCompanyId, opt
 }
 
 function persistIssuerBillingProfile() {
-  const companyId = billingDraft.issuerCompanyId;
-  if (!companyId) return;
-  companies = companies.map((company) => {
-    if (company.id !== companyId) return company;
-    const billingProfile = issuerBillingProfileFields.reduce(
-      (profile, field) => ({ ...profile, [field]: billingDraft[field] }),
-      {}
-    );
-    return { ...company, billingProfile };
+  const session = currentSession();
+  if (!session.id) return;
+  const billingProfile = issuerBillingProfileFields.reduce((profile, field) => ({ ...profile, [field]: billingDraft[field] }), {
+    issuerName: billingDraft.issuerName || session.name || activeAgency().name || "Touch Note",
   });
+  const nextSession = {
+    ...session,
+    metadata: {
+      ...(session.metadata || {}),
+      billingProfile,
+    },
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+  saveClientSession(nextSession);
 }
 
 function syncBillingDraftClientContact(clientId = billingDraft.clientId) {
@@ -2451,7 +2466,7 @@ function renderAgencyServicesManager() {
 
 function renderBillingDocumentEditor() {
   syncBillingDraftDefaults();
-  const issuer = companies.find((company) => company.id === billingDraft.issuerCompanyId) || companies[0];
+  const issuer = currentIssuerProfile();
   const client = clients.find((item) => item.id === billingDraft.clientId) || clients[0];
   const documentClients = activeAgencyClients();
   const subtotal = billingDraftSubtotal();
@@ -2473,7 +2488,7 @@ function renderBillingDocumentEditor() {
           <span class="status-icon"><i data-lucide="receipt"></i></span>
           <div>
             <h2>${billingDraft.editingInvoiceId ? "Editar" : "Nueva"} ${escapeHtml(documentLabel)}</h2>
-            <p>Selecciona emisor, cliente, servicios y fechas para generar el documento.</p>
+            <p>Tu perfil principal emite el documento. El cliente receptor sale de tus empresas creadas.</p>
           </div>
         </header>
 
@@ -2487,12 +2502,11 @@ function renderBillingDocumentEditor() {
                 <option value="Factura" ${billingDraft.documentType === "Factura" ? "selected" : ""}>Factura</option>
               </select>
             </label>
-            <label class="field compact">
-              <span>Empresa emisora</span>
-              <select data-billing-field="issuerCompanyId">
-                ${companies.map((company) => `<option value="${company.id}" ${company.id === billingDraft.issuerCompanyId ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
-              </select>
-            </label>
+            <div class="document-party-lock">
+              <span>Emisor principal</span>
+              <strong>${escapeHtml(issuer.issuerName || "Tu cuenta")}</strong>
+              <small>${escapeHtml(issuer.issuerEmail || "Configura tu correo en Ajustes")}</small>
+            </div>
             <label class="field compact">
               <span>Cliente</span>
               <select data-billing-field="clientId">
@@ -2571,7 +2585,7 @@ function renderBillingDocumentEditor() {
             </label>
             <label class="field compact">
               <span>Titular</span>
-              <input data-billing-field="paymentAccountHolder" type="text" value="${escapeHtml(billingDraft.paymentAccountHolder || issuer?.name || "")}" />
+              <input data-billing-field="paymentAccountHolder" type="text" value="${escapeHtml(billingDraft.paymentAccountHolder || issuer?.paymentAccountHolder || "")}" />
             </label>
             <label class="field compact">
               <span>Generar automaticamente</span>
@@ -2638,7 +2652,7 @@ function renderBillingDocumentEditor() {
       <aside class="document-side">
         <section class="document-card document-summary">
           <h3>Resumen</h3>
-          <div><span>Emisor</span><strong>${escapeHtml(issuer?.name || "Sin emisor")}</strong></div>
+          <div><span>Emisor</span><strong>${escapeHtml(issuer?.issuerName || "Sin emisor")}</strong></div>
           <div><span>Cliente</span><strong>${escapeHtml(client?.name || "Sin cliente")}</strong></div>
           <div><span>Subtotal</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
           <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
@@ -2656,7 +2670,7 @@ function renderBillingDocumentEditor() {
           <span>${escapeHtml(documentLabel)}</span>
           <strong>${formatMoney(subtotal, "COP")}</strong>
           <p>${escapeHtml(billingDraft.description || "Servicios contratados")}</p>
-          <small>${escapeHtml(issuer?.name || "Emisor")} -> ${escapeHtml(client?.name || "Cliente")}</small>
+          <small>${escapeHtml(issuer?.issuerName || "Emisor")} -> ${escapeHtml(client?.name || "Cliente")}</small>
           <small>${escapeHtml(billingDraft.issueDate || "Sin emision")} · vence ${escapeHtml(billingDraft.dueDate || "sin fecha")}</small>
         </section>
 
@@ -3298,17 +3312,17 @@ function resetFinanceFilters() {
 function financeDocumentFromInvoice(invoice) {
   if (!invoice) return null;
   const client = clients.find((item) => item.id === invoice.clientId);
-  const issuerCompanyId = invoice.issuerCompanyId || billingDraft.issuerCompanyId || invoice.companyId || activeCompanyId;
-  const issuerProfile = issuerBillingProfile(issuerCompanyId);
+  const issuerProfile = currentIssuerProfile();
   return {
     ...invoice,
-    issuerCompanyId,
+    issuerProfileId: invoice.issuerProfileId || currentSession().id || "current-user",
     documentType: invoice.documentType || "Cuenta de cobro",
     number: invoice.number || billingDocumentNumber(invoice),
     issueDate: invoice.issueDate || todayISO(),
     dueDate: invoice.dueDate || addDaysToDate(todayISO(), 5),
     observations: invoice.observations || "",
     signatureName: invoice.signatureName || "",
+    issuerName: invoice.issuerName || issuerProfile.issuerName || "",
     issuerNit: invoice.issuerNit || issuerProfile.issuerNit || "",
     issuerPhone: invoice.issuerPhone || issuerProfile.issuerPhone || "",
     issuerEmail: invoice.issuerEmail || issuerProfile.issuerEmail || "",
@@ -3326,19 +3340,20 @@ function financeDocumentFromInvoice(invoice) {
 function financeInvoiceParties(invoice) {
   const client = clients.find((item) => item.id === invoice?.clientId);
   const receiverCompany = companies.find((item) => item.id === (invoice?.companyId || client?.companyId));
-  const issuerCompany = companies.find((item) => item.id === (invoice?.issuerCompanyId || billingDraft.issuerCompanyId)) || companies.find((item) => item.id === activeCompanyId);
+  const issuerProfile = currentIssuerProfile();
   return {
     client,
-    issuerCompany,
+    issuerCompany: null,
+    issuerProfile,
     receiverCompany,
-    issuerName: issuerCompany?.name || "Emisor",
+    issuerName: invoice?.issuerName || issuerProfile.issuerName || "Emisor",
     receiverName: receiverCompany?.name || client?.name || "Cliente receptor",
   };
 }
 
 function renderFinancePartyFlow(invoice, options = {}) {
   if (!invoice) return "";
-  const { issuerName, receiverName, issuerCompany, receiverCompany } = financeInvoiceParties(invoice);
+  const { issuerName, receiverName, issuerProfile, receiverCompany } = financeInvoiceParties(invoice);
   const compact = options.compact ? " compact" : "";
   return `
     <div class="finance-party-flow${compact}" aria-label="Relación del documento">
@@ -3353,7 +3368,7 @@ function renderFinancePartyFlow(invoice, options = {}) {
       </span>
       ${
         options.showMeta
-          ? `<em>${escapeHtml(issuerCompany?.nit || issuerCompany?.handle || "Datos de emisor")} · ${escapeHtml(receiverCompany?.handle || "empresa vinculada")}</em>`
+          ? `<em>${escapeHtml(issuerProfile?.issuerNit || issuerProfile?.issuerEmail || "Datos de emisor")} · ${escapeHtml(receiverCompany?.handle || "empresa vinculada")}</em>`
           : ""
       }
     </div>
@@ -3447,6 +3462,7 @@ function renderFinancePanel() {
   purgeExpiredFinanceInvoices();
   const visibleCompanies = ensureActiveCompanyAccess();
   const activeClients = activeAgencyClients();
+  const issuerProfile = currentIssuerProfile();
   ensureRecurringBillingDocuments();
   const filteredInvoices = financeFilteredInvoices();
   const filteredTransactions = financeFilteredTransactions();
@@ -3551,13 +3567,13 @@ function renderFinancePanel() {
           <span class="status-icon"><i data-lucide="file-plus-2"></i></span>
           <div>
             <h3>Crear cuenta o factura</h3>
-            <p>Elige quién emite y qué empresa o cliente recibe el documento.</p>
+            <p>Tu cuenta principal emite. Selecciona la empresa o cliente que recibe el documento.</p>
           </div>
         </header>
         <div class="finance-create-flow">
           <span>
             <small>Emisor</small>
-            <strong>${escapeHtml((companies.find((item) => item.id === billingDraft.issuerCompanyId) || activeCompany()).name || "Empresa emisora")}</strong>
+            <strong>${escapeHtml(issuerProfile.issuerName || "Tu cuenta")}</strong>
           </span>
           <i data-lucide="arrow-right"></i>
           <span>
@@ -3566,12 +3582,11 @@ function renderFinancePanel() {
           </span>
         </div>
         <div class="finance-form-grid">
-          <label class="field compact">
+          <div class="document-party-lock compact">
             <span>Emisor</span>
-            <select data-finance-new="issuerCompanyId">
-              ${visibleCompanies.map((company) => `<option value="${company.id}" ${company.id === billingDraft.issuerCompanyId ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
-            </select>
-          </label>
+            <strong>${escapeHtml(issuerProfile.issuerName || "Tu cuenta")}</strong>
+            <small>${escapeHtml(issuerProfile.issuerEmail || "Correo pendiente")}</small>
+          </div>
           <label class="field compact">
             <span>Cliente</span>
             <select data-finance-new="clientId">
@@ -3810,7 +3825,7 @@ function renderSettingsPanel() {
   syncBillingDraftDefaults();
   const company = activeCompany();
   const session = currentSession();
-  const issuerCompany = companies.find((item) => item.id === billingDraft.issuerCompanyId) || company;
+  const issuerProfile = currentIssuerProfile();
   const documentNumberPreview = billingDocumentNumberFromDraft();
   const userPhotoUrl = entityPhotoUrl(session);
   const companyPhotoUrl = entityPhotoUrl(company);
@@ -3857,7 +3872,7 @@ function renderSettingsPanel() {
         </div>
       </section>
 
-      ${renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUrl, companyPhotoUrl })}
+      ${renderSettingsSetupGuide({ session, company, issuerCompany: issuerProfile, userPhotoUrl, companyPhotoUrl })}
 
       <section class="settings-group settings-profile-group">
         <header>
@@ -3939,14 +3954,14 @@ function renderSettingsPanel() {
           <div>
             <span>Próximo documento</span>
             <strong>${escapeHtml(documentNumberPreview)}</strong>
-            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerCompany.name || "Empresa")} · Recibe la empresa o cliente elegido al crearla.</small>
+            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerProfile.issuerName || "Tu cuenta")} · Recibe la empresa o cliente elegido al crearla.</small>
           </div>
           <button class="primary-button icon-text-button" type="button" data-settings-open="clients">
             <i data-lucide="file-text"></i>
             Crear cobro
           </button>
         </div>
-        ${renderIssuerProfileManager(issuerCompany)}
+        ${renderIssuerProfileManager(issuerProfile)}
         <div class="settings-form-grid">
           <label class="field compact">
             <span>Tipo</span>
@@ -3963,10 +3978,8 @@ function renderSettingsPanel() {
             <input data-settings-billing-field="nextNumber" type="number" min="1" value="${escapeHtml(billingDraft.nextNumber || 1)}" />
           </label>
           <label class="field compact">
-            <span>Empresa emisora</span>
-            <select data-settings-billing-field="issuerCompanyId">
-              ${companies.map((item) => `<option value="${item.id}" ${billingDraft.issuerCompanyId === item.id ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
-            </select>
+            <span>Nombre del emisor</span>
+            <input data-settings-billing-field="issuerName" value="${escapeHtml(billingDraft.issuerName || issuerProfile.issuerName || "")}" />
           </label>
           <label class="field compact">
             <span>NIT / ID emisor</span>
@@ -4040,7 +4053,7 @@ function renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUr
       icon: "receipt-text",
       title: "Cobros",
       done: paymentReady,
-      detail: paymentReady ? `${issuerCompany.name || "Emisor"} listo para cobrar.` : "Configura NIT, banco y numeración.",
+      detail: paymentReady ? `${issuerCompany.issuerName || issuerCompany.name || "Tu cuenta"} listo para cobrar.` : "Configura NIT, banco y numeración.",
     },
     {
       icon: "plug-zap",
@@ -4078,56 +4091,37 @@ function renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUr
   `;
 }
 
-function renderIssuerProfileManager(activeIssuerCompany) {
-  const activeIssuerId = activeIssuerCompany?.id || billingDraft.issuerCompanyId;
-  const cards = companies
-    .map((company) => {
-      const profile = issuerBillingProfile(company.id);
-      const isActive = company.id === activeIssuerId;
-      const nit = profile.issuerNit || company.nit || "Sin NIT";
-      const paymentParts = [profile.paymentBank, profile.paymentAccountType, profile.paymentAccountNumber].filter(Boolean);
-      const contactParts = [profile.issuerEmail || company.email, profile.issuerPhone || company.phone].filter(Boolean);
-      return `
-        <article class="issuer-profile-card ${isActive ? "active" : ""}">
-          <span class="issuer-profile-icon company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
-            ${avatarImageMarkup(entityPhotoUrl(company), company.name || "Empresa") || `<i data-lucide="receipt-text"></i>`}
-          </span>
-          <div class="issuer-profile-copy">
-            <strong>${escapeHtml(company.name || "Empresa sin nombre")}</strong>
-            <small>${escapeHtml(nit)}</small>
-            <p>${escapeHtml(paymentParts.join(" · ") || "Cuenta de pago pendiente")}</p>
-            <p>${escapeHtml(contactParts.join(" · ") || "Contacto pendiente")}</p>
-          </div>
-          <div class="issuer-profile-actions">
-            ${
-              isActive
-                ? `<span class="status-pill success">Emisor activo</span>`
-                : `<button class="secondary-button icon-button compact" type="button" data-settings-issuer-use="${company.id}" aria-label="Usar ${escapeHtml(company.name || "empresa")} como emisor"><i data-lucide="check-circle-2"></i></button>`
-            }
-            <button class="secondary-button icon-button compact" type="button" data-settings-issuer-edit="${company.id}" aria-label="Editar datos de ${escapeHtml(company.name || "empresa")}">
-              <i data-lucide="pencil"></i>
-            </button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
+function renderIssuerProfileManager(issuerProfile = currentIssuerProfile()) {
+  const paymentParts = [issuerProfile.paymentBank, issuerProfile.paymentAccountType, issuerProfile.paymentAccountNumber].filter(Boolean);
+  const contactParts = [issuerProfile.issuerEmail, issuerProfile.issuerPhone].filter(Boolean);
   return `
     <section class="issuer-profile-manager">
       <header class="issuer-profile-head">
         <div>
-          <span class="workspace-label">Perfiles de empresa</span>
-          <h4>Emisores para cuentas de cobro</h4>
-          <p>Elige qué perfil envía el documento. La empresa receptora se selecciona al crear cada cuenta o factura.</p>
+          <span class="workspace-label">Perfil principal</span>
+          <h4>Emisor de tus cuentas de cobro</h4>
+          <p>Este perfil pertenece al usuario que inició sesión. Tus empresas/clientes solo se seleccionan como receptores del documento.</p>
         </div>
-        <button class="secondary-button icon-text-button compact" type="button" data-settings-open="companies">
-          <i data-lucide="plus"></i>
-          Crear perfil
+        <button class="secondary-button icon-text-button compact" type="button" data-settings-issuer-edit="current-user">
+          <i data-lucide="pencil"></i>
+          Editar emisor
         </button>
       </header>
       <div class="issuer-profile-list">
-        ${cards}
+        <article class="issuer-profile-card active">
+          <span class="issuer-profile-icon company-avatar" style="--company-color: #111">
+            ${avatarImageMarkup(entityPhotoUrl(currentSession()), issuerProfile.issuerName || "Emisor") || `<i data-lucide="receipt-text"></i>`}
+          </span>
+          <div class="issuer-profile-copy">
+            <strong>${escapeHtml(issuerProfile.issuerName || "Tu cuenta")}</strong>
+            <small>${escapeHtml(issuerProfile.issuerNit || "Sin NIT o cedula")}</small>
+            <p>${escapeHtml(paymentParts.join(" · ") || "Cuenta de pago pendiente")}</p>
+            <p>${escapeHtml(contactParts.join(" · ") || "Contacto pendiente")}</p>
+          </div>
+          <div class="issuer-profile-actions">
+            <span class="status-pill success">Emisor activo</span>
+          </div>
+        </article>
       </div>
     </section>
   `;
@@ -4953,6 +4947,7 @@ function generateClientInvoice(clientId) {
     return;
   }
   syncBillingDraftDefaults();
+  const issuerProfile = currentIssuerProfile();
   const documentNumber = billingDocumentNumberFromDraft();
   const issueDate = new Date().toISOString().slice(0, 10);
   invoices = [
@@ -4961,7 +4956,8 @@ function generateClientInvoice(clientId) {
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
-      issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+      issuerProfileId: currentSession().id || "current-user",
+      issuerName: billingDraft.issuerName || issuerProfile.issuerName,
       documentType: billingDraft.documentType || "Cuenta de cobro",
       number: documentNumber,
       concept: `${serviceById(client.serviceId).name || client.plan} ${client.billingCycle.toLowerCase()}`,
@@ -5004,6 +5000,7 @@ function ensureRecurringBillingDocuments() {
     const pending = invoices.find((invoice) => !invoice.deletedAt && invoice.clientId === client.id && invoice.status !== "Pagada");
     if (pending) return;
     syncBillingDraftDefaults();
+    const issuerProfile = currentIssuerProfile();
     const issueDate = client.nextInvoiceDate;
     const documentNumber = billingDocumentNumberFromDraft();
     const service = serviceById(client.serviceId);
@@ -5014,7 +5011,8 @@ function ensureRecurringBillingDocuments() {
         agencyId: activeAgencyId,
         clientId: client.id,
         companyId: client.companyId,
-        issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+        issuerProfileId: currentSession().id || "current-user",
+        issuerName: billingDraft.issuerName || issuerProfile.issuerName,
         documentType: billingDraft.documentType || "Cuenta de cobro",
         number: documentNumber,
         concept: `${service.name || client.plan} ${String(client.billingCycle || "Mensual").toLowerCase()}`,
@@ -5058,7 +5056,6 @@ function ensureRecurringBillingDocuments() {
 
 function createFinanceDocument() {
   const clientId = financePanel?.querySelector('[data-finance-new="clientId"]')?.value;
-  const issuerCompanyId = financePanel?.querySelector('[data-finance-new="issuerCompanyId"]')?.value || billingDraft.issuerCompanyId || activeCompanyId;
   const documentType = financePanel?.querySelector('[data-finance-new="documentType"]')?.value || "Cuenta de cobro";
   const serviceId = financePanel?.querySelector('[data-finance-new="serviceId"]')?.value || "pro";
   const service = serviceById(serviceId);
@@ -5068,8 +5065,8 @@ function createFinanceDocument() {
     return;
   }
   syncBillingDraftDefaults();
-  billingDraft.issuerCompanyId = issuerCompanyId;
-  applyIssuerBillingProfile(issuerCompanyId, { force: true });
+  const issuerProfile = currentIssuerProfile();
+  applyIssuerBillingProfile("current-user", { force: true });
   billingDraft.documentType = documentType;
   billingDraft.numberPrefix = documentType === "Factura" ? "FAC" : "CC";
   billingDraft.currentNumber = "";
@@ -5083,7 +5080,8 @@ function createFinanceDocument() {
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
-      issuerCompanyId,
+      issuerProfileId: currentSession().id || "current-user",
+      issuerName: billingDraft.issuerName || issuerProfile.issuerName,
       documentType,
       number: documentNumber,
       concept: service.name,
@@ -5354,6 +5352,8 @@ function purchaseServiceForClient(serviceId) {
   if (!validateProvisioningForService(service, client)) return;
 
   const now = new Date();
+  syncBillingDraftDefaults();
+  const issuerProfile = currentIssuerProfile();
   const dueDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString().slice(0, 10);
   const order = {
     id: `order-${client.id}-${service.id}-${Date.now()}`,
@@ -5382,7 +5382,8 @@ function purchaseServiceForClient(serviceId) {
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
-      issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+      issuerProfileId: currentSession().id || "current-user",
+      issuerName: billingDraft.issuerName || issuerProfile.issuerName,
       documentType: "Cuenta de cobro",
       number: billingDocumentNumberFromDraft(),
       concept: service.name,
@@ -5461,6 +5462,7 @@ function createServiceOrderFromPurchase(purchase, client) {
   const serviceName = purchase.serviceName || service.name;
   const amount = Number(purchase.amount || service.price || 0);
   syncBillingDraftDefaults();
+  const issuerProfile = currentIssuerProfile();
   const documentNumber = billingDocumentNumberFromDraft();
   const order = {
     id: `order-${client.id}-${purchase.id || purchase.serviceId}-${Date.now()}`,
@@ -5490,7 +5492,8 @@ function createServiceOrderFromPurchase(purchase, client) {
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
-      issuerCompanyId: activeCompanyId,
+      issuerProfileId: currentSession().id || "current-user",
+      issuerName: billingDraft.issuerName || issuerProfile.issuerName,
       documentType: "Cuenta de cobro",
       number: documentNumber,
       concept: serviceName,
@@ -5637,13 +5640,15 @@ function saveBillingDocument() {
   const documentNumber = billingDraft.currentNumber || billingDocumentNumberFromDraft();
   const recurringEnabled = Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true");
   const recurringFrequency = billingDraft.autoFrequency || client.billingCycle || "Mensual";
+  const issuerProfile = currentIssuerProfile();
   const document = {
     ...(existingDocument || {}),
     id: existingDocument?.id || `invoice-${client.id}-${Date.now()}`,
     agencyId: activeAgencyId,
     clientId: client.id,
     companyId: client.companyId,
-    issuerCompanyId: billingDraft.issuerCompanyId,
+    issuerProfileId: currentSession().id || "current-user",
+    issuerName: billingDraft.issuerName || issuerProfile.issuerName,
     documentType: billingDraft.documentType,
     number: documentNumber,
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
@@ -5716,12 +5721,14 @@ function currentBillingDocument() {
   const client = clients.find((item) => item.id === billingDraft.clientId);
   if (!client) return null;
   const subtotal = billingDraftSubtotal();
+  const issuerProfile = currentIssuerProfile();
   return {
     id: `draft-${client.id}`,
     agencyId: activeAgencyId,
     clientId: client.id,
     companyId: client.companyId,
-    issuerCompanyId: billingDraft.issuerCompanyId,
+    issuerProfileId: currentSession().id || "current-user",
+    issuerName: billingDraft.issuerName || issuerProfile.issuerName,
     documentType: billingDraft.documentType,
     number: billingDraft.currentNumber || billingDocumentNumberFromDraft(),
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
@@ -5769,10 +5776,23 @@ function billingDocumentPdfFileName(documentData = currentBillingDocument()) {
   return billingDocumentFileName(documentData).replace(/\.html?$/i, ".pdf");
 }
 
+function billingDocumentIssuer(documentData = {}) {
+  const profile = currentIssuerProfile();
+  const session = currentSession();
+  const name = documentData.issuerName || profile.issuerName || session.name || "Touch Note";
+  return {
+    name,
+    nit: documentData.issuerNit || profile.issuerNit || "",
+    phone: documentData.issuerPhone || profile.issuerPhone || "",
+    email: documentData.issuerEmail || profile.issuerEmail || session.email || "",
+    paymentAccountHolder: documentData.paymentAccountHolder || profile.paymentAccountHolder || name,
+  };
+}
+
 function billingDocumentPlainText(documentData = currentBillingDocument()) {
   if (!documentData) return "";
   const client = clients.find((item) => item.id === documentData.clientId) || {};
-  const issuer = companies.find((company) => company.id === documentData.issuerCompanyId) || activeCompany();
+  const issuer = billingDocumentIssuer(documentData);
   const subtotal = billingDocumentSubtotal(documentData);
   const services = (documentData.lines || [])
     .map((line) => {
@@ -5782,7 +5802,7 @@ function billingDocumentPlainText(documentData = currentBillingDocument()) {
     })
     .join("\n");
   const payment = documentData.paymentBank || documentData.paymentAccountNumber
-    ? `\nDATOS PARA PAGO\n${documentData.paymentBank || "Entidad de pago"}\n${documentData.paymentAccountType || "Cuenta"} ${documentData.paymentAccountNumber || ""}\nTitular: ${documentData.paymentAccountHolder || issuer.name || ""}`
+    ? `\nDATOS PARA PAGO\n${documentData.paymentBank || "Entidad de pago"}\n${documentData.paymentAccountType || "Cuenta"} ${documentData.paymentAccountNumber || ""}\nTitular: ${documentData.paymentAccountHolder || issuer.paymentAccountHolder || issuer.name || ""}`
     : "";
   return `${documentData.documentType || "Cuenta de cobro"} No. ${billingDocumentNumber(documentData)}
 
@@ -5812,7 +5832,7 @@ ${documentData.observations || ""}`.trim();
 function billingDocumentHtml(documentData = currentBillingDocument()) {
   if (!documentData) return "";
   const client = clients.find((item) => item.id === documentData.clientId) || {};
-  const issuer = companies.find((company) => company.id === documentData.issuerCompanyId) || activeCompany();
+  const issuer = billingDocumentIssuer(documentData);
   const number = billingDocumentNumber(documentData);
   const logoSvg = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 40"><g fill="#111111"><circle cx="7.62" cy="9.52" r="1.74"/><path d="M30.04,15.21c.35-.19.58-.56.58-.96.03-1.54-.44-5.13-5.2-5.31-.13,0-.27,0-.41,0h-8.38c-4.92,0-8.91,3.67-8.91,8.19v6.89c0,4.52,3.98,8.19,8.91,8.19h8.38c.31,0,.63-.02.93-.05,3.14-.34,4.96-3.08,4.41-5.71-.07-.35-.29-.64-.58-.84-3.89-2.39-3.77-8.2.26-10.41h0Z"/><path d="M31.81,17.2l4.68-2.02c.77-.33,1.62.23,1.62,1.06v8.72c0,.85-.87,1.4-1.64,1.05l-4.72-2.15c-2.88-1.31-2.84-5.41.06-6.67Z"/></g></svg>');
   const lines = (documentData.lines || []).map((line) => {
@@ -5893,7 +5913,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
             <img src="data:image/svg+xml,${logoSvg}" alt="Touch Note" />
             <div>
               <strong>${escapeHtml(issuer.name || "Touch Note")}</strong>
-              <small>${escapeHtml(documentData.issuerEmail || issuer.email || issuer.handle || "")}</small>
+              <small>${escapeHtml(documentData.issuerEmail || issuer.email || "")}</small>
             </div>
           </div>
           <span class="badge">${escapeHtml(documentData.documentType || "Cuenta de cobro")}</span>
@@ -5909,9 +5929,9 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
         <div class="box">
           <span>Emisor</span>
           <strong>${escapeHtml(issuer.name || "Emisor")}</strong>
-          <p>${escapeHtml(documentData.issuerNit ? `NIT/ID: ${documentData.issuerNit}` : issuer.description || issuer.handle || "")}</p>
-          <p>${escapeHtml(documentData.issuerPhone ? `Celular: ${documentData.issuerPhone}` : "")}</p>
-          <p>${escapeHtml(documentData.issuerEmail ? `Correo: ${documentData.issuerEmail}` : "")}</p>
+          <p>${escapeHtml(issuer.nit ? `NIT/ID: ${issuer.nit}` : "")}</p>
+          <p>${escapeHtml(issuer.phone ? `Celular: ${issuer.phone}` : "")}</p>
+          <p>${escapeHtml(issuer.email ? `Correo: ${issuer.email}` : "")}</p>
         </div>
         <div class="box">
           <span>Cliente</span>
@@ -5926,7 +5946,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
           <span>Datos para pago</span>
           <strong>${escapeHtml(documentData.paymentBank || "Entidad de pago")}</strong>
           <p>${escapeHtml(documentData.paymentAccountType || "Cuenta")} ${escapeHtml(documentData.paymentAccountNumber || "")}</p>
-          <p>Titular: ${escapeHtml(documentData.paymentAccountHolder || issuer.name || "")}</p>
+          <p>Titular: ${escapeHtml(documentData.paymentAccountHolder || issuer.paymentAccountHolder || issuer.name || "")}</p>
         </section>
       ` : ""}
       <h2>Detalle</h2>
@@ -12526,8 +12546,7 @@ billingPanel.addEventListener("click", (event) => {
 settingsPanel?.addEventListener("click", async (event) => {
   const useIssuerButton = event.target.closest("[data-settings-issuer-use]");
   if (useIssuerButton) {
-    billingDraft.issuerCompanyId = useIssuerButton.dataset.settingsIssuerUse;
-    applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
+    applyIssuerBillingProfile("current-user", { force: true });
     persistIssuerBillingProfile();
     await persistState();
     renderSettingsPanel();
@@ -12538,13 +12557,12 @@ settingsPanel?.addEventListener("click", async (event) => {
 
   const editIssuerButton = event.target.closest("[data-settings-issuer-edit]");
   if (editIssuerButton) {
-    billingDraft.issuerCompanyId = editIssuerButton.dataset.settingsIssuerEdit;
-    applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
+    applyIssuerBillingProfile("current-user", { force: true });
     persistIssuerBillingProfile();
     await persistState();
     renderSettingsPanel();
-    setTimeout(() => settingsPanel.querySelector('[data-settings-billing-field="issuerNit"]')?.focus(), 50);
-    showToast("Edita los datos del emisor seleccionado.");
+    setTimeout(() => settingsPanel.querySelector('[data-settings-billing-field="issuerName"]')?.focus(), 50);
+    showToast("Edita los datos del emisor principal.");
     return;
   }
 
@@ -12572,7 +12590,6 @@ settingsPanel?.addEventListener("input", async (event) => {
   if (!billingField) return;
   const field = billingField.dataset.settingsBillingField;
   billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
-  if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
   if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
   if (["nextNumber", "numberPrefix", "documentType"].includes(field)) billingDraft.currentNumber = "";
   persistIssuerBillingProfile();
@@ -12605,7 +12622,6 @@ settingsPanel?.addEventListener("change", async (event) => {
   if (!billingField) return;
   const field = billingField.dataset.settingsBillingField;
   billingDraft[field] = field === "nextNumber" ? Number(billingField.value || 1) : field === "autoGenerate" ? billingField.value === "true" : billingField.value;
-  if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
   if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
   if (["nextNumber", "numberPrefix", "documentType"].includes(field)) billingDraft.currentNumber = "";
   persistIssuerBillingProfile();
@@ -12733,11 +12749,6 @@ financePanel?.addEventListener("click", (event) => {
 financePanel?.addEventListener("change", (event) => {
   const quickCreateField = event.target.closest("[data-finance-new]");
   if (quickCreateField) {
-    if (quickCreateField.dataset.financeNew === "issuerCompanyId") {
-      billingDraft.issuerCompanyId = quickCreateField.value;
-      applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
-      persistIssuerBillingProfile();
-    }
     if (quickCreateField.dataset.financeNew === "clientId") {
       billingDraft.clientId = quickCreateField.value;
       syncBillingDraftClientContact(billingDraft.clientId);
@@ -13005,9 +13016,8 @@ clientWorkspacePanel.addEventListener("input", (event) => {
       billingDraft.currentNumber = "";
       syncBillingDraftClientContact(billingDraft.clientId);
     }
-    if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
     persistState();
-    if (["documentType", "issuerCompanyId", "clientId", "nextNumber", "numberPrefix"].includes(field)) {
+    if (["documentType", "clientId", "nextNumber", "numberPrefix"].includes(field)) {
       if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
       if (field === "nextNumber" || field === "numberPrefix" || field === "documentType") billingDraft.currentNumber = "";
       renderClientBillingPanel();
@@ -13038,7 +13048,6 @@ clientWorkspacePanel.addEventListener("change", (event) => {
       billingDraft.currentNumber = "";
       syncBillingDraftClientContact(billingDraft.clientId);
     }
-    if (field === "issuerCompanyId") applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
     if (field === "documentType") billingDraft.numberPrefix = billingDraft.documentType === "Factura" ? "FAC" : "CC";
     if (field === "nextNumber" || field === "numberPrefix" || field === "documentType") billingDraft.currentNumber = "";
     persistState();
