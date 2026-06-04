@@ -10533,6 +10533,17 @@ function renderCompanies() {
                       </button>`
                 }
               </div>
+              <div class="company-row-quick-actions" aria-label="Acciones rápidas de ${escapeHtml(company.name)}">
+                ${
+                  isActive
+                    ? `<span class="company-quick-active"><i data-lucide="check"></i><span>Activa</span></span>`
+                    : `<button type="button" data-company-quick="${escapeHtml(company.id)}" data-company-quick-view="dashboard" aria-label="Usar ${escapeHtml(company.name)}"><i data-lucide="mouse-pointer-click"></i></button>`
+                }
+                <button type="button" data-company-quick="${escapeHtml(company.id)}" data-company-quick-view="calendar" aria-label="Calendario de ${escapeHtml(company.name)}"><i data-lucide="calendar-days"></i></button>
+                <button type="button" data-company-quick="${escapeHtml(company.id)}" data-company-quick-view="scripts" aria-label="Guiones de ${escapeHtml(company.name)}"><i data-lucide="notebook-pen"></i></button>
+                <button type="button" data-company-quick="${escapeHtml(company.id)}" data-company-quick-view="finances" aria-label="Cobros de ${escapeHtml(company.name)}"><i data-lucide="receipt-text"></i></button>
+                <button type="button" data-company-quick="${escapeHtml(company.id)}" data-company-quick-view="store" aria-label="Servicios de ${escapeHtml(company.name)}"><i data-lucide="shopping-bag"></i></button>
+              </div>
             </article>
           `;
         })
@@ -13257,6 +13268,25 @@ companiesGrid.addEventListener("click", async (event) => {
   const jumpButton = event.target.closest("[data-company-jump]");
   if (jumpButton) {
     setView(jumpButton.dataset.companyJump);
+    return;
+  }
+
+  const quickButton = event.target.closest("[data-company-quick]");
+  if (quickButton) {
+    const companyId = quickButton.dataset.companyQuick;
+    const viewName = quickButton.dataset.companyQuickView || "dashboard";
+    const company = companies.find((item) => item.id === companyId);
+    if (!company) return;
+    activeCompanyId = companyId;
+    selectedCompanyDetailId = "";
+    const client = clients.find((item) => item.companyId === companyId);
+    if (client) {
+      billingDraft.clientId = client.id;
+      billingDraft.companyId = companyId;
+    }
+    refreshCompanyContext();
+    setView(viewName);
+    showToast(`${company.name} activa para ${navItems.find((item) => item.view === viewName)?.label || "trabajar"}.`);
     return;
   }
 
