@@ -3511,14 +3511,31 @@ function renderFinancePanel() {
           <span class="status-icon"><i data-lucide="file-plus-2"></i></span>
           <div>
             <h3>Crear cuenta o factura</h3>
-            <p>Genera un documento rápido y queda listado por mes, empresa y año.</p>
+            <p>Elige quién emite y qué empresa o cliente recibe el documento.</p>
           </div>
         </header>
+        <div class="finance-create-flow">
+          <span>
+            <small>Emisor</small>
+            <strong>${escapeHtml((companies.find((item) => item.id === billingDraft.issuerCompanyId) || activeCompany()).name || "Empresa emisora")}</strong>
+          </span>
+          <i data-lucide="arrow-right"></i>
+          <span>
+            <small>Receptor</small>
+            <strong>${escapeHtml((activeClients.find((item) => item.id === billingDraft.clientId) || activeClients[0])?.name || "Cliente")}</strong>
+          </span>
+        </div>
         <div class="finance-form-grid">
+          <label class="field compact">
+            <span>Emisor</span>
+            <select data-finance-new="issuerCompanyId">
+              ${visibleCompanies.map((company) => `<option value="${company.id}" ${company.id === billingDraft.issuerCompanyId ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
+            </select>
+          </label>
           <label class="field compact">
             <span>Cliente</span>
             <select data-finance-new="clientId">
-              ${activeClients.map((client) => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("")}
+              ${activeClients.map((client) => `<option value="${client.id}" ${client.id === billingDraft.clientId ? "selected" : ""}>${escapeHtml(client.name)}</option>`).join("")}
             </select>
           </label>
           <label class="field compact">
@@ -4918,6 +4935,7 @@ function ensureRecurringBillingDocuments() {
 
 function createFinanceDocument() {
   const clientId = financePanel?.querySelector('[data-finance-new="clientId"]')?.value;
+  const issuerCompanyId = financePanel?.querySelector('[data-finance-new="issuerCompanyId"]')?.value || billingDraft.issuerCompanyId || activeCompanyId;
   const documentType = financePanel?.querySelector('[data-finance-new="documentType"]')?.value || "Cuenta de cobro";
   const serviceId = financePanel?.querySelector('[data-finance-new="serviceId"]')?.value || "pro";
   const service = serviceById(serviceId);
@@ -4927,6 +4945,8 @@ function createFinanceDocument() {
     return;
   }
   syncBillingDraftDefaults();
+  billingDraft.issuerCompanyId = issuerCompanyId;
+  applyIssuerBillingProfile(issuerCompanyId, { force: true });
   billingDraft.documentType = documentType;
   billingDraft.numberPrefix = documentType === "Factura" ? "FAC" : "CC";
   billingDraft.currentNumber = "";
@@ -4940,7 +4960,7 @@ function createFinanceDocument() {
       agencyId: activeAgencyId,
       clientId: client.id,
       companyId: client.companyId,
-      issuerCompanyId: billingDraft.issuerCompanyId || activeCompanyId,
+      issuerCompanyId,
       documentType,
       number: documentNumber,
       concept: service.name,
@@ -12587,6 +12607,22 @@ financePanel?.addEventListener("click", (event) => {
 });
 
 financePanel?.addEventListener("change", (event) => {
+  const quickCreateField = event.target.closest("[data-finance-new]");
+  if (quickCreateField) {
+    if (quickCreateField.dataset.financeNew === "issuerCompanyId") {
+      billingDraft.issuerCompanyId = quickCreateField.value;
+      applyIssuerBillingProfile(billingDraft.issuerCompanyId, { force: true });
+      persistIssuerBillingProfile();
+    }
+    if (quickCreateField.dataset.financeNew === "clientId") {
+      billingDraft.clientId = quickCreateField.value;
+      syncBillingDraftClientContact(billingDraft.clientId);
+    }
+    persistState();
+    renderFinancePanel();
+    return;
+  }
+
   const filter = event.target.closest("[data-finance-filter]");
   if (!filter) return;
   financeFilters[filter.dataset.financeFilter] = filter.value;
