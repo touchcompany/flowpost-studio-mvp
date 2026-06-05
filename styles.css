@@ -2967,15 +2967,16 @@ button {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(180px, 260px) 44px minmax(160px, 220px);
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 12px;
   min-height: 72px;
   margin-bottom: 24px;
 }
 
 .topbar > div:first-child {
+  min-width: 0;
   padding-left: 12px;
 }
 
@@ -3036,8 +3037,8 @@ button {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  min-width: 220px;
-  max-width: 290px;
+  min-width: 0;
+  max-width: 220px;
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -3265,8 +3266,7 @@ input[type="file"]:focus {
 .company-switcher {
   display: grid;
   gap: 6px;
-  min-width: min(260px, 38vw);
-  margin-left: auto;
+  min-width: 0;
 }
 
 .company-switcher span {

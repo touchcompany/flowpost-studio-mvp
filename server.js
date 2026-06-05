@@ -495,6 +495,10 @@ function normalizeSession(payload) {
     name: payload.name || (isTouch ? "Touch Studio" : "Usuario MVP"),
     email: payload.email || "",
     provider: payload.provider || "demo",
+    avatarUrl: payload.avatarUrl || payload.metadata?.avatarUrl || "",
+    nit: payload.nit || payload.metadata?.nit || "",
+    phone: payload.phone || payload.metadata?.phone || "",
+    address: payload.address || payload.metadata?.address || "",
     plan,
     planLabel: isTouch ? "Touch Super Admin" : planLabels[plan],
     role,
@@ -3383,9 +3387,12 @@ async function handleApi(req, res, url) {
       sendError(res, 501, "session store unavailable");
       return;
     }
+    const rawPayload = await readBody(req);
+    const currentSession = await sessionFromRequest(req);
+    const payload = normalizeSession(rawPayload);
     if (store.provider === "supabase" && process.env.ALLOW_LEGACY_SESSION_WRITE !== "true") {
-      const session = await sessionFromRequest(req);
-      if (!sessionIsSuperAdmin(session)) {
+      const canUpdateOwnProfile = currentSession?.id && payload.id === currentSession.id;
+      if (!sessionIsSuperAdmin(currentSession) && !canUpdateOwnProfile) {
         sendJson(res, 403, {
           ok: false,
           message: "Por seguridad, usa /api/auth/email, OAuth, invitaciones o checkout para crear sesiones en produccion.",
@@ -3393,8 +3400,24 @@ async function handleApi(req, res, url) {
         return;
       }
     }
-    const payload = normalizeSession(await readBody(req));
-    const session = await store.saveSession(payload);
+    const safePayload =
+      currentSession?.id && payload.id === currentSession.id && !sessionIsSuperAdmin(currentSession)
+        ? {
+            ...currentSession,
+            name: payload.name || currentSession.name,
+            email: currentSession.email,
+            provider: currentSession.provider,
+            avatarUrl: payload.avatarUrl,
+            nit: payload.nit,
+            phone: payload.phone,
+            address: payload.address,
+            metadata: {
+              ...(currentSession.metadata || {}),
+              ...(payload.metadata || {}),
+            },
+          }
+        : payload;
+    const session = await store.saveSession(safePayload);
     setSessionCookie(res, session.id);
     sendJson(res, 200, { session, provider: store.provider });
     return;

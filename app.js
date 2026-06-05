@@ -844,6 +844,7 @@ let billingDraft = {
   issuerNit: "",
   issuerPhone: "",
   issuerEmail: "admin@touch.com.co",
+  issuerAddress: "",
   paymentBank: "",
   paymentAccountType: "Cuenta de ahorros",
   paymentAccountNumber: "",
@@ -866,6 +867,7 @@ const issuerBillingProfileFields = [
   "issuerNit",
   "issuerPhone",
   "issuerEmail",
+  "issuerAddress",
   "paymentBank",
   "paymentAccountType",
   "paymentAccountNumber",
@@ -1377,6 +1379,10 @@ function normalizeClientSession(session = {}) {
     ...session,
     id: session.id || (isTouch ? "touch-super-admin" : ""),
     name: session.name || (isTouch ? "Touch Studio" : "Invitado MVP"),
+    avatarUrl: session.avatarUrl || session.metadata?.avatarUrl || "",
+    nit: session.nit || session.metadata?.nit || "",
+    phone: session.phone || session.metadata?.phone || "",
+    address: session.address || session.metadata?.address || "",
     plan,
     planLabel: isTouch ? "Touch Super Admin" : session.planLabel || planLimits[plan].label,
     role,
@@ -2005,8 +2011,11 @@ function ensureAgencyClients() {
     ...client,
     adminAccountEmail: APP_ADMIN_EMAIL,
     name: companies.find((company) => company.id === client.companyId)?.name || client.name,
+    email: client.email || companies.find((company) => company.id === client.companyId)?.email || "",
+    nit: client.nit || companies.find((company) => company.id === client.companyId)?.nit || "",
+    phone: client.phone || companies.find((company) => company.id === client.companyId)?.phone || "",
   }));
-  companies.forEach((company) => {
+  companies.filter((company) => !company.deletedAt).forEach((company) => {
     const exists = clients.some((client) => client.companyId === company.id);
     if (exists) return;
     clients.push({
@@ -2017,6 +2026,8 @@ function ensureAgencyClients() {
       name: company.name,
       contact: "Responsable de marca",
       email: "",
+      nit: company.nit || "",
+      phone: company.phone || "",
       plan: "Starter",
       billingCycle: "Mensual",
       amount: 79,
@@ -2057,7 +2068,12 @@ function activeAgency() {
 
 function activeAgencyClients() {
   ensureAgencyClients();
-  return clients.filter((client) => !client.deletedAt && client.agencyId === activeAgencyId && companies.some((company) => company.id === client.companyId));
+  return clients.filter(
+    (client) =>
+      !client.deletedAt &&
+      client.agencyId === activeAgencyId &&
+      companies.some((company) => company.id === client.companyId && !company.deletedAt)
+  );
 }
 
 function deletedAgencyClients() {
@@ -2359,6 +2375,7 @@ function syncBillingDraftDefaults() {
   if (!billingDraft.nextNumber) billingDraft.nextNumber = 1;
   if (!billingDraft.currentNumber) billingDraft.currentNumber = billingDocumentNumberFromDraft();
   if (!billingDraft.issuerEmail && issuer?.issuerEmail) billingDraft.issuerEmail = issuer.issuerEmail;
+  if (!billingDraft.issuerAddress && issuer?.issuerAddress) billingDraft.issuerAddress = issuer.issuerAddress;
   if (!billingDraft.paymentAccountHolder && issuer?.paymentAccountHolder) billingDraft.paymentAccountHolder = issuer.paymentAccountHolder;
   if (!billingDraft.clientEmail && client?.email) billingDraft.clientEmail = client.email;
   if (!billingDraft.autoFrequency && client?.billingCycle) billingDraft.autoFrequency = client.billingCycle;
@@ -2379,6 +2396,7 @@ function currentIssuerProfile() {
     issuerNit: profile.issuerNit || session.nit || "",
     issuerPhone: profile.issuerPhone || session.phone || "",
     issuerEmail: profile.issuerEmail || session.email || activeAgency().billingEmail || "",
+    issuerAddress: profile.issuerAddress || session.address || "",
     paymentBank: "",
     paymentAccountType: "Cuenta de ahorros",
     paymentAccountNumber: "",
@@ -2582,6 +2600,10 @@ function renderBillingDocumentEditor() {
             <label class="field compact">
               <span>Correo emisor</span>
               <input data-billing-field="issuerEmail" type="text" value="${escapeHtml(billingDraft.issuerEmail || "")}" />
+            </label>
+            <label class="field compact">
+              <span>Dirección emisor</span>
+              <input data-billing-field="issuerAddress" type="text" value="${escapeHtml(billingDraft.issuerAddress || "")}" />
             </label>
             <label class="field compact">
               <span>NIT / ID empresa</span>
@@ -3134,6 +3156,14 @@ function renderClientBillingPanel() {
                         <input data-client-field="email" type="text" value="${escapeHtml(client.email || "")}" />
                       </label>
                       <label class="field compact">
+                        <span>NIT / ID empresa</span>
+                        <input data-client-field="nit" type="text" value="${escapeHtml(client.nit || company?.nit || "")}" />
+                      </label>
+                      <label class="field compact">
+                        <span>Celular empresa</span>
+                        <input data-client-field="phone" type="text" value="${escapeHtml(client.phone || company?.phone || "")}" />
+                      </label>
+                      <label class="field compact">
                         <span>Servicio contratado</span>
                         <select data-client-field="serviceId">
                           ${activeAgencyServices().map((service) => `<option value="${service.id}" ${client.serviceId === service.id ? "selected" : ""}>${escapeHtml(service.name)}</option>`).join("")}
@@ -3382,6 +3412,7 @@ function financeDocumentFromInvoice(invoice) {
     issuerNit: invoice.issuerNit || issuerProfile.issuerNit || "",
     issuerPhone: invoice.issuerPhone || issuerProfile.issuerPhone || "",
     issuerEmail: invoice.issuerEmail || issuerProfile.issuerEmail || "",
+    issuerAddress: invoice.issuerAddress || issuerProfile.issuerAddress || "",
     paymentBank: invoice.paymentBank || issuerProfile.paymentBank || "",
     paymentAccountType: invoice.paymentAccountType || issuerProfile.paymentAccountType || "",
     paymentAccountNumber: invoice.paymentAccountNumber || issuerProfile.paymentAccountNumber || "",
@@ -3958,6 +3989,18 @@ function renderSettingsPanel() {
             <span>Correo de cuenta</span>
             <input data-settings-profile-field="email" type="email" value="${escapeHtml(session.email || "")}" placeholder="correo@empresa.com" />
           </label>
+          <label class="field compact">
+            <span>NIT o cédula</span>
+            <input data-settings-profile-field="nit" type="text" value="${escapeHtml(session.nit || "")}" placeholder="Documento del administrador" />
+          </label>
+          <label class="field compact">
+            <span>Celular</span>
+            <input data-settings-profile-field="phone" type="tel" value="${escapeHtml(session.phone || "")}" placeholder="+57..." />
+          </label>
+          <label class="field compact wide">
+            <span>Dirección</span>
+            <input data-settings-profile-field="address" type="text" value="${escapeHtml(session.address || "")}" placeholder="Dirección comercial o fiscal" />
+          </label>
           <div class="settings-media-field wide">
             <span class="settings-media-preview company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
               ${avatarImageMarkup(userPhotoUrl, session.name || "Usuario Touch") || `<i data-lucide="user-round"></i>`}
@@ -4066,6 +4109,10 @@ function renderSettingsPanel() {
           <label class="field compact">
             <span>Correo emisor</span>
             <input data-settings-billing-field="issuerEmail" type="email" value="${escapeHtml(billingDraft.issuerEmail || "")}" />
+          </label>
+          <label class="field compact wide">
+            <span>Dirección emisor</span>
+            <input data-settings-billing-field="issuerAddress" value="${escapeHtml(billingDraft.issuerAddress || "")}" />
           </label>
           <label class="field compact">
             <span>Banco</span>
@@ -5064,6 +5111,7 @@ function generateClientInvoice(clientId) {
       issuerNit: billingDraft.issuerNit,
       issuerPhone: billingDraft.issuerPhone,
       issuerEmail: billingDraft.issuerEmail,
+      issuerAddress: billingDraft.issuerAddress,
       paymentBank: billingDraft.paymentBank,
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5121,6 +5169,7 @@ function ensureRecurringBillingDocuments() {
         issuerNit: billingDraft.issuerNit,
         issuerPhone: billingDraft.issuerPhone,
         issuerEmail: billingDraft.issuerEmail,
+        issuerAddress: billingDraft.issuerAddress,
         paymentBank: billingDraft.paymentBank,
         paymentAccountType: billingDraft.paymentAccountType,
         paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5190,6 +5239,7 @@ function createFinanceDocument() {
       issuerNit: billingDraft.issuerNit,
       issuerPhone: billingDraft.issuerPhone,
       issuerEmail: billingDraft.issuerEmail,
+      issuerAddress: billingDraft.issuerAddress,
       paymentBank: billingDraft.paymentBank,
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5494,6 +5544,7 @@ function purchaseServiceForClient(serviceId) {
       issuerNit: billingDraft.issuerNit,
       issuerPhone: billingDraft.issuerPhone,
       issuerEmail: billingDraft.issuerEmail,
+      issuerAddress: billingDraft.issuerAddress,
       paymentBank: billingDraft.paymentBank,
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5606,6 +5657,7 @@ function createServiceOrderFromPurchase(purchase, client) {
       issuerNit: billingDraft.issuerNit,
       issuerPhone: billingDraft.issuerPhone,
       issuerEmail: billingDraft.issuerEmail,
+      issuerAddress: billingDraft.issuerAddress,
       paymentBank: billingDraft.paymentBank,
       paymentAccountType: billingDraft.paymentAccountType,
       paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5763,6 +5815,7 @@ function saveBillingDocument() {
     issuerNit: billingDraft.issuerNit,
     issuerPhone: billingDraft.issuerPhone,
     issuerEmail: billingDraft.issuerEmail,
+    issuerAddress: billingDraft.issuerAddress,
     paymentBank: billingDraft.paymentBank,
     paymentAccountType: billingDraft.paymentAccountType,
     paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5844,6 +5897,7 @@ function currentBillingDocument() {
     issuerNit: billingDraft.issuerNit,
     issuerPhone: billingDraft.issuerPhone,
     issuerEmail: billingDraft.issuerEmail,
+    issuerAddress: billingDraft.issuerAddress,
     paymentBank: billingDraft.paymentBank,
     paymentAccountType: billingDraft.paymentAccountType,
     paymentAccountNumber: billingDraft.paymentAccountNumber,
@@ -5887,6 +5941,7 @@ function billingDocumentIssuer(documentData = {}) {
     nit: documentData.issuerNit || profile.issuerNit || "",
     phone: documentData.issuerPhone || profile.issuerPhone || "",
     email: documentData.issuerEmail || profile.issuerEmail || session.email || "",
+    address: documentData.issuerAddress || profile.issuerAddress || session.address || "",
     paymentAccountHolder: documentData.paymentAccountHolder || profile.paymentAccountHolder || name,
   };
 }
@@ -5913,6 +5968,7 @@ ${issuer.name || "Touch Note"}
 ${documentData.issuerNit ? `NIT/ID: ${documentData.issuerNit}` : ""}
 ${documentData.issuerPhone ? `Celular: ${documentData.issuerPhone}` : ""}
 ${documentData.issuerEmail ? `Correo: ${documentData.issuerEmail}` : ""}
+${documentData.issuerAddress ? `Direccion: ${documentData.issuerAddress}` : ""}
 
 EMPRESA RECEPTORA
 ${client.name || "Empresa"}
@@ -6034,6 +6090,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
           <p>${escapeHtml(issuer.nit ? `NIT/ID: ${issuer.nit}` : "")}</p>
           <p>${escapeHtml(issuer.phone ? `Celular: ${issuer.phone}` : "")}</p>
           <p>${escapeHtml(issuer.email ? `Correo: ${issuer.email}` : "")}</p>
+          <p>${escapeHtml(issuer.address ? `Direccion: ${issuer.address}` : "")}</p>
         </div>
         <div class="box">
           <span>Empresa receptora</span>
@@ -6278,11 +6335,13 @@ async function documentAction(action) {
 }
 
 function updateClientProfile(clientId, field, value) {
+  const existingClient = clients.find((client) => client.id === clientId);
+  const normalizedValue = field === "amount" ? Number(value || 0) : value;
   clients = clients.map((client) =>
     client.id === clientId
       ? {
           ...client,
-          [field]: field === "amount" ? Number(value || 0) : value,
+          [field]: normalizedValue,
           ...(field === "serviceId"
             ? {
                 plan: serviceById(value).name,
@@ -6293,6 +6352,12 @@ function updateClientProfile(clientId, field, value) {
         }
       : client
   );
+  if (existingClient?.companyId && ["name", "email", "nit", "phone", "contact"].includes(field)) {
+    const companyFieldMap = { contact: "contactName" };
+    companies = companies.map((company) =>
+      company.id === existingClient.companyId ? { ...company, [companyFieldMap[field] || field]: normalizedValue } : company
+    );
+  }
   persistState();
   renderDashboard();
 }
