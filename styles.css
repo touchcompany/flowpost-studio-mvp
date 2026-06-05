@@ -408,8 +408,8 @@
 
 .settings-shortcuts-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
+  gap: 10px;
 }
 
 .settings-list button {
@@ -428,10 +428,38 @@
 
 .settings-shortcuts-grid button {
   min-width: 0;
-  min-height: 92px;
+  min-height: 82px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.68);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.settings-shortcuts-grid button:hover {
+  border-color: rgba(17, 17, 17, 0.18);
+  box-shadow: 0 12px 28px rgba(17, 17, 17, 0.06);
+  transform: translateY(-1px);
+}
+
+.settings-shortcuts-grid button .status-icon,
+.settings-list button .status-icon {
+  flex: 0 0 auto;
+}
+
+.settings-shortcuts-grid button strong,
+.settings-shortcuts-grid button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-shortcuts-grid button small {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .settings-list button:last-child {

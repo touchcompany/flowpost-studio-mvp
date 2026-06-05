@@ -3880,8 +3880,8 @@ function renderSettingsPanel() {
         <header class="settings-shortcuts-heading">
           <span class="status-icon"><i data-lucide="layout-grid"></i></span>
           <div>
-            <h3>Organiza tu espacio</h3>
-            <p>Entra directo a lo que quieres administrar.</p>
+            <h3>Centro de control</h3>
+            <p>Entra directo a las partes importantes de tu operación.</p>
           </div>
         </header>
         <div class="settings-shortcuts-grid">
@@ -3893,6 +3893,16 @@ function renderSettingsPanel() {
           <button type="button" data-settings-open="clients">
             <span class="status-icon"><i data-lucide="users"></i></span>
             <div><strong>Clientes</strong><small>Servicios, cobros y accesos.</small></div>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button type="button" data-settings-open="finances">
+            <span class="status-icon"><i data-lucide="receipt-text"></i></span>
+            <div><strong>Cuentas</strong><small>Facturas, pagos y proveedores.</small></div>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button type="button" data-settings-open="store">
+            <span class="status-icon"><i data-lucide="shopping-bag"></i></span>
+            <div><strong>Tienda</strong><small>Catálogo, pedidos y servicios.</small></div>
             <i data-lucide="chevron-right"></i>
           </button>
           <button type="button" data-settings-open="accounts">
@@ -12622,6 +12632,8 @@ settingsPanel?.addEventListener("click", async (event) => {
   if (target === "clients") renderClientBillingPanel();
   if (target === "companies") renderCompanies();
   if (target === "accounts") renderAccounts();
+  if (target === "store") renderStorePanel();
+  if (target === "finances") renderFinancePanel();
   setView(target);
 });
 
