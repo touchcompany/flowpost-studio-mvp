@@ -3072,6 +3072,17 @@ body.session-loading #logoutButton {
   color: transparent;
 }
 
+body.session-loading #activeCompanyName {
+  display: block;
+  width: min(46vw, 240px);
+  height: 1.2em;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #f2f2f2, #ffffff, #eeeeee);
+  background-size: 220% 100%;
+  color: transparent;
+  animation: softSkeleton 1.2s ease-in-out infinite;
+}
+
 .account-chip strong,
 .account-chip p {
   display: block;
