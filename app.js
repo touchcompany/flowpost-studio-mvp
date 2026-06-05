@@ -1360,7 +1360,8 @@ function currentSession() {
 }
 
 function isTouchSuperAdmin(session = currentSession()) {
-  return session.role === "super_admin";
+  const email = String(session.email || "").trim().toLowerCase();
+  return session.role === "super_admin" || email === APP_ADMIN_EMAIL;
 }
 
 function isClientPortalSession(session = currentSession()) {
@@ -1368,7 +1369,8 @@ function isClientPortalSession(session = currentSession()) {
 }
 
 function normalizeClientSession(session = {}) {
-  const isTouch = session.role === "super_admin";
+  const email = String(session.email || "").trim().toLowerCase();
+  const isTouch = session.role === "super_admin" || email === APP_ADMIN_EMAIL;
   const plan = isTouch ? "agency" : planLimits[session.plan] ? session.plan : "starter";
   const role = isTouch ? "super_admin" : session.role || (plan === "agency" ? "agency_owner" : "business_owner");
   return {
@@ -1501,6 +1503,7 @@ function updateMobileProfileNav() {
 
 function featureEnabled(feature, session = currentSession()) {
   if (isTouchSuperAdmin(session)) return true;
+  if (session.role === "agency_owner" && ["clients", "billing", "store"].includes(feature.key)) return true;
   if (isClientPortalSession(session)) {
     return ["content", "library", "aiScripts"].includes(feature.key);
   }
@@ -3903,7 +3906,7 @@ function renderSettingsPanel() {
           <span class="status-icon"><i data-lucide="layout-grid"></i></span>
           <div>
             <h3>Centro de control</h3>
-            <p>Entra directo a las partes importantes de tu operación.</p>
+            <p>Entra directo a las partes importantes de tu cuenta.</p>
           </div>
         </header>
         <div class="settings-shortcuts-grid">
@@ -3914,7 +3917,7 @@ function renderSettingsPanel() {
           </button>
           <button type="button" data-settings-open="clients">
             <span class="status-icon"><i data-lucide="users"></i></span>
-            <div><strong>Operación</strong><small>Servicios y cobros por empresa.</small></div>
+            <div><strong>Clientes</strong><small>Empresas, servicios y cobros.</small></div>
             <i data-lucide="chevron-right"></i>
           </button>
           <button type="button" data-settings-open="finances">
@@ -3947,6 +3950,14 @@ function renderSettingsPanel() {
           </div>
         </header>
         <div class="settings-form-grid">
+          <label class="field compact">
+            <span>Nombre visible</span>
+            <input data-settings-profile-field="name" type="text" value="${escapeHtml(session.name || "")}" placeholder="Tu nombre o agencia" />
+          </label>
+          <label class="field compact">
+            <span>Correo de cuenta</span>
+            <input data-settings-profile-field="email" type="email" value="${escapeHtml(session.email || "")}" placeholder="correo@empresa.com" />
+          </label>
           <div class="settings-media-field wide">
             <span class="settings-media-preview company-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
               ${avatarImageMarkup(userPhotoUrl, session.name || "Usuario Touch") || `<i data-lucide="user-round"></i>`}
@@ -4097,7 +4108,7 @@ function renderSettingsPanel() {
 
 function renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUrl, companyPhotoUrl }) {
   const companySocials = Array.isArray(company.socials) ? company.socials : [];
-  const connectedAccounts = socialAccounts.filter((account) => account.connected || account.status === "Conectado").length;
+  const connectedAccounts = (company.accounts || []).filter((account) => account.connected || ["Conectada", "Conectado"].includes(account.status)).length;
   const paymentReady = Boolean(billingDraft.paymentBank && billingDraft.paymentAccountNumber && billingDraft.paymentAccountHolder);
   const steps = [
     {
@@ -6632,6 +6643,23 @@ function closeMobileCompanyMenu() {
   mobileCompanyMenu?.classList.remove("open");
 }
 
+function renderViewContent(viewName) {
+  if (viewName === "dashboard") renderDashboard();
+  if (viewName === "companies") renderCompanies();
+  if (viewName === "library") {
+    renderMediaLocation();
+    renderVideoLibrary();
+  }
+  if (viewName === "calendar") renderCalendar();
+  if (viewName === "scripts") renderScriptsWorkspace();
+  if (viewName === "clients") renderClientBillingPanel();
+  if (viewName === "store") renderStorePanel();
+  if (viewName === "finances") renderFinancePanel();
+  if (viewName === "automations") renderAutomationCenter();
+  if (viewName === "accounts") renderAccounts();
+  if (viewName === "settings") renderSettingsPanel();
+}
+
 function setView(viewName, options = {}) {
   let targetView = normalizeViewName(viewName);
   syncViewEntitlements();
@@ -6649,6 +6677,7 @@ function setView(viewName, options = {}) {
   views.forEach((view) => view.classList.toggle("active", view.dataset.view === targetView));
   viewLinks.forEach((link) => link.classList.toggle("active", link.dataset.viewLink === targetView));
   mobileMoreButton?.classList.toggle("active", ["companies", "library", "clients", "store", "finances", "automations", "accounts", "settings"].includes(targetView));
+  renderViewContent(targetView);
   closeMobileMoreMenu();
   updateMobileProfileNav();
   if (options.syncHash !== false && window.location.hash !== `#${targetView}`) {
@@ -12671,9 +12700,9 @@ settingsPanel?.addEventListener("click", async (event) => {
 settingsPanel?.addEventListener("input", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
-    if (profileField.dataset.settingsProfileField !== "avatarUrl") return;
-    const value = publicMediaUrl(profileField.value);
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...currentSession(), avatarUrl: value }));
+    const field = profileField.dataset.settingsProfileField;
+    const value = field === "avatarUrl" ? publicMediaUrl(profileField.value) : profileField.value;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...currentSession(), [field]: value }));
     renderAccount();
     updateMobileProfileNav();
     return;
