@@ -201,6 +201,7 @@ const STORAGE_KEY = "flowpost-studio-state-v2";
 const UI_STORAGE_KEY = "flowpost-studio-ui-v1";
 const SESSION_KEY = "flowpost-studio-session-v1";
 const PENDING_PURCHASES_KEY = "flowpost-pending-service-purchases-v1";
+const APP_ADMIN_EMAIL = "ia@touch.com.co";
 const planLimits = {
   starter: {
     label: "Starter",
@@ -218,18 +219,18 @@ const planLimits = {
     label: "Agencia",
     companies: Infinity,
     publications: Infinity,
-    description: "Para operar clientes ilimitados con foco comercial.",
+    description: "Para operar empresas ilimitadas con foco comercial.",
   },
 };
 const roleProfiles = {
   super_admin: {
     label: "Super admin",
-    description: "Control total de la agencia, servicios, clientes, APIs, pagos y pruebas internas.",
+    description: "Control total de la agencia, empresas, servicios, APIs, pagos y pruebas internas.",
     icon: "crown",
   },
   agency_owner: {
     label: "Agencia",
-    description: "Gestiona clientes, cobros, servicios y contenido segun su plan.",
+    description: "Gestiona empresas, cobros, servicios y contenido segun su plan.",
     icon: "building-2",
   },
   business_owner: {
@@ -252,7 +253,7 @@ const featureCatalog = [
   { key: "content", label: "Contenido y calendario", icon: "calendar-days", plans: ["starter", "pro", "agency"] },
   { key: "library", label: "Biblioteca y recursos", icon: "layers", plans: ["starter", "pro", "agency"] },
   { key: "aiScripts", label: "Guiones con IA", icon: "sparkles", plans: ["starter", "pro", "agency"] },
-  { key: "clients", label: "Clientes de agencia", icon: "users", plans: ["agency"] },
+  { key: "clients", label: "Empresas gestionadas", icon: "users", plans: ["agency"] },
   { key: "billing", label: "Cobros y facturas", icon: "receipt", plans: ["pro", "agency"] },
   { key: "store", label: "Venta de servicios", icon: "store", plans: ["pro", "agency"] },
   { key: "hosting", label: "Hosting y dominios", icon: "server", plans: ["agency"] },
@@ -722,7 +723,7 @@ let accessMembers = [
   {
     id: "member-touch-owner",
     companyId: "casa-norte",
-    email: "admin@touch.com.co",
+    email: APP_ADMIN_EMAIL,
     role: "owner",
     status: "Activo",
     invitedAt: new Date().toISOString(),
@@ -753,13 +754,16 @@ let agencies = [
     id: "agency-touch",
     name: "Touch Agencia",
     ownerUserId: "demo-profile",
-    billingEmail: "admin@touch.com.co",
+    billingEmail: APP_ADMIN_EMAIL,
+    adminAccountEmail: APP_ADMIN_EMAIL,
   },
 ];
 let activeAgencyId = "agency-touch";
 let invoices = [
   {
     id: "invoice-casa-norte",
+    agencyId: "agency-touch",
+    adminAccountEmail: APP_ADMIN_EMAIL,
     clientId: "client-casa-norte",
     companyId: "casa-norte",
     concept: "Plan Pro mensual",
@@ -1974,8 +1978,16 @@ function normalizeText(value = "") {
 }
 
 function ensureAgencyClients() {
+  agencies = agencies.map((agency) => ({
+    billingEmail: APP_ADMIN_EMAIL,
+    adminAccountEmail: APP_ADMIN_EMAIL,
+    ...agency,
+    adminAccountEmail: APP_ADMIN_EMAIL,
+    billingEmail: agency.billingEmail || agency.adminAccountEmail || APP_ADMIN_EMAIL,
+  }));
   clients = clients.map((client) => ({
     agencyId: activeAgencyId,
+    adminAccountEmail: APP_ADMIN_EMAIL,
     contact: "Responsable de marca",
     email: "",
     plan: "Starter",
@@ -1988,6 +2000,8 @@ function ensureAgencyClients() {
     notes: "Pendiente completar briefing, tono de marca y ofertas principales.",
     aiPrompt: "Crea contenido claro, cercano y comercial para una pyme que necesita vender sin sonar agresiva.",
     ...client,
+    adminAccountEmail: APP_ADMIN_EMAIL,
+    name: companies.find((company) => company.id === client.companyId)?.name || client.name,
   }));
   companies.forEach((company) => {
     const exists = clients.some((client) => client.companyId === company.id);
@@ -1995,6 +2009,7 @@ function ensureAgencyClients() {
     clients.push({
       id: `client-${company.id}`,
       agencyId: activeAgencyId,
+      adminAccountEmail: APP_ADMIN_EMAIL,
       companyId: company.id,
       name: company.name,
       contact: "Responsable de marca",
@@ -2017,7 +2032,7 @@ function ensureAgencyClients() {
       accessMembers.push({
         id: `member-${company.id}-owner`,
         companyId: company.id,
-        email: activeAgency().billingEmail || "admin@touch.com.co",
+        email: activeAgency().adminAccountEmail || activeAgency().billingEmail || APP_ADMIN_EMAIL,
         role: "owner",
         status: "Activo",
         invitedAt: new Date().toISOString(),
@@ -2027,7 +2042,14 @@ function ensureAgencyClients() {
 }
 
 function activeAgency() {
-  return agencies.find((agency) => agency.id === activeAgencyId) || agencies[0] || { id: activeAgencyId, name: "Tu agencia" };
+  const agency = agencies.find((item) => item.id === activeAgencyId) || agencies[0] || { id: activeAgencyId, name: "Tu agencia" };
+  return {
+    adminAccountEmail: APP_ADMIN_EMAIL,
+    billingEmail: APP_ADMIN_EMAIL,
+    ...agency,
+    adminAccountEmail: APP_ADMIN_EMAIL,
+    billingEmail: agency.billingEmail || agency.adminAccountEmail || APP_ADMIN_EMAIL,
+  };
 }
 
 function activeAgencyClients() {
@@ -2424,10 +2446,10 @@ function renderAgencyServicesManager() {
       <div class="agency-services-header">
         <div class="section-heading small">
           <h2>Servicios de tu agencia</h2>
-          <p>${escapeHtml(activeAgency().name)} vende estos servicios a sus clientes. Esto no afecta el plan de Touch Note.</p>
+          <p>${escapeHtml(activeAgency().name)} vende estos servicios a las empresas que administras. Cada compra queda vinculada a ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.</p>
         </div>
         <label class="field compact service-client-select">
-          <span>Comprar para cliente</span>
+          <span>Asignar a empresa</span>
           <select data-billing-field="clientId">
             ${activeAgencyClients()
               .map((client) => `<option value="${client.id}" ${client.id === selectedClient?.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`)
@@ -2485,7 +2507,7 @@ function renderBillingDocumentEditor() {
   const emailDetail = emailReady
     ? `Listo para enviar a ${documentClientEmail}.`
     : mailReady
-      ? "Agrega email al cliente para enviar desde Touch Note."
+      ? "Agrega email a la empresa para enviar desde Touch Note."
       : `Configura SMTP para envio real: ${mailMissing}.`;
 
   return `
@@ -2495,12 +2517,12 @@ function renderBillingDocumentEditor() {
           <span class="status-icon"><i data-lucide="receipt"></i></span>
           <div>
             <h2>${billingDraft.editingInvoiceId ? "Editar" : "Nueva"} ${escapeHtml(documentLabel)}</h2>
-            <p>Tu perfil principal emite el documento. El cliente receptor sale de tus empresas creadas.</p>
+            <p>Tu usuario principal emite el documento. La empresa receptora sale de tus empresas creadas.</p>
           </div>
         </header>
 
         <section class="document-card">
-          <h3>Cliente y fechas</h3>
+          <h3>Empresa y fechas</h3>
           <div class="document-grid">
             <label class="field compact">
               <span>Tipo de documento</span>
@@ -2515,7 +2537,7 @@ function renderBillingDocumentEditor() {
               <small>${escapeHtml(issuer.issuerEmail || "Configura tu correo en Ajustes")}</small>
             </div>
             <label class="field compact">
-              <span>Cliente</span>
+              <span>Empresa receptora</span>
               <select data-billing-field="clientId">
                 ${documentClients.map((item) => `<option value="${item.id}" ${item.id === billingDraft.clientId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
               </select>
@@ -2536,7 +2558,7 @@ function renderBillingDocumentEditor() {
         </section>
 
         <section class="document-card">
-          <h3>Numero, emisor y cliente</h3>
+          <h3>Numero, emisor y empresa</h3>
           <div class="document-grid">
             <label class="field compact">
               <span>Numero del documento</span>
@@ -2559,15 +2581,15 @@ function renderBillingDocumentEditor() {
               <input data-billing-field="issuerEmail" type="text" value="${escapeHtml(billingDraft.issuerEmail || "")}" />
             </label>
             <label class="field compact">
-              <span>NIT / ID cliente</span>
+              <span>NIT / ID empresa</span>
               <input data-billing-field="clientNit" type="text" value="${escapeHtml(billingDraft.clientNit || client?.nit || "")}" />
             </label>
             <label class="field compact">
-              <span>Celular cliente</span>
+              <span>Celular empresa</span>
               <input data-billing-field="clientPhone" type="text" value="${escapeHtml(billingDraft.clientPhone || client?.phone || "")}" />
             </label>
             <label class="field compact">
-              <span>Correo cliente</span>
+              <span>Correo empresa</span>
               <input data-billing-field="clientEmail" type="text" value="${escapeHtml(billingDraft.clientEmail || client?.email || "")}" />
             </label>
           </div>
@@ -2640,7 +2662,7 @@ function renderBillingDocumentEditor() {
           <h3>Observaciones y firma</h3>
           <label class="field compact">
             <span>Observaciones</span>
-            <textarea data-billing-field="observations" placeholder="Notas para el cliente">${escapeHtml(billingDraft.observations)}</textarea>
+            <textarea data-billing-field="observations" placeholder="Notas para la empresa">${escapeHtml(billingDraft.observations)}</textarea>
           </label>
           <div class="signature-row">
             <label class="signature-box">
@@ -2660,7 +2682,7 @@ function renderBillingDocumentEditor() {
         <section class="document-card document-summary">
           <h3>Resumen</h3>
           <div><span>Emisor</span><strong>${escapeHtml(issuer?.issuerName || "Sin emisor")}</strong></div>
-          <div><span>Cliente</span><strong>${escapeHtml(client?.name || "Sin cliente")}</strong></div>
+          <div><span>Empresa</span><strong>${escapeHtml(client?.name || "Sin empresa")}</strong></div>
           <div><span>Subtotal</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
           <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
           <button class="primary-button icon-text-button" type="button" data-save-billing-document>
@@ -2677,7 +2699,7 @@ function renderBillingDocumentEditor() {
           <span>${escapeHtml(documentLabel)}</span>
           <strong>${formatMoney(subtotal, "COP")}</strong>
           <p>${escapeHtml(billingDraft.description || "Servicios contratados")}</p>
-          <small>${escapeHtml(issuer?.issuerName || "Emisor")} -> ${escapeHtml(client?.name || "Cliente")}</small>
+          <small>${escapeHtml(issuer?.issuerName || "Emisor")} -> ${escapeHtml(client?.name || "Empresa")}</small>
           <small>${escapeHtml(billingDraft.issueDate || "Sin emision")} · vence ${escapeHtml(billingDraft.dueDate || "sin fecha")}</small>
         </section>
 
@@ -2741,8 +2763,8 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
   if (!selectedClient) {
     return `
       <section class="client-command-center empty-state compact">
-        <strong>Sin clientes todavía</strong>
-        <p>Crea empresas y conviertelas en clientes para activar paneles, cobros y servicios comprables.</p>
+        <strong>Sin empresas todavía</strong>
+        <p>Crea empresas para activar servicios, cobros, guiones y accesos por marca.</p>
       </section>
     `;
   }
@@ -2767,7 +2789,7 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
           </span>
         </div>
         <div>
-          <span>Panel del cliente</span>
+          <span>Panel de empresa</span>
           <h3>${escapeHtml(selectedClient.name)}</h3>
           <p>${escapeHtml(company?.description || selectedClient.objectives || "Cuenta lista para gestionar servicios, contenido y cobros.")}</p>
           <div class="client-command-networks">
@@ -2820,11 +2842,11 @@ function renderClientSwitcher(activeClients, pendingInvoices) {
   if (!activeClients.length) return "";
   const selectedClient = activeClients.find((client) => client.id === billingDraft.clientId) || activeClients[0];
   return `
-    <section class="client-switcher" aria-label="Clientes de la agencia">
+    <section class="client-switcher" aria-label="Empresas gestionadas">
       <header>
         <div>
-          <span class="workspace-label">Cuentas de la agencia</span>
-          <h3>Elige un cliente para administrar</h3>
+          <span class="workspace-label">Empresas administradas</span>
+          <h3>Elige una empresa para administrar</h3>
         </div>
         <strong>${activeClients.length}</strong>
       </header>
@@ -2861,7 +2883,7 @@ function renderDeletedClientsPanel() {
       <header>
         <div>
           <span class="workspace-label">Papelera</span>
-          <h3>Clientes eliminados</h3>
+          <h3>Empresas eliminadas</h3>
         </div>
         <strong>${deletedClients.length}</strong>
       </header>
@@ -2906,11 +2928,11 @@ function renderClientBillingPanel() {
 
   const compactHtml = `
     <div class="section-heading small">
-      <h2>Clientes y cobros</h2>
-      <p>Control basico para operar cuentas, servicios comprados y facturas recurrentes.</p>
+      <h2>Empresas gestionadas</h2>
+      <p>Cada empresa creada funciona como cuenta receptora de servicios, cobros, guiones y accesos.</p>
     </div>
     <div class="client-billing-summary">
-      <article><span>Clientes</span><strong>${activeClients.length}</strong></article>
+      <article><span>Empresas</span><strong>${activeClients.length}</strong></article>
       <article><span>MRR estimado</span><strong>${formatMoney(monthlyTotal)}</strong></article>
       <article><span>Pendiente</span><strong>${formatMoney(pendingInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))}</strong></article>
       <article><span>Servicios</span><strong>${activeOrders.length}</strong></article>
@@ -2949,7 +2971,7 @@ function renderClientBillingPanel() {
                   <i data-lucide="copy"></i>
                   Copiar resumen
                 </button>
-                <button class="secondary-button icon-button compact danger" type="button" data-client-delete="${client.id}" aria-label="Eliminar cliente">
+                <button class="secondary-button icon-button compact danger" type="button" data-client-delete="${client.id}" aria-label="Eliminar empresa gestionada">
                   <i data-lucide="trash-2"></i>
                 </button>
               </div>
@@ -2972,8 +2994,8 @@ function renderClientBillingPanel() {
         ${renderAgencyServicesManager()}
         ${renderBillingDocumentEditor()}
         <div class="client-workspace-summary">
-          <article><span>Clientes activos</span><strong>${activeClients.length}</strong><p>Empresas convertidas en cuentas comerciales.</p></article>
-          <article><span>Agencia activa</span><strong>${escapeHtml(activeAgency().name)}</strong><p>Todo queda separado por agencia, cliente y empresa.</p></article>
+          <article><span>Empresas activas</span><strong>${activeClients.length}</strong><p>Empresas convertidas en cuentas comerciales.</p></article>
+          <article><span>Cuenta admin</span><strong>${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}</strong><p>Las compras y servicios se vinculan a esta cuenta principal.</p></article>
           <article><span>Cobros abiertos</span><strong>${pendingInvoices.length}</strong><p>${formatMoney(pendingInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))} pendientes.</p></article>
           <article><span>Servicios comprados</span><strong>${activeOrders.length}</strong><p>Ordenes internas listas para pasar a pago y produccion.</p></article>
         </div>
@@ -3004,7 +3026,7 @@ function renderClientBillingPanel() {
                   </header>
                   <section class="client-premium-strip">
                     <div>
-                      <span>Salud del cliente</span>
+                      <span>Salud de la empresa</span>
                       <strong>${score}%</strong>
                       <p>${escapeHtml(clientHealthLabel(score))} · ${invoice ? "cobro pendiente" : "cobros al dia"}</p>
                     </div>
@@ -3024,11 +3046,11 @@ function renderClientBillingPanel() {
                   <div class="client-profile-body">
                     <section>
                       <h3>Cobro actual</h3>
-                      <p>${invoice ? `${invoice.concept} vence ${invoice.dueDate} · ${formatMoney(openValue, "COP")}` : "Cliente al dia."}</p>
+                      <p>${invoice ? `${invoice.concept} vence ${invoice.dueDate} · ${formatMoney(openValue, "COP")}` : "Empresa al dia."}</p>
                     </section>
                     <section>
                       <h3>Objetivo</h3>
-                      <p>${escapeHtml(client.objectives || "Define el objetivo principal de este cliente.")}</p>
+                      <p>${escapeHtml(client.objectives || "Define el objetivo principal de esta empresa.")}</p>
                     </section>
                     <section>
                       <h3>Recursos</h3>
@@ -3038,7 +3060,7 @@ function renderClientBillingPanel() {
                   <section class="client-order-list">
                     <div>
                       <h3>Servicios comprados</h3>
-                      <p>Compras hechas por este cliente dentro de la agencia.</p>
+                      <p>Compras vinculadas a esta empresa dentro de la agencia.</p>
                     </div>
                     ${
                       orders.length
@@ -3090,7 +3112,7 @@ function renderClientBillingPanel() {
                               `
                             )
                             .join("")
-                        : `<article class="client-order-empty">Este cliente aun no ha comprado servicios adicionales.</article>`
+                        : `<article class="client-order-empty">Esta empresa aun no tiene servicios adicionales.</article>`
                     }
                   </section>
                   ${renderClientAccessPanel(client)}
@@ -3161,7 +3183,7 @@ function renderClientBillingPanel() {
                       <i data-lucide="folder-open"></i>
                       Abrir cuenta
                     </button>
-                    <button class="secondary-button icon-button compact danger" type="button" data-client-delete="${client.id}" aria-label="Eliminar cliente">
+                    <button class="secondary-button icon-button compact danger" type="button" data-client-delete="${client.id}" aria-label="Eliminar empresa gestionada">
                       <i data-lucide="trash-2"></i>
                     </button>
                   </div>
@@ -3190,14 +3212,14 @@ function serviceIcon(service) {
 }
 
 function serviceStoreDescription(service, selectedClient) {
-  const clientName = selectedClient?.name || "tu cliente";
+  const clientName = selectedClient?.name || "tu empresa";
   const text = `${service?.id || ""} ${service?.name || ""} ${service?.group || ""}`.toLowerCase();
   if (/hosting|server|cpanel|whm/.test(text)) return `Hosting administrado, acceso y entrega técnica para ${clientName}.`;
   if (/dominio|domain/.test(text)) return `Registro, DNS y seguimiento de renovación para ${clientName}.`;
   if (/web|landing|sitio|pagina/.test(text)) return `Página web lista para publicar, medir y conectar con el ecosistema.`;
   if (/reel|video|produccion|producción/.test(text)) return `Producción y entrega de piezas listas para campañas y redes.`;
   if (/ads|campana|campaña|publicidad|meta|facebook|instagram/.test(text)) return `Campaña con brief, creativos, configuración y control de avance.`;
-  if (/chat|soporte|bot|automat/.test(text)) return `Automatización y soporte conectado al flujo comercial del cliente.`;
+  if (/chat|soporte|bot|automat/.test(text)) return `Automatización y soporte conectado al flujo comercial de la empresa.`;
   if (/guion|guión|ia|copy|contenido/.test(text)) return `Guiones, ideas y copy con IA guardados por empresa.`;
   return `${service?.group || "Servicio"} operativo para ${clientName}.`;
 }
@@ -3378,7 +3400,7 @@ function financeInvoiceParties(invoice) {
     issuerProfile,
     receiverCompany,
     issuerName: invoice?.issuerName || issuerProfile.issuerName || "Emisor",
-    receiverName: receiverCompany?.name || client?.name || "Cliente receptor",
+    receiverName: receiverCompany?.name || client?.name || "Empresa receptora",
   };
 }
 
@@ -3421,7 +3443,7 @@ function renderFinanceNextStepCard(invoice) {
       <div class="finance-next-main">
         <span>Siguiente paso</span>
         <h3>${escapeHtml(documentLabel)} ${escapeHtml(documentNumber)}</h3>
-        <p>${escapeHtml(client?.name || "Cliente")} · ${escapeHtml(receiverCompany?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
+        <p>${escapeHtml(receiverCompany?.name || client?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}</p>
         ${renderFinancePartyFlow(invoice, { showMeta: true })}
       </div>
       <div class="finance-next-total">
@@ -3462,7 +3484,7 @@ function renderFinancePriorityStrip(filteredInvoices, filteredProviders, income,
         <div>
           <small>Por cobrar</small>
           <strong>${nextInvoice ? formatMoney(nextInvoice.amount, nextInvoice.currency || "COP") : "Todo al día"}</strong>
-          <p>${nextInvoice ? `${escapeHtml(invoiceClient?.name || "Cliente")} · vence ${escapeHtml(shortDateLabel(nextInvoice.dueDate))}` : "No hay documentos pendientes en este filtro."}</p>
+          <p>${nextInvoice ? `${escapeHtml(invoiceClient?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(nextInvoice.dueDate))}` : "No hay documentos pendientes en este filtro."}</p>
         </div>
         ${nextInvoice ? `<button class="secondary-button icon-button compact" type="button" data-finance-focus-invoice="${escapeHtml(nextInvoice.id)}" aria-label="Ver documento"><i data-lucide="chevron-right"></i></button>` : ""}
       </article>
@@ -3598,7 +3620,7 @@ function renderFinancePanel() {
           <span class="status-icon"><i data-lucide="file-plus-2"></i></span>
           <div>
             <h3>Crear cuenta o factura</h3>
-            <p>Tu cuenta principal emite. Selecciona la empresa o cliente que recibe el documento.</p>
+            <p>Tu cuenta principal emite. Selecciona la empresa que recibe el documento.</p>
           </div>
         </header>
         <div class="finance-create-flow">
@@ -3609,7 +3631,7 @@ function renderFinancePanel() {
           <i data-lucide="arrow-right"></i>
           <span>
             <small>Receptor</small>
-            <strong>${escapeHtml((activeClients.find((item) => item.id === billingDraft.clientId) || activeClients[0])?.name || "Cliente")}</strong>
+            <strong>${escapeHtml((activeClients.find((item) => item.id === billingDraft.clientId) || activeClients[0])?.name || "Empresa")}</strong>
           </span>
         </div>
         <div class="finance-form-grid">
@@ -3619,7 +3641,7 @@ function renderFinancePanel() {
             <small>${escapeHtml(issuerProfile.issuerEmail || "Correo pendiente")}</small>
           </div>
           <label class="field compact">
-            <span>Cliente</span>
+            <span>Empresa receptora</span>
             <select data-finance-new="clientId">
               ${activeClients.map((client) => `<option value="${client.id}" ${client.id === billingDraft.clientId ? "selected" : ""}>${escapeHtml(client.name)}</option>`).join("")}
             </select>
@@ -3662,7 +3684,7 @@ function renderFinancePanel() {
             <p>${filteredInvoices.length} documento${filteredInvoices.length === 1 ? "" : "s"}</p>
           </div>
           <div class="finance-row-actions">
-            <span class="pill ${billingDraft.autoGenerate ? "ready" : "muted"}" title="${recurringClients.length} cliente${recurringClients.length === 1 ? "" : "s"} con próximo cobro">${billingDraft.autoGenerate ? `${recurringInvoices.length} recurrente${recurringInvoices.length === 1 ? "" : "s"}` : "Automatización pausada"}</span>
+            <span class="pill ${billingDraft.autoGenerate ? "ready" : "muted"}" title="${recurringClients.length} empresa${recurringClients.length === 1 ? "" : "s"} con próximo cobro">${billingDraft.autoGenerate ? `${recurringInvoices.length} recurrente${recurringInvoices.length === 1 ? "" : "s"}` : "Automatización pausada"}</span>
             <button class="secondary-button icon-button compact" type="button" data-finance-open-clients aria-label="Abrir editor de cobros"><i data-lucide="panel-right-open"></i></button>
           </div>
           </header>
@@ -3678,7 +3700,7 @@ function renderFinancePanel() {
                           <span class="finance-avatar"><i data-lucide="${invoice.documentType === "Factura" ? "file-check-2" : "receipt-text"}"></i></span>
                           <div>
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
-                            <p>${escapeHtml(invoice.issuerName || issuerProfile.issuerName || "Tu cuenta")} cobra a ${escapeHtml(client?.name || receiverCompany?.name || "Cliente")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
+                          <p>${escapeHtml(invoice.issuerName || issuerProfile.issuerName || "Tu cuenta")} cobra a ${escapeHtml(client?.name || receiverCompany?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(invoice.dueDate))}${invoice.autoGenerate ? ` · ${escapeHtml(invoice.autoFrequency || "Mensual")}` : ""}</p>
                             ${renderFinancePartyFlow(invoice, { compact: true, showMeta: true })}
                           </div>
                           <strong>${formatMoney(invoice.amount, invoice.currency || "COP")}</strong>
@@ -3719,7 +3741,7 @@ function renderFinancePanel() {
                           <span class="finance-avatar"><i data-lucide="archive-restore"></i></span>
                           <div>
                             <strong>${escapeHtml(invoice.number || billingDocumentNumber(invoice))}</strong>
-                            <p>${escapeHtml(client?.name || "Cliente")} · recuperable hasta ${escapeHtml(shortDateLabel((invoice.deletionExpiresAt || "").slice(0, 10)))}</p>
+                            <p>${escapeHtml(client?.name || "Empresa")} · recuperable hasta ${escapeHtml(shortDateLabel((invoice.deletionExpiresAt || "").slice(0, 10)))}</p>
                           </div>
                           <div class="finance-row-actions">
                             <button class="secondary-button icon-button compact" type="button" data-finance-invoice-restore="${escapeHtml(invoice.id)}" aria-label="Recuperar documento"><i data-lucide="archive-restore"></i></button>
@@ -3892,7 +3914,7 @@ function renderSettingsPanel() {
           </button>
           <button type="button" data-settings-open="clients">
             <span class="status-icon"><i data-lucide="users"></i></span>
-            <div><strong>Clientes</strong><small>Servicios, cobros y accesos.</small></div>
+            <div><strong>Operación</strong><small>Servicios y cobros por empresa.</small></div>
             <i data-lucide="chevron-right"></i>
           </button>
           <button type="button" data-settings-open="finances">
@@ -3968,7 +3990,7 @@ function renderSettingsPanel() {
             <label class="field compact">
               <span>Foto o logo</span>
               <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(companyPhotoUrl)}" placeholder="/content/uploads/logo.jpg o https://..." />
-              <small>Esta imagen se usa en empresa, calendario, clientes, cobros y menú móvil.</small>
+              <small>Esta imagen se usa en empresa, calendario, operación, cobros y menú móvil.</small>
               ${mediaUrlHelperMarkup(companyPhotoUrl, "logo")}
             </label>
           </div>
@@ -3995,7 +4017,7 @@ function renderSettingsPanel() {
           <div>
             <span>Próximo documento</span>
             <strong>${escapeHtml(documentNumberPreview)}</strong>
-            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerProfile.issuerName || "Tu cuenta")} · Recibe la empresa o cliente elegido al crearla.</small>
+            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerProfile.issuerName || "Tu cuenta")} · Recibe la empresa elegida al crearla.</small>
           </div>
           <button class="primary-button icon-text-button" type="button" data-settings-open="clients">
             <i data-lucide="file-text"></i>
@@ -4141,7 +4163,7 @@ function renderIssuerProfileManager(issuerProfile = currentIssuerProfile()) {
         <div>
           <span class="workspace-label">Perfil principal</span>
           <h4>Emisor de tus cuentas de cobro</h4>
-          <p>Este perfil pertenece al usuario que inició sesión. Tus empresas/clientes solo se seleccionan como receptores del documento.</p>
+          <p>Este perfil pertenece al usuario que inició sesión. Las empresas creadas solo se seleccionan como receptoras del documento.</p>
         </div>
         <button class="secondary-button icon-text-button compact" type="button" data-settings-issuer-edit="current-user">
           <i data-lucide="pencil"></i>
@@ -4182,8 +4204,8 @@ async function syncSettingsCompanyField(field, rawValue, options = {}) {
 function automationBlueprint(service) {
   const id = service?.id || "";
   const generic = [
-    ["Cobro creado", "Cuenta de cobro generada y vinculada al cliente."],
-    ["Brief del cliente", "Solicitar objetivo, referencias, fechas y aprobador."],
+    ["Cobro creado", "Cuenta de cobro generada y vinculada a la empresa."],
+    ["Brief de la empresa", "Solicitar objetivo, referencias, fechas y aprobador."],
     ["Produccion", "Ejecutar el servicio con recursos internos."],
     ["Entrega", "Enviar avance al cliente y cerrar pendientes."],
   ];
@@ -4232,7 +4254,7 @@ function automationBlueprint(service) {
     ],
     "ai-content": [
       ["Cobro creado", "Cuenta de cobro generada para IA creativa."],
-      ["Perfil del cliente", "Definir tono, oferta, audiencia y objeciones."],
+      ["Perfil de la empresa", "Definir tono, oferta, audiencia y objeciones."],
       ["Prompts base", "Crear prompts para guiones, copies e imágenes."],
       ["Calendario IA", "Proponer ideas y piezas para la empresa."],
       ["Aprobacion", "Enviar selección editable al cliente."],
@@ -4450,11 +4472,11 @@ function renderStorePanel() {
       <div>
         <span class="status-icon large"><i data-lucide="shopping-bag"></i></span>
         <div>
-          <span class="workspace-label">${storeAdmin ? "Super admin" : "Panel del cliente"}</span>
+          <span class="workspace-label">${storeAdmin ? "Super admin" : "Panel de empresa"}</span>
           <h2>${storeAdmin ? `Administrador de servicios de ${escapeHtml(activeAgency().name)}` : "Mis servicios y pedidos"}</h2>
           <p>${
             storeAdmin
-              ? "Gestiona lo que se vende en la página pública, asigna servicios a clientes y recibe pedidos en operación."
+              ? `Gestiona lo que se vende en la página pública, asigna servicios a empresas y recibe pedidos en ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.`
               : "Revisa los servicios comprados, pedidos activos y planes disponibles para tu empresa."
           }</p>
         </div>
@@ -4485,7 +4507,7 @@ function renderStorePanel() {
             </div>
             <label class="field compact">
               <span>Dominio</span>
-              <input data-provision-field="domain" type="text" placeholder="cliente.com" value="${escapeHtml(serviceProvisionDraft.domain)}" />
+              <input data-provision-field="domain" type="text" placeholder="empresa.com" value="${escapeHtml(serviceProvisionDraft.domain)}" />
             </label>
             <button class="secondary-button icon-text-button" type="button" data-check-domain>
               <i data-lucide="globe-2"></i>
@@ -4493,7 +4515,7 @@ function renderStorePanel() {
             </button>
             <label class="field compact">
               <span>Email técnico</span>
-              <input data-provision-field="contactEmail" type="email" placeholder="admin@cliente.com" value="${escapeHtml(serviceProvisionDraft.contactEmail || selectedClient?.email || "")}" />
+              <input data-provision-field="contactEmail" type="email" placeholder="admin@empresa.com" value="${escapeHtml(serviceProvisionDraft.contactEmail || selectedClient?.email || "")}" />
             </label>
             <label class="field compact">
               <span>Plan cPanel</span>
@@ -4534,7 +4556,7 @@ function renderStorePanel() {
     <section class="store-summary">
       <article><span>${storeAdmin ? "Catálogo" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
       <article><span>${storeAdmin ? "Pedidos agencia" : "Tus pedidos"}</span><strong>${storeAdmin ? activeOrders.length : selectedOrders.length}</strong></article>
-      <article><span>Cliente actual</span><strong>${selectedOrders.length}</strong></article>
+      <article><span>Empresa actual</span><strong>${selectedOrders.length}</strong></article>
       <article><span>${storeAdmin ? "Valor vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0), "COP")}</strong></article>
     </section>
 
@@ -4606,7 +4628,7 @@ function renderStorePanel() {
 
       <aside class="store-client-panel">
         <div class="section-heading small">
-          <h2>${escapeHtml(selectedClient?.name || "Sin cliente")}</h2>
+          <h2>${escapeHtml(selectedClient?.name || "Sin empresa")}</h2>
           <p>Servicios comprados y estado de entrega.</p>
         </div>
         <div class="store-order-list">
@@ -4627,7 +4649,7 @@ function renderStorePanel() {
                     `
                   )
                   .join("")
-              : `<div class="empty-state compact"><strong>Sin compras</strong><p>Compra un servicio para activar la operación de este cliente.</p></div>`
+            : `<div class="empty-state compact"><strong>Sin compras</strong><p>Compra o asigna un servicio para activar la operación de esta empresa.</p></div>`
           }
         </div>
         ${
@@ -4638,7 +4660,7 @@ function renderStorePanel() {
               </button>`
             : `<button class="secondary-button icon-text-button" type="button" data-store-open-clients>
                 <i data-lucide="users"></i>
-                Administrar en Clientes
+                Administrar operación
               </button>`
         }
       </aside>
@@ -4665,7 +4687,7 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
     {
       icon: "receipt-text",
       title: "Cobros y entregas",
-      text: "Pedidos, cuentas de cobro, estados y seguimiento para cada cliente.",
+      text: "Pedidos, cuentas de cobro, estados y seguimiento para cada empresa.",
     },
   ];
 
@@ -4676,13 +4698,13 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
         <h3>${storeAdmin ? "Convierte tu catalogo en una operacion vendible" : `Panel comercial de ${escapeHtml(selectedClient?.name || activeCompany().name)}`}</h3>
         <p>${
           storeAdmin
-            ? "Publica servicios, asigna productos manualmente, recibe pedidos y conecta la entrega con clientes, cobros y automatizaciones."
+            ? "Publica servicios, asigna productos manualmente, recibe pedidos y conecta la entrega con empresas, cobros y automatizaciones."
             : "Aqui ves lo comprado, lo disponible para solicitar y lo que tu agencia esta preparando para tu empresa."
         }</p>
         <div class="store-experience-actions">
           <button class="primary-button icon-text-button" type="button" data-store-open-clients>
             <i data-lucide="${storeAdmin ? "users" : "layout-dashboard"}"></i>
-            ${storeAdmin ? "Ver clientes" : "Ver mi panel"}
+            ${storeAdmin ? "Ver operación" : "Ver mi panel"}
           </button>
           <button class="secondary-button icon-text-button" type="button" data-store-open-finances>
             <i data-lucide="receipt-text"></i>
@@ -4751,7 +4773,7 @@ function renderAutomationCenter() {
         <span class="status-icon large"><i data-lucide="workflow"></i></span>
         <div>
           <h2>Operación automática de ${escapeHtml(activeAgency().name)}</h2>
-          <p>Cada venta dispara pasos, cobros, proveedores y entregas para el cliente correcto.</p>
+          <p>Cada venta dispara pasos, cobros, proveedores y entregas para la empresa correcta.</p>
         </div>
       </div>
       <div class="automation-score" style="--score: ${progress}%">
@@ -4778,7 +4800,7 @@ function renderAutomationCenter() {
         <span class="pill ${provisioningStatus?.mode?.live ? "done" : "muted"}">${escapeHtml(provisioningStatus?.mode?.label || "sin revisar")}</span>
       </article>
       ${connectorCard("cpanel", provisioningStatus?.cpanel, "Crea hosting, correos y prepara sitios web comprados.")}
-      ${connectorCard("enom", provisioningStatus?.enom, "Compra dominios y registra datos técnicos del cliente.")}
+      ${connectorCard("enom", provisioningStatus?.enom, "Compra dominios y registra datos técnicos de la empresa.")}
       <button class="secondary-button icon-text-button" type="button" data-refresh-providers>
         <i data-lucide="refresh-cw"></i>
         Revisar proveedores
@@ -4800,7 +4822,7 @@ function renderAutomationCenter() {
                         <span class="status-icon"><i data-lucide="${serviceIcon(serviceById(order.serviceId))}"></i></span>
                         <div>
                           <strong>${escapeHtml(order.serviceName)}</strong>
-                          <p>${escapeHtml(client?.name || "Cliente")} · ${formatMoney(order.amount, order.currency)}</p>
+                          <p>${escapeHtml(client?.name || "Empresa")} · ${formatMoney(order.amount, order.currency)}</p>
                         </div>
                         <span class="pill ${serviceOrderStatusClass(order.status)}">${escapeHtml(order.status)}</span>
                       </header>
@@ -4840,7 +4862,7 @@ function renderAutomationCenter() {
                         }
                         <button class="primary-button icon-text-button" type="button" data-center-client="${order.clientId}">
                           <i data-lucide="folder-open"></i>
-                          Ver cliente
+                          Ver empresa
                         </button>
                       </footer>
                     </article>
@@ -5003,7 +5025,7 @@ function generateClientInvoice(clientId) {
   if (!client) return;
   const existing = invoices.find((invoice) => !invoice.deletedAt && invoice.clientId === client.id && invoice.status !== "Pagada");
   if (existing) {
-    showToast("Este cliente ya tiene un cobro pendiente.");
+    showToast("Esta empresa ya tiene un cobro pendiente.");
     return;
   }
   syncBillingDraftDefaults();
@@ -5014,6 +5036,7 @@ function generateClientInvoice(clientId) {
     {
       id: `invoice-${client.id}-${Date.now()}`,
       agencyId: activeAgencyId,
+      adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
       clientId: client.id,
       companyId: client.companyId,
       issuerProfileId: currentSession().id || "current-user",
@@ -5069,6 +5092,7 @@ function ensureRecurringBillingDocuments() {
       {
         id: invoiceId,
         agencyId: activeAgencyId,
+        adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
         clientId: client.id,
         companyId: client.companyId,
         issuerProfileId: currentSession().id || "current-user",
@@ -5121,7 +5145,7 @@ function createFinanceDocument() {
   const service = serviceById(serviceId);
   const client = clients.find((item) => item.id === clientId);
   if (!client) {
-    showToast("Selecciona un cliente para crear la cuenta.");
+    showToast("Selecciona una empresa para crear la cuenta.");
     return;
   }
   syncBillingDraftDefaults();
@@ -5138,6 +5162,7 @@ function createFinanceDocument() {
     {
       id: invoiceId,
       agencyId: activeAgencyId,
+      adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
       clientId: client.id,
       companyId: client.companyId,
       issuerProfileId: currentSession().id || "current-user",
@@ -5406,7 +5431,7 @@ function purchaseServiceForClient(serviceId) {
   const service = serviceById(serviceId);
   const client = isClientPortalSession() ? clientForCompany() : clients.find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
   if (!service || !client) {
-    showToast("Selecciona cliente y servicio.");
+    showToast("Selecciona empresa y servicio.");
     return;
   }
   if (!validateProvisioningForService(service, client)) return;
@@ -5418,6 +5443,7 @@ function purchaseServiceForClient(serviceId) {
   const order = {
     id: `order-${client.id}-${service.id}-${Date.now()}`,
     agencyId: activeAgencyId,
+    adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
     clientId: client.id,
     companyId: client.companyId,
     serviceId: service.id,
@@ -5440,6 +5466,7 @@ function purchaseServiceForClient(serviceId) {
     {
       id: `invoice-${order.id}`,
       agencyId: activeAgencyId,
+      adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
       clientId: client.id,
       companyId: client.companyId,
       issuerProfileId: currentSession().id || "current-user",
@@ -5527,6 +5554,7 @@ function createServiceOrderFromPurchase(purchase, client) {
   const order = {
     id: `order-${client.id}-${purchase.id || purchase.serviceId}-${Date.now()}`,
     agencyId: activeAgencyId,
+    adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
     clientId: client.id,
     companyId: client.companyId,
     serviceId: purchase.serviceId || service.id,
@@ -5550,6 +5578,7 @@ function createServiceOrderFromPurchase(purchase, client) {
     {
       id: `invoice-${order.id}`,
       agencyId: activeAgencyId,
+      adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
       clientId: client.id,
       companyId: client.companyId,
       issuerProfileId: currentSession().id || "current-user",
@@ -5598,7 +5627,7 @@ function applyPendingLandingPurchases() {
   persistState();
   renderStorePanel();
   renderAutomationCenter();
-  showToast(`${purchases.length} compra${purchases.length === 1 ? "" : "s"} agregada${purchases.length === 1 ? "" : "s"} al cliente ${client.name}.`);
+  showToast(`${purchases.length} compra${purchases.length === 1 ? "" : "s"} agregada${purchases.length === 1 ? "" : "s"} a la empresa ${client.name}.`);
 }
 
 function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
@@ -5622,7 +5651,7 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
       <article class="store-admin-card">
         <span>Pedidos activos</span>
         <strong>${pendingOrders}</strong>
-        <small>${escapeHtml(selectedClient?.name || "Sin cliente")}</small>
+        <small>${escapeHtml(selectedClient?.name || "Sin empresa")}</small>
       </article>
       <div class="store-admin-form">
         <input data-store-new-service="name" placeholder="Nuevo servicio o producto" />
@@ -5641,7 +5670,7 @@ function renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, sele
   const orders = storeAdmin ? activeOrders.slice(0, 6) : selectedOrders;
   const title = storeAdmin ? "Pedidos recibidos" : "Servicios activos";
   const detail = storeAdmin
-    ? "Atiende solicitudes, marca avances y cambia de cliente sin salir de Tienda."
+    ? "Atiende solicitudes, marca avances y cambia de empresa sin salir de Tienda."
     : "Aquí ves lo que ya está comprado o solicitado para esta empresa.";
   return `
     <section class="store-orders-board">
@@ -5651,7 +5680,7 @@ function renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, sele
           <h3>${title}</h3>
           <p>${detail}</p>
         </div>
-        ${storeAdmin ? `<button class="secondary-button icon-text-button compact" type="button" data-store-open-clients><i data-lucide="users"></i> Clientes</button>` : ""}
+        ${storeAdmin ? `<button class="secondary-button icon-text-button compact" type="button" data-store-open-clients><i data-lucide="users"></i> Operación</button>` : ""}
       </header>
       <div class="store-order-board-list">
         ${
@@ -5665,13 +5694,13 @@ function renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, sele
                       <span class="status-icon small"><i data-lucide="${serviceIcon(serviceById(order.serviceId))}"></i></span>
                       <div>
                         <strong>${escapeHtml(order.serviceName)}</strong>
-                        <small>${escapeHtml(client?.name || selectedClient?.name || "Cliente")} · ${formatMoney(order.amount, order.currency || "COP")}</small>
+                        <small>${escapeHtml(client?.name || selectedClient?.name || "Empresa")} · ${formatMoney(order.amount, order.currency || "COP")}</small>
                       </div>
                       <span class="pill ${serviceOrderStatusClass(order.status)}">${escapeHtml(order.status)}</span>
                       ${
                         storeAdmin
                           ? `<div class="store-order-row-actions">
-                              <button class="secondary-button icon-button compact" type="button" data-store-focus-client="${escapeHtml(order.clientId)}" aria-label="Ver cliente"><i data-lucide="arrow-up-right"></i></button>
+                              <button class="secondary-button icon-button compact" type="button" data-store-focus-client="${escapeHtml(order.clientId)}" aria-label="Ver empresa"><i data-lucide="arrow-up-right"></i></button>
                               <button class="secondary-button icon-button compact" type="button" data-store-order-status="${escapeHtml(order.id)}" data-next-status="${escapeHtml(nextStatus)}" aria-label="Actualizar estado"><i data-lucide="${nextStatus === "Completado" ? "check" : "play"}"></i></button>
                             </div>`
                           : ""
@@ -5690,7 +5719,7 @@ function renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, sele
 function saveBillingDocument() {
   const client = clients.find((item) => item.id === billingDraft.clientId);
   if (!client) {
-    showToast("Selecciona un cliente.");
+    showToast("Selecciona una empresa.");
     return;
   }
   const subtotal = billingDraftSubtotal();
@@ -5705,6 +5734,7 @@ function saveBillingDocument() {
     ...(existingDocument || {}),
     id: existingDocument?.id || `invoice-${client.id}-${Date.now()}`,
     agencyId: activeAgencyId,
+    adminAccountEmail: existingDocument?.adminAccountEmail || activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
     clientId: client.id,
     companyId: client.companyId,
     issuerProfileId: currentSession().id || "current-user",
@@ -5785,6 +5815,7 @@ function currentBillingDocument() {
   return {
     id: `draft-${client.id}`,
     agencyId: activeAgencyId,
+    adminAccountEmail: activeAgency().adminAccountEmail || APP_ADMIN_EMAIL,
     clientId: client.id,
     companyId: client.companyId,
     issuerProfileId: currentSession().id || "current-user",
@@ -5827,7 +5858,7 @@ function billingDocumentNumber(documentData = {}) {
 function billingDocumentFileName(documentData = currentBillingDocument()) {
   const client = clients.find((item) => item.id === documentData?.clientId);
   const label = slugify(documentData?.documentType || "documento") || "documento";
-  const clientName = slugify(client?.name || "cliente") || "cliente";
+  const clientName = slugify(client?.name || "empresa") || "empresa";
   const number = slugify(billingDocumentNumber(documentData).toLowerCase()) || Date.now();
   return `${label}-${clientName}-${number}.html`;
 }
@@ -5872,8 +5903,8 @@ ${documentData.issuerNit ? `NIT/ID: ${documentData.issuerNit}` : ""}
 ${documentData.issuerPhone ? `Celular: ${documentData.issuerPhone}` : ""}
 ${documentData.issuerEmail ? `Correo: ${documentData.issuerEmail}` : ""}
 
-CLIENTE
-${client.name || "Cliente"}
+EMPRESA RECEPTORA
+${client.name || "Empresa"}
 ${documentData.clientNit ? `NIT/ID: ${documentData.clientNit}` : ""}
 ${documentData.clientPhone ? `Celular: ${documentData.clientPhone}` : ""}
 ${documentData.clientEmail || client.email ? `Correo: ${documentData.clientEmail || client.email}` : ""}
@@ -5994,8 +6025,8 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
           <p>${escapeHtml(issuer.email ? `Correo: ${issuer.email}` : "")}</p>
         </div>
         <div class="box">
-          <span>Cliente</span>
-          <strong>${escapeHtml(client.name || "Cliente")}</strong>
+          <span>Empresa receptora</span>
+          <strong>${escapeHtml(client.name || "Empresa")}</strong>
           <p>${escapeHtml(documentData.clientNit ? `NIT/ID: ${documentData.clientNit}` : client.contact || "")}</p>
           <p>${escapeHtml(documentData.clientPhone ? `Celular: ${documentData.clientPhone}` : "")}</p>
           <p>${escapeHtml(documentData.clientEmail || client.email ? `Correo: ${documentData.clientEmail || client.email}` : "")}</p>
@@ -6031,7 +6062,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
 function downloadBillingDocumentHtml(documentData = currentBillingDocument()) {
   const html = billingDocumentHtml(documentData);
   if (!html) {
-    showToast("Selecciona un cliente para descargar el documento.");
+    showToast("Selecciona una empresa para descargar el documento.");
     return;
   }
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -6097,7 +6128,7 @@ async function downloadBillingPdf(documentData = currentBillingDocument()) {
 function openBillingPdf(documentData = currentBillingDocument()) {
   const html = billingDocumentHtml(documentData);
   if (!html) {
-    showToast("Selecciona un cliente para generar el PDF.");
+    showToast("Selecciona una empresa para generar el PDF.");
     return;
   }
   const printWindow = window.open("", "_blank");
@@ -6133,7 +6164,7 @@ function whatsappPhone(value) {
 async function documentAction(action) {
   const documentData = currentBillingDocument();
   if (!documentData) {
-    showToast("Selecciona un cliente y un documento.");
+    showToast("Selecciona una empresa y un documento.");
     return;
   }
   const subtotal = billingDocumentSubtotal(documentData);
@@ -6142,7 +6173,7 @@ async function documentAction(action) {
   const documentType = documentData?.documentType || "Cuenta de cobro";
   const recipientEmail = documentData?.clientEmail || client?.email || "";
   const recipientPhone = whatsappPhone(documentData?.clientPhone || client?.phone);
-  const message = `${documentType} ${documentNumber} para ${client?.name || "cliente"} por ${formatMoney(subtotal, "COP")}`;
+  const message = `${documentType} ${documentNumber} para ${client?.name || "empresa"} por ${formatMoney(subtotal, "COP")}`;
   if (action === "pdf") {
     openBillingPdf(documentData);
     return;
@@ -6232,7 +6263,7 @@ async function documentAction(action) {
     downloadBillingDocumentHtml(documentData);
   }
   window.open(`https://wa.me/${recipientPhone}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
-  showToast(`${recipientPhone ? "WhatsApp del cliente abierto" : "WhatsApp preparado"}. Adjunta el PDF descargado: ${documentNumber}.`);
+  showToast(`${recipientPhone ? "WhatsApp de la empresa abierto" : "WhatsApp preparado"}. Adjunta el PDF descargado: ${documentNumber}.`);
 }
 
 function updateClientProfile(clientId, field, value) {
@@ -6321,7 +6352,7 @@ function generateClientAiProfile(clientId) {
   persistState();
   renderClientBillingPanel();
   renderDashboard();
-  showToast("Perfil IA generado para el cliente.");
+  showToast("Perfil IA generado para la empresa.");
 }
 
 async function addCompanyMember(companyId) {
@@ -6442,7 +6473,7 @@ function markClientInvoicePaid(clientId) {
     return { ...invoice, status: "Pagada", paidAt: new Date().toISOString() };
   });
   if (!changed) {
-    showToast("No hay cobros pendientes para este cliente.");
+    showToast("No hay cobros pendientes para esta empresa.");
     return;
   }
   financeTransactions = [...paidTransactions, ...financeTransactions];
@@ -6678,7 +6709,7 @@ function renderAccessSummary(company, client) {
       <article>
         <span class="dashboard-icon"><i data-lucide="shopping-bag"></i></span>
         <div>
-          <span class="workspace-label">Servicios del cliente</span>
+          <span class="workspace-label">Servicios de empresa</span>
           <strong>${escapeHtml(client?.name || company.name)}</strong>
           <p>${orders.length} compra${orders.length === 1 ? "" : "s"} · ${activeModules.length} modulo${activeModules.length === 1 ? "" : "s"} visible${activeModules.length === 1 ? "" : "s"} en su panel</p>
         </div>
@@ -6695,7 +6726,7 @@ function renderOnboardingNextSteps(company, client) {
   const persona = session.metadata?.onboarding?.persona || (session.role === "agency_owner" ? "agency" : session.role === "creator" ? "creator" : "business");
   const stepsByPersona = {
     agency: [
-      { icon: "users", title: "Crea o importa clientes", detail: "Cada cliente puede tener empresa, servicios, cobros, guiones y permisos separados.", view: "clients", action: "Ver clientes" },
+      { icon: "users", title: "Crea o importa empresas", detail: "Cada empresa puede tener servicios, cobros, guiones y permisos separados.", view: "clients", action: "Ver operación" },
       { icon: "store", title: "Activa servicios vendibles", detail: "Define planes, reels, ads, hosting, dominios y paginas para vender desde la plataforma.", view: "store", action: "Abrir tienda" },
       { icon: "mail-check", title: "Prueba invitaciones", detail: "Invita un cliente o aprobador para validar el portal limitado por empresa.", view: "clients", action: "Invitar" },
     ],
@@ -6838,7 +6869,7 @@ function renderDashboard() {
       ? dashboardInsight("layers", "Agrega recursos", "La biblioteca esta vacia; sube videos o conecta Drive para acelerar publicaciones.", "Abrir biblioteca", "library")
       : dashboardInsight("layers", "Biblioteca activa", `${company.videos.length} recurso${company.videos.length === 1 ? "" : "s"} disponible${company.videos.length === 1 ? "" : "s"} para crear piezas.`, "Ver recursos", "library"),
     openInvoices.length
-      ? dashboardInsight("wallet", "Cobro pendiente", `${openInvoices.length} documento${openInvoices.length === 1 ? "" : "s"} abierto${openInvoices.length === 1 ? "" : "s"} para esta empresa.`, "Ver clientes", "clients")
+      ? dashboardInsight("wallet", "Cobro pendiente", `${openInvoices.length} documento${openInvoices.length === 1 ? "" : "s"} abierto${openInvoices.length === 1 ? "" : "s"} para esta empresa.`, "Ver operación", "clients")
       : dashboardInsight("wallet", "Cobros al dia", "No hay documentos pendientes para esta empresa.", "Crear cobro", "clients"),
   ];
   const completion = Math.min(
@@ -10556,7 +10587,7 @@ function companyDetailView(company) {
           <div>
             <small>Responsable</small>
             <strong>${escapeHtml(primaryContact)}</strong>
-            <p>${escapeHtml(client?.email || client?.phone || "Agrega correo, NIT y teléfono desde Clientes.")}</p>
+            <p>${escapeHtml(client?.email || client?.phone || "Agrega correo, NIT y teléfono desde Operación.")}</p>
           </div>
         </article>
       </section>
@@ -10942,7 +10973,7 @@ function reviewCalendarPublication(publicationId, decision) {
     };
   });
   jobs = jobs.map((job) => (job.publicationId === publicationId ? { ...job, status: approved ? "Aprobado" : "En revisión" } : job));
-  addActivity("review", approved ? "Guion aprobado" : "Ajustes solicitados", note || "Revision registrada desde el portal del cliente.", {
+  addActivity("review", approved ? "Guion aprobado" : "Ajustes solicitados", note || "Revision registrada desde el portal de aprobacion.", {
     companyId: activeCompanyId,
     publicationId,
   });
@@ -12882,7 +12913,7 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     }
     persistState();
     renderClientBillingPanel();
-    showToast(`Cliente activo: ${client?.name || "cuenta seleccionada"}.`);
+    showToast(`Empresa activa: ${client?.name || "cuenta seleccionada"}.`);
     return;
   }
 
@@ -13041,7 +13072,7 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     activeCompanyId = openButton.dataset.clientOpenCompany;
     refreshCompanyContext();
     setView("companies");
-    showToast("Cuenta del cliente abierta.");
+    showToast("Empresa abierta.");
     return;
   }
 
@@ -13051,7 +13082,7 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     persistState();
     renderStorePanel();
     setView("store");
-    showToast("Tienda abierta para este cliente.");
+    showToast("Tienda abierta para esta empresa.");
     return;
   }
 
@@ -13184,7 +13215,7 @@ storePanel.addEventListener("click", (event) => {
     billingDraft.clientId = focusClientButton.dataset.storeFocusClient;
     persistState();
     renderStorePanel();
-    showToast("Cliente seleccionado en Tienda.");
+    showToast("Empresa seleccionada en Tienda.");
     return;
   }
 
