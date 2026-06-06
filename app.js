@@ -4620,6 +4620,108 @@ async function provisionServiceOrder(orderId) {
   }
 }
 
+function renderStoreCommerceFlow({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], publicServices = [], pendingOrders = 0, completedOrders = 0 }) {
+  const clientName = selectedClient?.name || activeCompany().name;
+  const orderCount = storeAdmin ? activeOrders.length : selectedOrders.length;
+  const openOrders = storeAdmin ? pendingOrders : selectedOrders.filter((order) => order.status !== "Completado").length;
+  const steps = storeAdmin
+    ? [
+        {
+          icon: "globe-2",
+          title: "Publicar",
+          value: publicServices.length,
+          detail: "Servicios visibles en la pagina externa.",
+        },
+        {
+          icon: "shopping-bag",
+          title: "Recibir",
+          value: orderCount,
+          detail: "Pedidos y asignaciones por empresa.",
+        },
+        {
+          icon: "receipt-text",
+          title: "Cobrar",
+          value: pendingOrders,
+          detail: "Cuentas y facturas listas para gestionar.",
+        },
+        {
+          icon: "badge-check",
+          title: "Entregar",
+          value: completedOrders,
+          detail: "Servicios completados o cerrados.",
+        },
+      ]
+    : [
+        {
+          icon: "shopping-bag",
+          title: "Comprar",
+          value: servicesForStore.length,
+          detail: "Servicios disponibles para esta empresa.",
+        },
+        {
+          icon: "receipt-text",
+          title: "Cobro",
+          value: selectedOrders.length,
+          detail: "Compras vinculadas a tu cuenta.",
+        },
+        {
+          icon: "workflow",
+          title: "Produccion",
+          value: openOrders,
+          detail: "Seguimiento de avances y pendientes.",
+        },
+        {
+          icon: "lock-keyhole",
+          title: "Acceso",
+          value: selectedClient ? 1 : 0,
+          detail: "Modulos visibles segun lo comprado.",
+        },
+      ];
+
+  return `
+    <section class="store-commerce-flow">
+      <header>
+        <div>
+          <span class="workspace-label">${storeAdmin ? "Operacion comercial" : "Ruta del servicio"}</span>
+          <h3>${storeAdmin ? "De la pagina publica a la entrega del cliente" : `Asi se activa un servicio para ${escapeHtml(clientName)}`}</h3>
+          <p>${
+            storeAdmin
+              ? "Cada servicio se puede vender afuera, asignar manualmente desde tu agencia y seguir hasta cobro, produccion y entrega."
+              : "El cliente solo ve lo que compra o lo que tu agencia le asigna. Todo queda ordenado por empresa."
+          }</p>
+        </div>
+        <div class="store-flow-actions">
+          <button class="secondary-button icon-text-button" type="button" data-store-open-finances>
+            <i data-lucide="receipt-text"></i>
+            Cobros
+          </button>
+          <button class="primary-button icon-text-button" type="button" ${storeAdmin ? "data-store-open-clients" : "data-store-open-accounts"}>
+            <i data-lucide="${storeAdmin ? "users" : "layout-dashboard"}"></i>
+            ${storeAdmin ? "Clientes" : "Mi acceso"}
+          </button>
+        </div>
+      </header>
+      <div class="store-flow-steps">
+        ${steps
+          .map(
+            (step, index) => `
+              <article class="store-flow-step">
+                <span class="status-icon"><i data-lucide="${step.icon}"></i></span>
+                <div>
+                  <small>Paso ${index + 1}</small>
+                  <strong>${escapeHtml(step.title)}</strong>
+                  <p>${escapeHtml(step.detail)}</p>
+                </div>
+                <b>${escapeHtml(String(step.value))}</b>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderStorePanel() {
   if (!storePanel) return;
   ensureAgencyClients();
@@ -4673,6 +4775,8 @@ function renderStorePanel() {
     </section>
 
     ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
+
+    ${renderStoreCommerceFlow({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicServices, pendingOrders, completedOrders })}
 
     <section class="store-mode-strip">
       <article>
