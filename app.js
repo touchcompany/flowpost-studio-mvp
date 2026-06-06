@@ -4535,6 +4535,8 @@ function renderStorePanel() {
   ensureServiceOrderAutomations();
   const session = currentSession();
   const storeAdmin = isTouchSuperAdmin(session);
+  storePanel.classList.toggle("store-admin-mode", storeAdmin);
+  storePanel.classList.toggle("store-customer-mode", !storeAdmin);
   const portalMode = isClientPortalSession();
   const portalClient = clientForCompany();
   const clientsForStore = storeAdmin ? activeAgencyClients() : portalMode && portalClient ? [portalClient] : [clientForCompany()].filter(Boolean);
@@ -4543,6 +4545,11 @@ function renderStorePanel() {
   const activeOrders = storeAdmin ? serviceOrders.filter((order) => order.agencyId === activeAgencyId) : selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const selectedOrders = selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const revenue = activeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const publicServices = servicesForStore.filter((service) => service.clientVisible !== false);
+  const privateServices = servicesForStore.length - publicServices.length;
+  const pendingOrders = activeOrders.filter((order) => ["Solicitado", "En proceso", "Pendiente"].includes(order.status)).length;
+  const completedOrders = activeOrders.filter((order) => order.status === "Completado").length;
+  const selectedRevenue = selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
   const groups = [...new Set(servicesForStore.map((service) => service.group || "Servicio"))];
   const publicStoreUrl = `${window.location.origin || "https://app.touch.com.co"}/landing.html#planes`;
   const cpanelPlans = provisioningStatus?.cpanel?.plans || {};
@@ -4575,6 +4582,30 @@ function renderStorePanel() {
     </section>
 
     ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
+
+    <section class="store-mode-strip">
+      <article>
+        <span class="status-icon small"><i data-lucide="${storeAdmin ? "shield-check" : "badge-check"}"></i></span>
+        <div>
+          <strong>${storeAdmin ? "Modo super admin" : "Modo cliente"}</strong>
+          <small>${storeAdmin ? "Puedes publicar, ocultar, asignar y ver pedidos de todas las empresas." : "Solo ves servicios disponibles y compras asociadas a esta empresa."}</small>
+        </div>
+      </article>
+      <article>
+        <span class="status-icon small"><i data-lucide="${storeAdmin ? "store" : "shopping-bag"}"></i></span>
+        <div>
+          <strong>${storeAdmin ? `${publicServices.length} públicos` : `${selectedOrders.length} compras`}</strong>
+          <small>${storeAdmin ? `${privateServices} privados para asignar manualmente` : "Los módulos se activan según lo comprado"}</small>
+        </div>
+      </article>
+      <article>
+        <span class="status-icon small"><i data-lucide="receipt-text"></i></span>
+        <div>
+          <strong>${storeAdmin ? `${pendingOrders} pendientes` : formatMoney(selectedRevenue, "COP")}</strong>
+          <small>${storeAdmin ? `${completedOrders} completados en esta agencia` : "Inversión visible de esta empresa"}</small>
+        </div>
+      </article>
+    </section>
 
     ${
       storeAdmin
@@ -4635,10 +4666,10 @@ function renderStorePanel() {
     }
 
     <section class="store-summary">
-      <article><span>${storeAdmin ? "Catálogo público" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
-      <article><span>${storeAdmin ? "Pedidos recibidos" : "Tus pedidos"}</span><strong>${storeAdmin ? activeOrders.length : selectedOrders.length}</strong></article>
-      <article><span>Empresa actual</span><strong>${selectedOrders.length}</strong></article>
-      <article><span>${storeAdmin ? "Valor vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0), "COP")}</strong></article>
+      <article><span>${storeAdmin ? "Servicios visibles" : "Disponibles"}</span><strong>${storeAdmin ? publicServices.length : servicesForStore.length}</strong></article>
+      <article><span>${storeAdmin ? "Privados" : "Comprados"}</span><strong>${storeAdmin ? privateServices : selectedOrders.length}</strong></article>
+      <article><span>${storeAdmin ? "En proceso" : "Empresa"}</span><strong>${storeAdmin ? pendingOrders : selectedClient ? "1" : "0"}</strong></article>
+      <article><span>${storeAdmin ? "Vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedRevenue, "COP")}</strong></article>
     </section>
 
     ${renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, selectedOrders })}

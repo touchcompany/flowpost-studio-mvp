@@ -11471,6 +11471,43 @@ input[type="file"] {
   margin-top: 4px;
 }
 
+.store-mode-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.store-mode-strip article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 14px 36px rgba(17, 17, 17, 0.045);
+}
+
+.store-mode-strip strong,
+.store-mode-strip small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-mode-strip small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .store-experience-metrics {
   display: grid;
   gap: 10px;
@@ -11655,7 +11692,7 @@ input[type="file"] {
 }
 
 .store-summary article {
-  padding: 14px;
+  padding: 13px 14px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.82);
@@ -11776,6 +11813,9 @@ input[type="file"] {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(0, 149, 246, 0.12), transparent 34%),
+    rgba(255, 255, 255, 0.86);
 }
 
 .store-admin-card strong,
@@ -11943,13 +11983,14 @@ input[type="file"] {
 
 .store-service-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
   gap: 10px;
 }
 
 .store-service-card {
   display: grid;
-  gap: 12px;
+  gap: 11px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 20px;
@@ -11981,8 +12022,9 @@ input[type="file"] {
 
 .store-service-icon {
   display: grid;
-  width: 48px;
-  height: 48px;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
   place-items: center;
   border-radius: 18px;
   background: linear-gradient(145deg, #ffffff, #f4f4f5);
@@ -11992,8 +12034,8 @@ input[type="file"] {
 }
 
 .store-service-icon svg {
-  width: 23px;
-  height: 23px;
+  width: 22px;
+  height: 22px;
   stroke-width: 1.7;
 }
 
@@ -12042,6 +12084,18 @@ input[type="file"] {
   gap: 8px;
 }
 
+.store-card-actions .primary-button,
+.store-card-actions .secondary-button {
+  min-height: 42px;
+  border-radius: 15px;
+}
+
+.store-card-actions .icon-button {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+}
+
 .store-service-copy {
   min-width: 0;
 }
@@ -12053,6 +12107,7 @@ input[type="file"] {
 
 .store-service-card h4 {
   font-size: 1rem;
+  line-height: 1.12;
 }
 
 .store-service-card p {
@@ -12116,6 +12171,16 @@ input[type="file"] {
   box-shadow: 0 18px 48px rgba(17, 17, 17, 0.05);
 }
 
+.store-client-panel .section-heading.small {
+  padding: 0;
+}
+
+.store-client-panel .section-heading.small h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .store-order-list article {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -12125,6 +12190,21 @@ input[type="file"] {
   border: 1px solid var(--line);
   border-radius: 11px;
   background: #fafafa;
+}
+
+.store-admin-mode .store-client-panel {
+  background:
+    radial-gradient(circle at 90% 6%, rgba(16, 185, 129, 0.11), transparent 30%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.store-customer-mode .store-admin-desk,
+.store-customer-mode .store-provision-box:not(.customer) {
+  display: none;
+}
+
+.store-customer-mode .store-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
 }
 
 .store-order-list strong,
@@ -12499,6 +12579,7 @@ input[type="file"] {
   .store-hero,
   .store-experience-hero,
   .store-capability-strip,
+  .store-mode-strip,
   .store-provision-box,
   .deployment-grid,
   .deployment-commands,
@@ -12561,6 +12642,10 @@ input[type="file"] {
 
   .store-order-board-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .store-customer-mode .store-layout {
+    grid-template-columns: 1fr;
   }
 
   .store-order-row-actions {
@@ -12727,6 +12812,18 @@ input[type="file"] {
 
   .client-actions .secondary-button {
     flex: 1 1 150px;
+  }
+
+  .store-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .store-card-actions {
+    grid-template-columns: 1fr auto;
+  }
+
+  .store-mode-strip article {
+    border-radius: 18px;
   }
 }
 
