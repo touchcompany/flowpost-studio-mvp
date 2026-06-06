@@ -3284,8 +3284,20 @@ function financeDateMatches(dateValue) {
   return (financeFilters.month === "all" || financeFilters.month === month) && (financeFilters.year === "all" || financeFilters.year === year);
 }
 
-function financeCompanyMatches(companyId) {
-  return financeFilters.companyId === "all" || companyId === financeFilters.companyId;
+function financeRecordCompanyId(record = {}) {
+  if (record.companyId) return record.companyId;
+  if (record.clientId) return clients.find((client) => client.id === record.clientId)?.companyId || "";
+  if (record.invoiceId) {
+    const invoice = invoices.find((item) => item.id === record.invoiceId);
+    return invoice?.companyId || clients.find((client) => client.id === invoice?.clientId)?.companyId || "";
+  }
+  return "";
+}
+
+function financeCompanyMatches(recordOrCompanyId) {
+  if (financeFilters.companyId === "all") return true;
+  const companyId = typeof recordOrCompanyId === "string" ? recordOrCompanyId : financeRecordCompanyId(recordOrCompanyId);
+  return companyId === financeFilters.companyId;
 }
 
 function financeYearOptions() {
@@ -3320,7 +3332,7 @@ function financeFilteredInvoices() {
   return financeActiveInvoices()
     .filter(
       (invoice) =>
-        financeCompanyMatches(invoice.companyId) &&
+        financeCompanyMatches(invoice) &&
         financeDateMatches(invoice.issueDate || invoice.dueDate) &&
         (financeFilters.documentStatus === "all" || financeInvoiceStatus(invoice) === financeFilters.documentStatus)
     )
@@ -3335,7 +3347,7 @@ function financeFilteredTransactions() {
   return financeTransactions
     .filter(
       (transaction) =>
-        financeCompanyMatches(transaction.companyId) &&
+        financeCompanyMatches(transaction) &&
         financeDateMatches(transaction.date) &&
         (financeFilters.transactionType === "all" || transaction.type === financeFilters.transactionType)
     )
@@ -3347,7 +3359,7 @@ function financeFilteredProviders() {
   return monthlyProviders
     .filter(
       (provider) =>
-        financeCompanyMatches(provider.companyId) &&
+        financeCompanyMatches(provider) &&
         financeDateMatches(provider.nextPaymentDate) &&
         (financeFilters.providerStatus === "all" || financeProviderStatus(provider) === financeFilters.providerStatus)
     )
@@ -3571,7 +3583,7 @@ function renderFinancePanel() {
   const upcomingProviders = filteredProviders.filter((item) => ["Atrasado", "Próximo"].includes(financeProviderStatus(item)));
   const recurringInvoices = filteredInvoices.filter((item) => item.autoGenerate);
   const recurringClients = activeClients.filter((item) => item.nextInvoiceDate);
-  const deletedInvoices = financeDeletedInvoices().filter((invoice) => financeCompanyMatches(invoice.companyId));
+  const deletedInvoices = financeDeletedInvoices().filter((invoice) => financeCompanyMatches(invoice));
   const focusInvoice =
     filteredInvoices.find((invoice) => invoice.id === financeFocusInvoiceId) ||
     filteredInvoices.find((invoice) => financeInvoiceStatus(invoice) === "Vencida") ||
