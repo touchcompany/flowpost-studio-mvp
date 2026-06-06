@@ -2552,7 +2552,7 @@ function renderBillingDocumentEditor() {
         </header>
 
         <section class="document-card">
-          <h3>Empresa y fechas</h3>
+          <h3>Receptor y fechas</h3>
           <div class="document-grid">
             <label class="field compact">
               <span>Tipo de documento</span>
@@ -2588,7 +2588,7 @@ function renderBillingDocumentEditor() {
         </section>
 
         <section class="document-card">
-          <h3>Numero, emisor y empresa</h3>
+          <h3>Numero, emisor y receptor</h3>
           <div class="document-grid">
             <label class="field compact">
               <span>Numero del documento</span>
@@ -2716,7 +2716,7 @@ function renderBillingDocumentEditor() {
         <section class="document-card document-summary">
           <h3>Resumen</h3>
           <div><span>Emisor</span><strong>${escapeHtml(issuer?.issuerName || "Sin emisor")}</strong></div>
-          <div><span>Empresa</span><strong>${escapeHtml(client?.name || "Sin empresa")}</strong></div>
+          <div><span>Empresa receptora</span><strong>${escapeHtml(client?.name || "Sin empresa")}</strong></div>
           <div><span>Subtotal</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
           <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
           <button class="primary-button icon-text-button" type="button" data-save-billing-document>
@@ -2733,7 +2733,7 @@ function renderBillingDocumentEditor() {
           <span>${escapeHtml(documentLabel)}</span>
           <strong>${formatMoney(subtotal, "COP")}</strong>
           <p>${escapeHtml(billingDraft.description || "Servicios contratados")}</p>
-          <small>${escapeHtml(issuer?.issuerName || "Emisor")} -> ${escapeHtml(client?.name || "Empresa")}</small>
+          <small>Emisor: ${escapeHtml(issuer?.issuerName || "Emisor")} · Receptor: ${escapeHtml(client?.name || "Empresa")}</small>
           <small>${escapeHtml(billingDraft.issueDate || "Sin emision")} · vence ${escapeHtml(billingDraft.dueDate || "sin fecha")}</small>
         </section>
 
