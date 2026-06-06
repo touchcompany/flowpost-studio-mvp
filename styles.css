@@ -2107,6 +2107,90 @@ body.modal-open {
   line-height: 1.4;
 }
 
+.commerce-flow-section {
+  width: min(1240px, calc(100% - 36px));
+}
+
+.commerce-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+  padding: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(0, 149, 246, 0.12), transparent 30%),
+    radial-gradient(circle at 86% 4%, rgba(16, 185, 129, 0.12), transparent 28%),
+    rgba(255, 255, 255, 0.76);
+  box-shadow: 0 28px 90px rgba(17, 17, 17, 0.08);
+  backdrop-filter: blur(22px);
+}
+
+.commerce-flow article {
+  position: relative;
+  display: grid;
+  min-height: 240px;
+  align-content: end;
+  padding: 18px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 246, 247, 0.76)),
+    radial-gradient(circle at 78% 8%, rgba(17, 17, 17, 0.08), transparent 26%);
+  overflow: hidden;
+}
+
+.commerce-flow article::before {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  color: rgba(17, 17, 17, 0.07);
+  font-size: 4.6rem;
+  font-weight: 900;
+  line-height: 1;
+  content: "0" counter(flow-step);
+  counter-increment: flow-step;
+}
+
+.commerce-flow {
+  counter-reset: flow-step;
+}
+
+.commerce-flow span {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 18px;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 16px 36px rgba(17, 17, 17, 0.16);
+}
+
+.commerce-flow svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.55;
+}
+
+.commerce-flow strong,
+.commerce-flow p {
+  display: block;
+  margin: 0;
+}
+
+.commerce-flow strong {
+  margin-top: 26px;
+  font-size: 1.18rem;
+}
+
+.commerce-flow p {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.42;
+}
+
 .premium-plans .plan-card {
   border-radius: 28px;
 }
@@ -2123,7 +2207,46 @@ body.modal-open {
   gap: 12px;
   padding: 24px;
   border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(255, 255, 255, 0.9), transparent 22%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(246, 246, 247, 0.78));
   transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.purchase-grid article[data-service-card="website"] {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(0, 149, 246, 0.16), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(240, 249, 255, 0.82));
+}
+
+.purchase-grid article[data-service-card="hosting"] {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(17, 17, 17, 0.1), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(245, 245, 245, 0.82));
+}
+
+.purchase-grid article[data-service-card="domain"] {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(16, 185, 129, 0.16), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(240, 253, 244, 0.82));
+}
+
+.purchase-grid article[data-service-card="ads"] {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(236, 72, 153, 0.14), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(253, 242, 248, 0.82));
+}
+
+.purchase-grid article[data-service-card="reels"] {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(249, 115, 22, 0.16), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 247, 237, 0.82));
+}
+
+.purchase-grid article[data-service-card="chatbot"] {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(99, 102, 241, 0.14), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(238, 242, 255, 0.82));
 }
 
 .purchase-grid h3,
@@ -13224,10 +13347,15 @@ input[type="file"] {
 
   .feature-grid,
   .audience-grid,
+  .commerce-flow,
   .service-marquee,
   .purchase-grid,
   .plan-grid {
     grid-template-columns: 1fr;
+  }
+
+  .commerce-flow article {
+    min-height: 190px;
   }
 
   .commerce-stage {
