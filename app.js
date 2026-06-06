@@ -3989,6 +3989,8 @@ function renderSettingsPanel() {
   const companyPhotoUrl = entityPhotoUrl(company);
   settingsPanel.innerHTML = `
     <section class="settings-shell">
+      ${renderSettingsCommandCenter({ session, company, issuerProfile, userPhotoUrl, companyPhotoUrl })}
+
       <article class="settings-profile-card">
         <span class="company-avatar settings-avatar" style="--company-color: ${escapeHtml(company.primaryColor || "#111")}">
           ${avatarImageMarkup(userPhotoUrl, session.name || "Usuario Touch") || `<img src="favicon.svg" alt="" />`}
@@ -4230,6 +4232,68 @@ function renderSettingsPanel() {
     </section>
   `;
   renderIcons();
+}
+
+function renderSettingsCommandCenter({ session, company, issuerProfile, userPhotoUrl, companyPhotoUrl }) {
+  const missingProfile = [session.name, session.email, userPhotoUrl].filter(Boolean).length;
+  const missingCompany = [company.name, company.description, companyPhotoUrl].filter(Boolean).length;
+  const missingIssuer = [issuerProfile.issuerName, issuerProfile.issuerNit, issuerProfile.paymentBank, issuerProfile.paymentAccountNumber].filter(Boolean).length;
+  const profileReady = missingProfile >= 2;
+  const companyReady = missingCompany >= 2;
+  const issuerReady = missingIssuer >= 3;
+  const cards = [
+    {
+      icon: "user-round-check",
+      title: "Tu cuenta",
+      value: profileReady ? "Lista" : "Completar",
+      detail: session.email || "Agrega correo para identificar la cuenta.",
+      done: profileReady,
+      target: "accounts",
+    },
+    {
+      icon: "briefcase-business",
+      title: "Empresa activa",
+      value: companyReady ? "Lista" : "Completar",
+      detail: company.name || "Selecciona o crea una empresa.",
+      done: companyReady,
+      target: "companies",
+    },
+    {
+      icon: "receipt-text",
+      title: "Emisor de cobros",
+      value: issuerReady ? "Listo" : "Pendiente",
+      detail: issuerProfile.issuerName || session.name || "Configura datos fiscales y banco.",
+      done: issuerReady,
+      target: "finances",
+    },
+  ];
+
+  return `
+    <section class="settings-command-center">
+      <div class="settings-command-copy">
+        <span class="workspace-label">Configuración general</span>
+        <h2>Tu espacio de trabajo</h2>
+        <p>Administra usuario, empresa activa, emisor de cobros, tienda y conexiones desde una sola pantalla.</p>
+      </div>
+      <div class="settings-command-cards">
+        ${cards
+          .map(
+            (card) => `
+              <button type="button" class="${card.done ? "done" : ""}" data-settings-open="${card.target}">
+                <span class="status-icon"><i data-lucide="${card.done ? "check" : card.icon}"></i></span>
+                <div>
+                  <small>${escapeHtml(card.title)}</small>
+                  <strong>${escapeHtml(card.value)}</strong>
+                  <p>${escapeHtml(card.detail)}</p>
+                </div>
+                <i data-lucide="chevron-right"></i>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUrl, companyPhotoUrl }) {
