@@ -2953,6 +2953,46 @@ function renderDeletedClientsPanel() {
   `;
 }
 
+function renderManagedCompaniesContext(activeClients = [], selectedClient = null, pendingInvoices = []) {
+  const company = companies.find((item) => item.id === selectedClient?.companyId) || activeCompany();
+  const issuer = currentIssuerProfile();
+  const pendingForSelected = selectedClient
+    ? pendingInvoices.filter((invoice) => invoice.clientId === selectedClient.id).reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0)
+    : 0;
+  return `
+    <section class="managed-companies-context">
+      <div class="managed-context-main">
+        <span class="company-avatar" style="--company-color: ${escapeHtml(company?.primaryColor || "#111")}">
+          ${companyAvatarMarkup(company, "building-2")}
+        </span>
+        <div>
+          <span class="workspace-label">Empresas gestionadas</span>
+          <h3>Clientes = empresas dentro de tu cuenta principal</h3>
+          <p>Cada empresa tiene contenido, guiones, servicios, cobros, pagos y usuarios separados. La cuenta administradora sigue siendo ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.</p>
+        </div>
+      </div>
+      <div class="managed-context-facts">
+        <article>
+          <span>Seleccionada</span>
+          <strong>${escapeHtml(selectedClient?.name || company?.name || "Sin empresa")}</strong>
+        </article>
+        <article>
+          <span>Emisor</span>
+          <strong>${escapeHtml(issuer.issuerName || currentSession().name || "Tu usuario")}</strong>
+        </article>
+        <article>
+          <span>Por cobrar</span>
+          <strong>${formatMoney(pendingForSelected, "COP")}</strong>
+        </article>
+        <article>
+          <span>Total empresas</span>
+          <strong>${activeClients.length}</strong>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 function renderClientBillingPanel() {
   ensureAgencyClients();
   ensureServiceOrderAutomations();
@@ -3032,6 +3072,7 @@ function renderClientBillingPanel() {
   if (clientWorkspacePanel) {
     clientWorkspacePanel.innerHTML = `
       <section class="client-workspace">
+        ${renderManagedCompaniesContext(activeClients, selectedClient, pendingInvoices)}
         ${renderClientSwitcher(activeClients, pendingInvoices)}
         ${renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)}
         ${renderAgencyServicesManager()}

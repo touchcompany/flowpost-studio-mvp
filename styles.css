@@ -10375,6 +10375,88 @@ input[type="file"] {
   gap: 16px;
 }
 
+.managed-companies-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  gap: 14px;
+  align-items: stretch;
+  padding: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.74)),
+    radial-gradient(circle at 92% 12%, rgba(0, 149, 246, 0.13), transparent 32%),
+    radial-gradient(circle at 10% 100%, rgba(17, 17, 17, 0.08), transparent 30%);
+  box-shadow: 0 18px 52px rgba(17, 17, 17, 0.055);
+}
+
+.managed-context-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.managed-context-main > .company-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+}
+
+.managed-context-main h3,
+.managed-context-main p {
+  margin: 0;
+}
+
+.managed-context-main h3 {
+  margin-top: 3px;
+  font-size: clamp(1.28rem, 2.2vw, 2rem);
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.managed-context-main p {
+  max-width: 760px;
+  margin-top: 7px;
+  color: var(--muted);
+  line-height: 1.42;
+}
+
+.managed-context-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.managed-context-facts article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.managed-context-facts span,
+.managed-context-facts strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.managed-context-facts span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.managed-context-facts strong {
+  margin-top: 6px;
+  font-size: 0.98rem;
+}
+
 .client-switcher {
   display: grid;
   gap: 12px;
@@ -14299,10 +14381,39 @@ input[type="file"] {
   .dashboard-metric,
   .dashboard-card,
   .client-billing-panel,
+  .managed-companies-context,
   .agency-services-manager,
   .document-card,
   .client-profile-card {
     border-radius: 18px;
+  }
+
+  .managed-companies-context {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .managed-context-main {
+    gap: 11px;
+  }
+
+  .managed-context-main > .company-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 17px;
+  }
+
+  .managed-context-main h3 {
+    font-size: 1.18rem;
+  }
+
+  .managed-context-main p {
+    font-size: 0.9rem;
+  }
+
+  .managed-context-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .client-command-center {
