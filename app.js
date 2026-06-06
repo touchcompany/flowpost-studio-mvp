@@ -1356,7 +1356,16 @@ function updateConnectionStatus() {
 
 function currentSession() {
   if (!sessionHydrated && window.location.protocol !== "file:") {
-    return normalizeClientSession({});
+    return {
+      ...normalizeClientSession({}),
+      id: "",
+      name: "",
+      email: "",
+      avatarUrl: "",
+      planLabel: "Cargando",
+      roleLabel: "Cuenta",
+      status: "loading",
+    };
   }
   try {
     return normalizeClientSession(JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"));
@@ -4000,6 +4009,10 @@ function renderSettingsPanel() {
             <p>Tu imagen personal aparece en el acceso rápido y el menú inferior.</p>
             <small class="settings-sync-note"><i data-lucide="cloud-check"></i> Se guarda para todos tus dispositivos.</small>
           </div>
+          <button class="secondary-button icon-text-button compact settings-header-action" type="button" data-settings-save-profile>
+            <i data-lucide="save"></i>
+            Guardar
+          </button>
         </header>
         <div class="settings-form-grid">
           <label class="field compact">
@@ -4044,6 +4057,10 @@ function renderSettingsPanel() {
             <p>Lo que ve el equipo al trabajar esta marca.</p>
             <small class="settings-sync-note"><i data-lucide="cloud-check"></i> Cambios sincronizados automáticamente.</small>
           </div>
+          <button class="secondary-button icon-text-button compact settings-header-action" type="button" data-settings-save-company>
+            <i data-lucide="save"></i>
+            Guardar
+          </button>
         </header>
         <div class="settings-form-grid">
           <label class="field compact">
@@ -4279,6 +4296,39 @@ async function syncSettingsCompanyField(field, rawValue, options = {}) {
   renderDashboard();
   updatePreview();
   await persistState();
+}
+
+async function saveSettingsProfileFromPanel() {
+  const updates = {};
+  settingsPanel.querySelectorAll("[data-settings-profile-field]").forEach((fieldNode) => {
+    const field = fieldNode.dataset.settingsProfileField;
+    const rawValue = fieldNode.value || "";
+    updates[field] = field === "avatarUrl" ? publicMediaUrl(rawValue) : rawValue.trim();
+  });
+  await saveClientSession({ ...currentSession(), ...updates });
+  renderAccount();
+  updateMobileProfileNav();
+  renderSettingsPanel();
+  showToast("Perfil actualizado en todos tus dispositivos.");
+}
+
+async function saveSettingsCompanyFromPanel() {
+  const updates = {};
+  settingsPanel.querySelectorAll("[data-settings-company-field]").forEach((fieldNode) => {
+    const field = fieldNode.dataset.settingsCompanyField;
+    const rawValue = fieldNode.value || "";
+    updates[field] = field === "avatarUrl" ? publicMediaUrl(rawValue) : String(rawValue).trim();
+  });
+  companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, ...updates } : company));
+  activeCompanyName.textContent = activeCompany().name || "";
+  refreshCompanyContext();
+  renderCompanies();
+  renderDashboard();
+  renderClientBillingPanel();
+  updatePreview();
+  await persistState();
+  renderSettingsPanel();
+  showToast("Empresa sincronizada para todos los dispositivos.");
 }
 
 function automationBlueprint(service) {
@@ -12838,6 +12888,18 @@ billingPanel.addEventListener("click", (event) => {
 });
 
 settingsPanel?.addEventListener("click", async (event) => {
+  const saveProfileButton = event.target.closest("[data-settings-save-profile]");
+  if (saveProfileButton) {
+    await saveSettingsProfileFromPanel();
+    return;
+  }
+
+  const saveCompanyButton = event.target.closest("[data-settings-save-company]");
+  if (saveCompanyButton) {
+    await saveSettingsCompanyFromPanel();
+    return;
+  }
+
   const useIssuerButton = event.target.closest("[data-settings-issuer-use]");
   if (useIssuerButton) {
     applyIssuerBillingProfile("current-user", { force: true });
