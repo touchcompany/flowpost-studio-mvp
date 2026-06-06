@@ -4531,6 +4531,7 @@ function renderStorePanel() {
   const selectedOrders = selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const revenue = activeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
   const groups = [...new Set(servicesForStore.map((service) => service.group || "Servicio"))];
+  const publicStoreUrl = `${window.location.origin || "https://app.touch.com.co"}/landing.html#planes`;
   const cpanelPlans = provisioningStatus?.cpanel?.plans || {};
   const planOptions = [...new Set([cpanelPlans.defaultPlan, cpanelPlans.hostingPlan, cpanelPlans.websitePlan, serviceProvisionDraft.hostingPlan].filter(Boolean))];
 
@@ -4560,7 +4561,7 @@ function renderStorePanel() {
       }
     </section>
 
-    ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue })}
+    ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
 
     ${
       storeAdmin
@@ -4608,7 +4609,7 @@ function renderStorePanel() {
                 : ""
             }
           </section>
-          ${renderStoreAdminDesk({ selectedClient, services: servicesForStore, activeOrders })}`
+          ${renderStoreAdminDesk({ selectedClient, services: servicesForStore, activeOrders, publicStoreUrl })}`
         : `<section class="store-provision-box customer">
             <div>
               <span class="status-icon"><i data-lucide="sparkles"></i></span>
@@ -4672,7 +4673,7 @@ function renderStorePanel() {
                               : ""
                           }
                           <div class="store-card-actions">
-                            <button class="${canBuy ? "primary-button" : "secondary-button"} icon-text-button" type="button" data-store-buy="${service.id}" ${canBuy ? "" : "disabled"}>
+                            <button class="${canBuy ? "primary-button" : "secondary-button"} icon-text-button" type="button" data-store-buy="${service.id}" ${canBuy ? "" : "disabled"} aria-label="${storeAdmin ? `Asignar ${escapeHtml(service.name)}` : `Solicitar ${escapeHtml(service.name)}`}">
                               <i data-lucide="${storeAdmin ? "badge-plus" : "shopping-bag"}"></i>
                               ${serviceOrder ? "Ya asignado" : storeAdmin ? "Asignar" : "Solicitar"}
                             </button>
@@ -4736,7 +4737,7 @@ function renderStorePanel() {
   renderIcons();
 }
 
-function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], revenue = 0 }) {
+function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], revenue = 0, publicStoreUrl = "" }) {
   const visibleOrders = storeAdmin ? activeOrders : selectedOrders;
   const publicServices = servicesForStore.filter((service) => service.clientVisible !== false).length;
   const catalogValue = servicesForStore.reduce((sum, service) => sum + Number(service.price || 0), 0);
@@ -4818,9 +4819,17 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
                     `
                   )
                   .join("")
-              : `<article><span><i data-lucide="eye-off"></i></span><div><strong>Sin servicios públicos</strong><small>Activa uno para venderlo afuera.</small></div></article>`
+            : `<article><span><i data-lucide="eye-off"></i></span><div><strong>Sin servicios públicos</strong><small>Activa uno para venderlo afuera.</small></div></article>`
           }
         </div>
+        ${
+          storeAdmin
+            ? `<a class="store-public-link" href="${escapeHtml(publicStoreUrl)}" target="_blank" rel="noreferrer">
+                <i data-lucide="external-link"></i>
+                Ver página pública de planes
+              </a>`
+            : ""
+        }
       </div>
       <div class="store-capability-strip">
         ${capabilities
@@ -5728,7 +5737,7 @@ function applyPendingLandingPurchases() {
   showToast(`${purchases.length} compra${purchases.length === 1 ? "" : "s"} agregada${purchases.length === 1 ? "" : "s"} a la empresa ${client.name}.`);
 }
 
-function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
+function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicStoreUrl = "" }) {
   const publicServices = services.filter((service) => service.clientVisible !== false);
   const privateServices = services.length - publicServices.length;
   const pendingOrders = activeOrders.filter((order) => ["Solicitado", "En proceso", "Pendiente"].includes(order.status)).length;
@@ -5737,8 +5746,8 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
       <article class="store-admin-card featured">
         <span class="status-icon"><i data-lucide="panel-top"></i></span>
         <div>
-          <strong>Catálogo público sincronizado</strong>
-          <p>Los servicios marcados como visibles son los que se venden desde la página externa. Aquí llegan las solicitudes y también puedes asignarlas manualmente.</p>
+          <strong>Catálogo público tipo Shopify</strong>
+          <p>Administra servicios, productos, visibilidad, pedidos y asignaciones manuales. Los clientes normales solo ven lo que compraron o pueden solicitar.</p>
         </div>
       </article>
       <article class="store-admin-card">
@@ -5750,6 +5759,15 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders }) {
         <span>Pedidos activos</span>
         <strong>${pendingOrders}</strong>
         <small>${escapeHtml(selectedClient?.name || "Sin empresa")}</small>
+      </article>
+      <article class="store-admin-card store-public-link-card">
+        <span>Venta externa</span>
+        <strong>Página pública</strong>
+        <small>Todo lo visible se vende desde landing/planes.</small>
+        <a class="secondary-button icon-text-button compact" href="${escapeHtml(publicStoreUrl)}" target="_blank" rel="noreferrer">
+          <i data-lucide="external-link"></i>
+          Abrir
+        </a>
       </article>
       <div class="store-admin-form">
         <input data-store-new-service="name" placeholder="Nuevo servicio o producto" />

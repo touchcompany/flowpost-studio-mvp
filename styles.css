@@ -11563,6 +11563,27 @@ input[type="file"] {
   font-size: 0.76rem;
 }
 
+.store-public-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(17, 17, 17, 0.09);
+  border-radius: 999px;
+  color: #111;
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.78rem;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.store-public-link svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+
 .store-capability-strip {
   grid-column: 1 / -1;
   display: grid;
@@ -11715,7 +11736,7 @@ input[type="file"] {
 
 .store-admin-desk {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(140px, 0.35fr) minmax(140px, 0.35fr);
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(140px, 0.35fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -11762,6 +11783,15 @@ input[type="file"] {
 .store-admin-card p,
 .store-admin-card small {
   color: var(--muted);
+}
+
+.store-public-link-card {
+  align-content: start;
+}
+
+.store-public-link-card .secondary-button {
+  width: fit-content;
+  margin-top: 6px;
 }
 
 .store-admin-form {
