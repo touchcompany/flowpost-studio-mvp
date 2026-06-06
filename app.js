@@ -307,6 +307,7 @@ const editorialStatuses = ["Idea", "En diseño", "En revisión", "Aprobado", "Pr
 let backendEnabled = false;
 let backendProvider = "local";
 let stateSaveQueue = Promise.resolve();
+let sessionHydrated = window.location.protocol === "file:";
 let provisioningStatus = null;
 let oauthStatus = null;
 let authStatus = null;
@@ -1354,6 +1355,9 @@ function updateConnectionStatus() {
 }
 
 function currentSession() {
+  if (!sessionHydrated && window.location.protocol !== "file:") {
+    return normalizeClientSession({});
+  }
   try {
     return normalizeClientSession(JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"));
   } catch {
@@ -1590,13 +1594,17 @@ function renderAccount() {
 }
 
 async function hydrateSessionFromBackend() {
-  if (window.location.protocol === "file:") return true;
+  if (window.location.protocol === "file:") {
+    sessionHydrated = true;
+    return true;
+  }
   try {
     const response = await fetch("/api/session", { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error("session unavailable");
     const result = await response.json();
     if (result.session?.id) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+      sessionHydrated = true;
       return true;
     }
   } catch {
@@ -2466,11 +2474,11 @@ function renderAgencyServicesManager() {
     <section class="agency-services-manager">
       <div class="agency-services-header">
         <div class="section-heading small">
-          <h2>Servicios de tu agencia</h2>
-          <p>${escapeHtml(activeAgency().name)} vende estos servicios a las empresas que administras. Cada compra queda vinculada a ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.</p>
+          <h2>Servicios para empresas cliente</h2>
+          <p>${escapeHtml(activeAgency().name)} vende o asigna estos servicios a las empresas administradas. Cada pedido queda vinculado a ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.</p>
         </div>
         <label class="field compact service-client-select">
-          <span>Asignar a empresa</span>
+          <span>Empresa receptora</span>
           <select data-billing-field="clientId">
             ${activeAgencyClients()
               .map((client) => `<option value="${client.id}" ${client.id === selectedClient?.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`)
@@ -2835,15 +2843,15 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
       <div class="client-command-actions">
         <button class="primary-button icon-text-button" type="button" data-client-open-company="${selectedClient.companyId}">
           <i data-lucide="folder-open"></i>
-          Abrir cuenta
+          Abrir empresa
         </button>
         <button class="secondary-button icon-text-button" type="button" data-client-invoice="${selectedClient.id}">
           <i data-lucide="receipt"></i>
           Generar cobro
         </button>
         <button class="secondary-button icon-text-button" type="button" data-client-open-store="${selectedClient.id}">
-          <i data-lucide="store"></i>
-          Comprar servicios
+          <i data-lucide="badge-plus"></i>
+          Asignar servicio
         </button>
       </div>
       <div class="client-command-modules">
@@ -3019,7 +3027,7 @@ function renderClientBillingPanel() {
         ${renderAgencyServicesManager()}
         ${renderBillingDocumentEditor()}
         <div class="client-workspace-summary">
-          <article><span>Empresas activas</span><strong>${activeClients.length}</strong><p>Empresas convertidas en cuentas comerciales.</p></article>
+          <article><span>Empresas cliente</span><strong>${activeClients.length}</strong><p>Empresas administradas por tu cuenta principal.</p></article>
           <article><span>Cuenta admin</span><strong>${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}</strong><p>Las compras y servicios se vinculan a esta cuenta principal.</p></article>
           <article><span>Cobros abiertos</span><strong>${pendingInvoices.length}</strong><p>${formatMoney(pendingInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))} pendientes.</p></article>
           <article><span>Servicios comprados</span><strong>${activeOrders.length}</strong><p>Ordenes internas listas para pasar a pago y produccion.</p></article>
@@ -3445,12 +3453,12 @@ function renderFinancePartyFlow(invoice, options = {}) {
   return `
     <div class="finance-party-flow${compact}" aria-label="Relación del documento">
       <span>
-        <small>Emite</small>
+        <small>Emisor principal</small>
         <strong>${escapeHtml(issuerName)}</strong>
       </span>
       <i data-lucide="arrow-right"></i>
       <span>
-        <small>Recibe</small>
+        <small>Empresa receptora</small>
         <strong>${escapeHtml(receiverName)}</strong>
       </span>
       ${
@@ -3653,26 +3661,26 @@ function renderFinancePanel() {
         <header>
           <span class="status-icon"><i data-lucide="file-plus-2"></i></span>
           <div>
-            <h3>Crear cuenta o factura</h3>
-            <p>Tu cuenta principal emite. Selecciona la empresa que recibe el documento.</p>
+            <h3>Crear documento de cobro</h3>
+            <p>Tu usuario principal emite. La empresa seleccionada recibe la cuenta o factura.</p>
           </div>
         </header>
         <div class="finance-create-flow">
           <span>
-            <small>Emisor</small>
+            <small>Emisor principal</small>
             <strong>${escapeHtml(issuerProfile.issuerName || "Tu cuenta")}</strong>
           </span>
           <i data-lucide="arrow-right"></i>
           <span>
-            <small>Receptor</small>
+            <small>Empresa receptora</small>
             <strong>${escapeHtml((activeClients.find((item) => item.id === billingDraft.clientId) || activeClients[0])?.name || "Empresa")}</strong>
           </span>
         </div>
         <div class="finance-form-grid">
           <div class="document-party-lock compact">
-            <span>Emisor</span>
+            <span>Emisor principal</span>
             <strong>${escapeHtml(issuerProfile.issuerName || "Tu cuenta")}</strong>
-            <small>${escapeHtml(issuerProfile.issuerEmail || "Correo pendiente")}</small>
+            <small>${escapeHtml([issuerProfile.issuerNit, issuerProfile.issuerEmail].filter(Boolean).join(" · ") || "Datos pendientes en Configuración")}</small>
           </div>
           <label class="field compact">
             <span>Empresa receptora</span>
@@ -3948,7 +3956,7 @@ function renderSettingsPanel() {
           </button>
           <button type="button" data-settings-open="clients">
             <span class="status-icon"><i data-lucide="users"></i></span>
-            <div><strong>Clientes</strong><small>Empresas, servicios y cobros.</small></div>
+            <div><strong>Empresas cliente</strong><small>Servicios, cobros y accesos por empresa.</small></div>
             <i data-lucide="chevron-right"></i>
           </button>
           <button type="button" data-settings-open="finances">
@@ -4064,14 +4072,14 @@ function renderSettingsPanel() {
           <span class="status-icon"><i data-lucide="receipt-text"></i></span>
           <div>
             <h3>Cuentas de cobro y facturas</h3>
-            <p>Emisor, numeración, cuenta bancaria y generación recurrente.</p>
+            <p>Tu cuenta principal emite; cada empresa creada puede recibir documentos, servicios y pagos.</p>
           </div>
         </header>
         <div class="settings-billing-preview">
           <div>
             <span>Próximo documento</span>
             <strong>${escapeHtml(documentNumberPreview)}</strong>
-            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emite ${escapeHtml(issuerProfile.issuerName || "Tu cuenta")} · Recibe la empresa elegida al crearla.</small>
+            <small>${escapeHtml(billingDraft.documentType || "Cuenta de cobro")} · Emisor ${escapeHtml(issuerProfile.issuerName || "Tu cuenta")} · Receptor: empresa gestionada.</small>
           </div>
           <button class="primary-button icon-text-button" type="button" data-settings-open="clients">
             <i data-lucide="file-text"></i>
@@ -4215,13 +4223,14 @@ function renderSettingsSetupGuide({ session, company, issuerCompany, userPhotoUr
 function renderIssuerProfileManager(issuerProfile = currentIssuerProfile()) {
   const paymentParts = [issuerProfile.paymentBank, issuerProfile.paymentAccountType, issuerProfile.paymentAccountNumber].filter(Boolean);
   const contactParts = [issuerProfile.issuerEmail, issuerProfile.issuerPhone].filter(Boolean);
+  const identityParts = [issuerProfile.issuerNit ? `NIT/ID: ${issuerProfile.issuerNit}` : "", issuerProfile.issuerAddress].filter(Boolean);
   return `
     <section class="issuer-profile-manager">
       <header class="issuer-profile-head">
         <div>
           <span class="workspace-label">Perfil principal</span>
           <h4>Emisor de tus cuentas de cobro</h4>
-          <p>Este perfil pertenece al usuario que inició sesión. Las empresas creadas solo se seleccionan como receptoras del documento.</p>
+          <p>Este perfil pertenece al usuario que inició sesión. Las empresas que creas son receptoras, no emisoras.</p>
         </div>
         <button class="secondary-button icon-text-button compact" type="button" data-settings-issuer-edit="current-user">
           <i data-lucide="pencil"></i>
@@ -4235,7 +4244,7 @@ function renderIssuerProfileManager(issuerProfile = currentIssuerProfile()) {
           </span>
           <div class="issuer-profile-copy">
             <strong>${escapeHtml(issuerProfile.issuerName || "Tu cuenta")}</strong>
-            <small>${escapeHtml(issuerProfile.issuerNit || "Sin NIT o cedula")}</small>
+            <small>${escapeHtml(identityParts.join(" · ") || "Sin NIT o direccion")}</small>
             <p>${escapeHtml(paymentParts.join(" · ") || "Cuenta de pago pendiente")}</p>
             <p>${escapeHtml(contactParts.join(" · ") || "Contacto pendiente")}</p>
           </div>
@@ -4530,11 +4539,11 @@ function renderStorePanel() {
       <div>
         <span class="status-icon large"><i data-lucide="shopping-bag"></i></span>
         <div>
-          <span class="workspace-label">${storeAdmin ? "Super admin" : "Panel de empresa"}</span>
-          <h2>${storeAdmin ? `Administrador de servicios de ${escapeHtml(activeAgency().name)}` : "Mis servicios y pedidos"}</h2>
+          <span class="workspace-label">${storeAdmin ? "Catálogo público + pedidos" : "Panel de empresa"}</span>
+          <h2>${storeAdmin ? `Administrador comercial de ${escapeHtml(activeAgency().name)}` : "Mis servicios y pedidos"}</h2>
           <p>${
             storeAdmin
-              ? `Gestiona lo que se vende en la página pública, asigna servicios a empresas y recibe pedidos en ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.`
+              ? `Gestiona lo que aparece en la página pública, asigna servicios manualmente y recibe pedidos en ${escapeHtml(activeAgency().adminAccountEmail || APP_ADMIN_EMAIL)}.`
               : "Revisa los servicios comprados, pedidos activos y planes disponibles para tu empresa."
           }</p>
         </div>
@@ -4543,7 +4552,7 @@ function renderStorePanel() {
         !storeAdmin
           ? `<span class="pill ready">${escapeHtml(selectedClient?.name || activeCompany().name)}</span>`
           : `<label class="field compact store-client-picker">
-              <span>Asignar a</span>
+              <span>Empresa</span>
               <select data-store-client>
                 ${clientsForStore.map((client) => `<option value="${client.id}" ${client.id === selectedClient?.id ? "selected" : ""}>${escapeHtml(client.name)}</option>`).join("")}
               </select>
@@ -4612,8 +4621,8 @@ function renderStorePanel() {
     }
 
     <section class="store-summary">
-      <article><span>${storeAdmin ? "Catálogo" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
-      <article><span>${storeAdmin ? "Pedidos agencia" : "Tus pedidos"}</span><strong>${storeAdmin ? activeOrders.length : selectedOrders.length}</strong></article>
+        <article><span>${storeAdmin ? "Catálogo público" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
+      <article><span>${storeAdmin ? "Pedidos recibidos" : "Tus pedidos"}</span><strong>${storeAdmin ? activeOrders.length : selectedOrders.length}</strong></article>
       <article><span>Empresa actual</span><strong>${selectedOrders.length}</strong></article>
       <article><span>${storeAdmin ? "Valor vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0), "COP")}</strong></article>
     </section>
@@ -4687,7 +4696,7 @@ function renderStorePanel() {
       <aside class="store-client-panel">
         <div class="section-heading small">
           <h2>${escapeHtml(selectedClient?.name || "Sin empresa")}</h2>
-          <p>Servicios comprados y estado de entrega.</p>
+          <p>Servicios asignados, comprados y estado de entrega.</p>
         </div>
         <div class="store-order-list">
           ${
@@ -4718,7 +4727,7 @@ function renderStorePanel() {
               </button>`
             : `<button class="secondary-button icon-text-button" type="button" data-store-open-clients>
                 <i data-lucide="users"></i>
-                Administrar operación
+                Administrar empresas
               </button>`
         }
       </aside>
@@ -4753,10 +4762,10 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
     <section class="store-experience-hero">
       <div class="store-experience-copy">
         <span class="workspace-label">${storeAdmin ? "Tienda publica + panel admin" : "Servicios activos"}</span>
-        <h3>${storeAdmin ? "Convierte tu catalogo en una operacion vendible" : `Panel comercial de ${escapeHtml(selectedClient?.name || activeCompany().name)}`}</h3>
+        <h3>${storeAdmin ? "Vende, asigna y entrega servicios desde un solo lugar" : `Panel comercial de ${escapeHtml(selectedClient?.name || activeCompany().name)}`}</h3>
         <p>${
           storeAdmin
-            ? "Publica servicios, asigna productos manualmente, recibe pedidos y conecta la entrega con empresas, cobros y automatizaciones."
+            ? "Publica servicios en la página web, asigna productos sin checkout cuando lo necesites y conecta cada pedido con cobros, empresas y automatizaciones."
             : "Aqui ves lo comprado, lo disponible para solicitar y lo que tu agencia esta preparando para tu empresa."
         }</p>
         <div class="store-experience-actions">
