@@ -4621,7 +4621,7 @@ function renderStorePanel() {
     }
 
     <section class="store-summary">
-        <article><span>${storeAdmin ? "Catálogo público" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
+      <article><span>${storeAdmin ? "Catálogo público" : "Disponibles"}</span><strong>${servicesForStore.length}</strong></article>
       <article><span>${storeAdmin ? "Pedidos recibidos" : "Tus pedidos"}</span><strong>${storeAdmin ? activeOrders.length : selectedOrders.length}</strong></article>
       <article><span>Empresa actual</span><strong>${selectedOrders.length}</strong></article>
       <article><span>${storeAdmin ? "Valor vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0), "COP")}</strong></article>
@@ -4740,6 +4740,7 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
   const visibleOrders = storeAdmin ? activeOrders : selectedOrders;
   const publicServices = servicesForStore.filter((service) => service.clientVisible !== false).length;
   const catalogValue = servicesForStore.reduce((sum, service) => sum + Number(service.price || 0), 0);
+  const previewServices = servicesForStore.filter((service) => service.clientVisible !== false).slice(0, 3);
   const capabilities = [
     {
       icon: "sparkles",
@@ -4795,6 +4796,31 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
           <strong>${formatMoney(catalogValue, "COP")}</strong>
           <small>catalogo activo</small>
         </article>
+      </div>
+      <div class="store-public-preview" aria-label="Vista previa de la tienda pública">
+        <header>
+          <span>${storeAdmin ? "Vista pública" : "Disponible"}</span>
+          <strong>${storeAdmin ? "touch.com.co" : selectedClient?.name || activeCompany().name}</strong>
+        </header>
+        <div>
+          ${
+            previewServices.length
+              ? previewServices
+                  .map(
+                    (service) => `
+                      <article>
+                        <span><i data-lucide="${serviceIcon(service)}"></i></span>
+                        <div>
+                          <strong>${escapeHtml(service.name)}</strong>
+                          <small>${formatMoney(service.price, "COP")}</small>
+                        </div>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : `<article><span><i data-lucide="eye-off"></i></span><div><strong>Sin servicios públicos</strong><small>Activa uno para venderlo afuera.</small></div></article>`
+          }
+        </div>
       </div>
       <div class="store-capability-strip">
         ${capabilities
