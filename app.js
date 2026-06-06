@@ -1379,11 +1379,12 @@ function normalizeClientSession(session = {}) {
   const isTouch = session.role === "super_admin" || email === APP_ADMIN_EMAIL;
   const plan = isTouch ? "agency" : planLimits[session.plan] ? session.plan : "starter";
   const role = isTouch ? "super_admin" : session.role || (plan === "agency" ? "agency_owner" : "business_owner");
+  const avatarUrl = publicMediaUrl(session.avatarUrl || session.metadata?.avatarUrl || session.picture || session.photoURL || "");
   return {
     ...session,
     id: session.id || (isTouch ? "touch-super-admin" : ""),
     name: session.name || (isTouch ? "Touch Studio" : "Invitado MVP"),
-    avatarUrl: session.avatarUrl || session.metadata?.avatarUrl || "",
+    avatarUrl,
     nit: session.nit || session.metadata?.nit || "",
     phone: session.phone || session.metadata?.phone || "",
     address: session.address || session.metadata?.address || "",
@@ -1456,12 +1457,12 @@ function mediaUrlHelperMarkup(value = "", label = "imagen") {
 }
 
 function entityPhotoUrl(entity = {}) {
-  return normalizeMediaUrl(entity.avatarUrl || entity.picture || entity.photoURL || entity.metadata?.avatarUrl || "");
+  return publicMediaUrl(entity.avatarUrl || entity.picture || entity.photoURL || entity.metadata?.avatarUrl || "");
 }
 
 function avatarImageMarkup(photoUrl = "", alt = "") {
   return photoUrl
-    ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" onerror="this.closest('.company-avatar')?.classList.add('is-broken-media'); this.remove();" />`
+    ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" onerror="this.closest('.company-avatar, .account-avatar, .nav-icon, .brand-mark')?.classList.add('is-broken-media'); this.remove();" />`
     : "";
 }
 
@@ -1495,7 +1496,7 @@ function updateMobileProfileNav() {
   const loadingSession = document.body.classList.contains("session-loading") && !session.id;
   const planLabel = session.planLabel || planLimits[currentPlan()]?.label || "Starter";
   const roleLabel = session.roleLabel || roleProfiles[session.role]?.label || "Cuenta";
-  const photoUrl = session.avatarUrl || session.picture || session.photoURL || "";
+  const photoUrl = entityPhotoUrl(session);
   const initials = profileInitials(session.name);
   if (mobileProfileNavIcon) {
     mobileProfileNavIcon.innerHTML = loadingSession
@@ -12842,18 +12843,43 @@ settingsPanel?.addEventListener("click", async (event) => {
 settingsPanel?.addEventListener("input", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
-    const field = profileField.dataset.settingsProfileField;
-    const value = field === "avatarUrl" ? publicMediaUrl(profileField.value) : profileField.value;
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...currentSession(), [field]: value }));
-    renderAccount();
-    updateMobileProfileNav();
+    const mediaWrapper = profileField.closest(".settings-media-field");
+    if (mediaWrapper && profileField.dataset.settingsProfileField === "avatarUrl") {
+      const preview = mediaWrapper.querySelector(".settings-media-preview");
+      const helper = mediaWrapper.querySelector(".settings-media-helper");
+      const previewUrl = publicMediaUrl(profileField.value);
+      if (preview) {
+        preview.classList.remove("is-broken-media");
+        preview.innerHTML = previewUrl ? avatarImageMarkup(previewUrl, currentSession().name || "Usuario Touch") : `<i data-lucide="user-round"></i>`;
+      }
+      if (helper) helper.outerHTML = mediaUrlHelperMarkup(previewUrl, "perfil");
+      renderIcons();
+    }
     return;
   }
 
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    await syncSettingsCompanyField(field, field === "avatarUrl" ? publicMediaUrl(companyField.value) : companyField.value);
+    const value = field === "avatarUrl" ? publicMediaUrl(companyField.value) : companyField.value;
+    companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: value } : company));
+    activeCompanyName.textContent = activeCompany().name || "";
+    if (field === "primaryColor") {
+      settingsPanel.querySelectorAll(".settings-media-preview, .settings-profile-card .company-avatar").forEach((node) => {
+        node.style.setProperty("--company-color", value || "#111");
+      });
+    }
+    const mediaWrapper = companyField.closest(".settings-media-field");
+    if (mediaWrapper && field === "avatarUrl") {
+      const preview = mediaWrapper.querySelector(".settings-media-preview");
+      const helper = mediaWrapper.querySelector(".settings-media-helper");
+      if (preview) {
+        preview.classList.remove("is-broken-media");
+        preview.innerHTML = value ? avatarImageMarkup(value, activeCompany().name || "Empresa") : `<i data-lucide="briefcase-business"></i>`;
+      }
+      if (helper) helper.outerHTML = mediaUrlHelperMarkup(value, "logo");
+      renderIcons();
+    }
     return;
   }
 
@@ -13826,7 +13852,7 @@ companyForm.addEventListener("submit", (event) => {
             voice: companyVoiceInput.value.trim(),
             socialNetworks,
             primaryColor: companyColorInput.value,
-            avatarUrl: companyAvatarInput.value.trim(),
+            avatarUrl: publicMediaUrl(companyAvatarInput.value),
           }
         : company
     );
@@ -13851,7 +13877,7 @@ companyForm.addEventListener("submit", (event) => {
       description: companyDescriptionInput.value.trim(),
       voice: companyVoiceInput.value.trim(),
       primaryColor: companyColorInput.value,
-      avatarUrl: companyAvatarInput.value.trim(),
+      avatarUrl: publicMediaUrl(companyAvatarInput.value),
       socialNetworks,
       mediaSource: {
         provider: "Google Drive",
