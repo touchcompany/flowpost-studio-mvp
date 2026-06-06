@@ -10666,7 +10666,7 @@ function companyDetailView(company) {
         <div>
           <span class="workspace-label">Detalle de empresa</span>
           <h3>${escapeHtml(company.name)}</h3>
-          <p>${escapeHtml(company.handle || "Sin usuario")} · ${escapeHtml(company.description || "Completa la descripcion de esta empresa.")}</p>
+          <p>${escapeHtml(company.handle || "Sin usuario")} · empresa cliente vinculada a tu cuenta principal</p>
         </div>
         <span class="pill done">Activa</span>
       </header>
@@ -10723,6 +10723,13 @@ function companyDetailView(company) {
 
       <div class="company-linked-grid">
         <article class="company-info-card">
+          <span class="status-icon small"><i data-lucide="id-card"></i></span>
+          <div>
+            <strong>Datos de empresa</strong>
+            <p>${escapeHtml(client?.nit || "Sin NIT")} · ${escapeHtml(client?.phone || "Sin telefono")} · ${escapeHtml(client?.email || "Sin correo")}</p>
+          </div>
+        </article>
+        <article class="company-info-card">
           <span class="status-icon small"><i data-lucide="message-square-text"></i></span>
           <div><strong>Identidad editorial</strong><p>${escapeHtml(company.voice || "Define el tono de voz para generar contenido consistente.")}</p></div>
         </article>
@@ -10777,7 +10784,8 @@ function companyDetailView(company) {
 }
 
 function removeCompanyRecordsFromBrowser(companyId) {
-  const keep = (items = []) => items.filter((item) => item.companyId !== companyId);
+  const companyClientIds = new Set(clients.filter((client) => client.companyId === companyId).map((client) => client.id));
+  const keep = (items = []) => items.filter((item) => item.companyId !== companyId && !companyClientIds.has(item.clientId));
   companies = companies.filter((company) => company.id !== companyId);
   publications = keep(publications);
   jobs = keep(jobs);
@@ -10844,9 +10852,15 @@ function renderCompanies() {
     return;
   }
   const normalizedSearch = normalizeText(companyListSearch);
+  const pendingInvoiceCountForCompany = (companyId) => {
+    const client = clients.find((item) => item.companyId === companyId);
+    return invoices.filter(
+      (invoice) => !invoice.deletedAt && (invoice.companyId === companyId || invoice.clientId === client?.id) && invoice.status !== "Pagada"
+    ).length;
+  };
   const companyRows = visibleCompanies.filter((company) => {
     const client = clients.find((item) => item.companyId === company.id);
-    const pending = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada").length;
+    const pending = pendingInvoiceCountForCompany(company.id);
     const text = normalizeText(`${company.name} ${company.handle || ""} ${company.description || ""} ${client?.name || ""} ${client?.email || ""}`);
     const matchesSearch = !normalizedSearch || text.includes(normalizedSearch);
     const matchesFilter =
@@ -10856,16 +10870,14 @@ function renderCompanies() {
       (companyListFilter === "ready" && pending === 0);
     return matchesSearch && matchesFilter;
   });
-  const pendingCompanies = visibleCompanies.filter((company) =>
-    invoices.some((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada")
-  ).length;
+  const pendingCompanies = visibleCompanies.filter((company) => pendingInvoiceCountForCompany(company.id) > 0).length;
   const readyCompanies = visibleCompanies.length - pendingCompanies;
   const activeCompanyPosts = publications.filter((post) => post.companyId === activeCompanyId).length;
   companiesGrid.innerHTML = `
     <section class="company-list-toolbar">
       <label class="field compact">
         <span>Buscar</span>
-        <input data-company-search value="${escapeHtml(companyListSearch)}" placeholder="Nombre, usuario o cliente" />
+        <input data-company-search value="${escapeHtml(companyListSearch)}" placeholder="Empresa, correo, usuario o servicio" />
       </label>
       <div class="company-filter-chips" aria-label="Filtros de empresas">
         ${[
@@ -10892,7 +10904,7 @@ function renderCompanies() {
         .map((company) => {
           const isActive = company.id === activeCompanyId;
           const client = clients.find((item) => item.companyId === company.id);
-          const pending = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada").length;
+          const pending = pendingInvoiceCountForCompany(company.id);
           const companyPosts = publications.filter((post) => post.companyId === company.id).length;
           return `
             <article class="company-chat-row ${isActive ? "active" : ""}">
@@ -10902,7 +10914,7 @@ function renderCompanies() {
                 </span>
                 <span>
                   <strong>${escapeHtml(company.name)}</strong>
-                  <small>${escapeHtml(company.handle || client?.email || "Sin usuario")} · ${companyPosts} piezas · ${pending} cobro${pending === 1 ? "" : "s"}</small>
+                  <small>${escapeHtml(client?.email || company.handle || "Sin contacto")} · ${companyPosts} piezas · ${pending} cobro${pending === 1 ? "" : "s"}</small>
                   <em>${escapeHtml(company.description || "Toca para ver esta empresa")}</em>
                 </span>
               </button>
