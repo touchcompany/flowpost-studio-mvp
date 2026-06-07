@@ -633,6 +633,87 @@
   gap: 18px;
 }
 
+.finance-role-guide {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.finance-role-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.7)),
+    radial-gradient(circle at 100% 0%, rgba(17, 17, 17, 0.04), transparent 34%);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.055);
+}
+
+.finance-role-card.primary {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(240, 253, 250, 0.72)),
+    radial-gradient(circle at 92% 0%, rgba(20, 184, 166, 0.14), transparent 36%);
+}
+
+.finance-role-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 16px;
+  color: #111;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(17, 17, 17, 0.08),
+    0 12px 24px rgba(15, 23, 42, 0.06);
+}
+
+.finance-role-icon svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.8;
+}
+
+.finance-role-card small,
+.finance-role-card strong,
+.finance-role-card p {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.finance-role-card small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.finance-role-card strong {
+  margin-top: 2px;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.finance-role-card p {
+  display: -webkit-box;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.32;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .finance-disclosure,
 .finance-inline-create {
   overflow: hidden;
@@ -1263,6 +1344,7 @@
   }
 
   .finance-filter-bar,
+  .finance-role-guide,
   .finance-metrics,
   .finance-form-grid,
   .finance-grid {

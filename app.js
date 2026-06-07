@@ -3581,6 +3581,7 @@ function renderFinancePriorityStrip(filteredInvoices, filteredProviders, income,
   const nextProvider = filteredProviders.find((provider) => ["Atrasado", "Próximo"].includes(financeProviderStatus(provider))) || filteredProviders[0];
   const balance = income - expenses;
   const invoiceClient = nextInvoice ? clients.find((item) => item.id === nextInvoice.clientId) : null;
+  const invoiceCompany = nextInvoice ? companies.find((item) => item.id === (nextInvoice.companyId || invoiceClient?.companyId)) : null;
   const providerStatus = nextProvider ? financeProviderStatus(nextProvider) : "";
   return `
     <section class="finance-priority-strip" aria-label="Prioridades financieras">
@@ -3589,7 +3590,7 @@ function renderFinancePriorityStrip(filteredInvoices, filteredProviders, income,
         <div>
           <small>Por cobrar</small>
           <strong>${nextInvoice ? formatMoney(nextInvoice.amount, nextInvoice.currency || "COP") : "Todo al día"}</strong>
-          <p>${nextInvoice ? `${escapeHtml(invoiceClient?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(nextInvoice.dueDate))}` : "No hay documentos pendientes en este filtro."}</p>
+          <p>${nextInvoice ? `${escapeHtml(invoiceCompany?.name || invoiceClient?.name || "Empresa")} · vence ${escapeHtml(shortDateLabel(nextInvoice.dueDate))}` : "No hay documentos pendientes en este filtro."}</p>
         </div>
         ${nextInvoice ? `<button class="secondary-button icon-button compact" type="button" data-finance-focus-invoice="${escapeHtml(nextInvoice.id)}" aria-label="Ver documento"><i data-lucide="chevron-right"></i></button>` : ""}
       </article>
@@ -3610,6 +3611,41 @@ function renderFinancePriorityStrip(filteredInvoices, filteredProviders, income,
           <p>${balance < 0 ? "Los egresos superan los ingresos del periodo." : "Ingresos por encima de los egresos del periodo."}</p>
         </div>
         <button class="secondary-button icon-button compact" type="button" data-finance-reset-filters aria-label="Ver todo"><i data-lucide="rotate-ccw"></i></button>
+      </article>
+    </section>
+  `;
+}
+
+function renderFinanceRoleGuide({ issuerProfile, activeClients = [], visibleCompanies = [], filteredInvoices = [], filteredProviders = [] }) {
+  const receiverCount = activeClients.length || visibleCompanies.length;
+  const pendingDocuments = filteredInvoices.filter((invoice) => financeInvoiceStatus(invoice) !== "Pagada").length;
+  const providerCount = filteredProviders.length;
+  const issuerMeta = [issuerProfile.issuerNit, issuerProfile.issuerEmail].filter(Boolean).join(" · ");
+  return `
+    <section class="finance-role-guide" aria-label="Funcionamiento de cobros">
+      <article class="finance-role-card primary">
+        <span class="finance-role-icon"><i data-lucide="user-round-check"></i></span>
+        <div>
+          <small>Emite tu cuenta principal</small>
+          <strong>${escapeHtml(issuerProfile.issuerName || currentSession().name || "Tu cuenta")}</strong>
+          <p>${escapeHtml(issuerMeta || "Configura NIT, correo y datos de pago en Configuración.")}</p>
+        </div>
+      </article>
+      <article class="finance-role-card">
+        <span class="finance-role-icon"><i data-lucide="briefcase-business"></i></span>
+        <div>
+          <small>Reciben tus empresas</small>
+          <strong>${receiverCount} empresa${receiverCount === 1 ? "" : "s"}</strong>
+          <p>Las empresas creadas reciben documentos, servicios y pagos.</p>
+        </div>
+      </article>
+      <article class="finance-role-card">
+        <span class="finance-role-icon"><i data-lucide="receipt-text"></i></span>
+        <div>
+          <small>Control financiero</small>
+          <strong>${pendingDocuments} pendiente${pendingDocuments === 1 ? "" : "s"}</strong>
+          <p>${providerCount} proveedor${providerCount === 1 ? "" : "es"} con filtros por mes, año y empresa.</p>
+        </div>
       </article>
     </section>
   `;
@@ -3657,6 +3693,7 @@ function renderFinancePanel() {
   ];
   financePanel.innerHTML = `
     <section class="finance-shell">
+      ${renderFinanceRoleGuide({ issuerProfile, activeClients, visibleCompanies, filteredInvoices, filteredProviders })}
       <details class="finance-disclosure">
         <summary>
           <span><i data-lucide="list-filter"></i> Filtrar cuentas</span>
