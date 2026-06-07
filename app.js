@@ -1389,19 +1389,29 @@ function normalizeClientSession(session = {}) {
   const plan = isTouch ? "agency" : planLimits[session.plan] ? session.plan : "starter";
   const role = isTouch ? "super_admin" : session.role || (plan === "agency" ? "agency_owner" : "business_owner");
   const avatarUrl = publicMediaUrl(session.avatarUrl || session.metadata?.avatarUrl || session.picture || session.photoURL || "");
+  const nit = session.nit || session.metadata?.nit || "";
+  const phone = session.phone || session.metadata?.phone || "";
+  const address = session.address || session.metadata?.address || "";
   return {
     ...session,
     id: session.id || (isTouch ? "touch-super-admin" : ""),
     name: session.name || (isTouch ? "Touch Studio" : "Invitado MVP"),
     avatarUrl,
-    nit: session.nit || session.metadata?.nit || "",
-    phone: session.phone || session.metadata?.phone || "",
-    address: session.address || session.metadata?.address || "",
+    nit,
+    phone,
+    address,
     plan,
     planLabel: isTouch ? "Touch Super Admin" : session.planLabel || planLimits[plan].label,
     role,
     roleLabel: roleProfiles[role]?.label || "Empresa",
     status: isTouch ? "active" : session.status || "trial",
+    metadata: {
+      ...(session.metadata || {}),
+      avatarUrl,
+      nit,
+      phone,
+      address,
+    },
   };
 }
 

@@ -490,21 +490,31 @@ function normalizeSession(payload) {
   const isTouch = sessionIsSuperAdmin({ ...payload, id: payload.id || "pending-profile" });
   const plan = isTouch ? "agency" : planLabels[payload.plan] ? payload.plan : "starter";
   const role = isTouch ? "super_admin" : payload.role || (plan === "agency" ? "agency_owner" : "business_owner");
+  const avatarUrl = payload.avatarUrl || payload.metadata?.avatarUrl || "";
+  const nit = payload.nit || payload.metadata?.nit || "";
+  const phone = payload.phone || payload.metadata?.phone || "";
+  const address = payload.address || payload.metadata?.address || "";
   return {
     id: payload.id || (isTouch ? "touch-super-admin" : "demo-profile"),
     name: payload.name || (isTouch ? "Touch Studio" : "Usuario MVP"),
     email: payload.email || "",
     provider: payload.provider || "demo",
-    avatarUrl: payload.avatarUrl || payload.metadata?.avatarUrl || "",
-    nit: payload.nit || payload.metadata?.nit || "",
-    phone: payload.phone || payload.metadata?.phone || "",
-    address: payload.address || payload.metadata?.address || "",
+    avatarUrl,
+    nit,
+    phone,
+    address,
     plan,
     planLabel: isTouch ? "Touch Super Admin" : planLabels[plan],
     role,
     roleLabel: payload.roleLabel || roleLabels[role] || "",
     companyAccess: Array.isArray(payload.companyAccess) ? payload.companyAccess : [],
-    metadata: payload.metadata || {},
+    metadata: {
+      ...(payload.metadata || {}),
+      avatarUrl,
+      nit,
+      phone,
+      address,
+    },
     inviteToken: payload.inviteToken || "",
     status: isTouch ? "active" : payload.status || "trial",
     createdAt: payload.createdAt || new Date().toISOString(),
