@@ -7270,6 +7270,93 @@ function renderOnboardingNextSteps(company, client) {
   `;
 }
 
+function renderDashboardLaunchpad({ company, client, companyPosts, companyJobs, openInvoices, readyAccounts }) {
+  const resources = company.videos?.length || 0;
+  const orders = client ? clientServiceOrders(client.id).length : 0;
+  const scripts = companyPosts.filter((post) => post.script || post.hook).length;
+  const modules = [
+    {
+      icon: "calendar-days",
+      title: "Planear contenido",
+      detail: `${companyPosts.length} pieza${companyPosts.length === 1 ? "" : "s"} · ${companyJobs.length} trabajo${companyJobs.length === 1 ? "" : "s"}`,
+      view: "calendar",
+      cta: "Abrir calendario",
+      ready: companyPosts.length > 0,
+    },
+    {
+      icon: "notebook-pen",
+      title: "Crear guiones",
+      detail: `${scripts} guion${scripts === 1 ? "" : "es"} guardado${scripts === 1 ? "" : "s"} para esta empresa`,
+      view: "scripts",
+      cta: "Abrir estudio IA",
+      ready: scripts > 0,
+    },
+    {
+      icon: "image",
+      title: "Recursos",
+      detail: `${resources} archivo${resources === 1 ? "" : "s"} listo${resources === 1 ? "" : "s"} en biblioteca`,
+      view: "library",
+      cta: "Ver biblioteca",
+      ready: resources > 0,
+    },
+    {
+      icon: "receipt-text",
+      title: "Cobros",
+      detail: `${openInvoices.length} documento${openInvoices.length === 1 ? "" : "s"} abierto${openInvoices.length === 1 ? "" : "s"}`,
+      view: "finances",
+      cta: "Gestionar cuentas",
+      ready: openInvoices.length === 0,
+    },
+    {
+      icon: "shopping-bag",
+      title: "Servicios",
+      detail: `${orders} compra${orders === 1 ? "" : "s"} o servicio${orders === 1 ? "" : "s"} vinculado${orders === 1 ? "" : "s"}`,
+      view: "store",
+      cta: "Abrir tienda",
+      ready: orders > 0,
+    },
+    {
+      icon: "plug-zap",
+      title: "Conexiones",
+      detail: `${readyAccounts} red${readyAccounts === 1 ? "" : "es"} lista${readyAccounts === 1 ? "" : "s"} para operar`,
+      view: "accounts",
+      cta: "Conectar APIs",
+      ready: readyAccounts > 0,
+    },
+  ];
+  return `
+    <section class="dashboard-launchpad" aria-label="Módulos principales">
+      <header>
+        <div>
+          <span class="workspace-label">Centro operativo</span>
+          <strong>Todo lo importante de ${escapeHtml(company.name)}</strong>
+          <p>Entra a cada módulo desde aquí. La información siempre queda filtrada por la empresa activa.</p>
+        </div>
+        <button class="secondary-button icon-text-button" type="button" data-dashboard-action="settings">
+          <i data-lucide="sliders-horizontal"></i>
+          Ajustar espacio
+        </button>
+      </header>
+      <div class="dashboard-launchpad-grid">
+        ${modules
+          .map(
+            (module) => `
+              <button class="${module.ready ? "ready" : ""}" type="button" data-dashboard-action="${module.view}">
+                <span class="dashboard-icon"><i data-lucide="${module.ready ? "check" : module.icon}"></i></span>
+                <span>
+                  <strong>${escapeHtml(module.title)}</strong>
+                  <small>${escapeHtml(module.detail)}</small>
+                </span>
+                <em>${escapeHtml(module.cta)}</em>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function activityIcon(type) {
   const icons = {
     automation: "workflow",
@@ -7413,6 +7500,7 @@ function renderDashboard() {
     ${isClientPortalSession() ? renderClientPortalAccess(client, { compact: true }) : ""}
     ${!isClientPortalSession() ? renderAccessSummary(company, client) : ""}
     ${!isClientPortalSession() ? renderOnboardingNextSteps(company, client) : ""}
+    ${!isClientPortalSession() ? renderDashboardLaunchpad({ company, client, companyPosts, companyJobs, openInvoices, readyAccounts }) : ""}
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
