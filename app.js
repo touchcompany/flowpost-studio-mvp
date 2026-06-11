@@ -3731,6 +3731,182 @@ function renderFinanceExecutiveSummary({ income, expenses, pending, overdueInvoi
   `;
 }
 
+function financeMonthKey(dateValue) {
+  if (!dateValue) return "";
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function financeMonthLabel(key) {
+  if (!key || !key.includes("-")) return "Sin fecha";
+  const [year, month] = key.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("es-CO", { month: "short", year: "2-digit" }).replace(".", "");
+}
+
+function financeReportMonthKeys(filteredTransactions, filteredInvoices, filteredProviders) {
+  const keys = new Set();
+  filteredTransactions.forEach((item) => {
+    const key = financeMonthKey(item.date);
+    if (key) keys.add(key);
+  });
+  filteredInvoices.forEach((item) => {
+    const key = financeMonthKey(item.issueDate || item.dueDate);
+    if (key) keys.add(key);
+  });
+  filteredProviders.forEach((item) => {
+    const key = financeMonthKey(item.nextPaymentDate);
+    if (key) keys.add(key);
+  });
+  if (!keys.size) {
+    const now = new Date();
+    for (let index = 5; index >= 0; index -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      keys.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+    }
+  }
+  return [...keys].sort().slice(-6);
+}
+
+function renderFinanceReports({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies }) {
+  const monthKeys = financeReportMonthKeys(filteredTransactions, filteredInvoices, filteredProviders);
+  const monthlyRows = monthKeys.map((key) => {
+    const income = filteredTransactions
+      .filter((item) => item.type === "Ingreso" && financeMonthKey(item.date) === key)
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const expenses =
+      filteredTransactions
+        .filter((item) => item.type === "Egreso" && financeMonthKey(item.date) === key)
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0) +
+      filteredProviders
+        .filter((item) => financeMonthKey(item.nextPaymentDate) === key)
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const pending = filteredInvoices
+      .filter((item) => financeInvoiceStatus(item) !== "Pagada" && financeMonthKey(item.issueDate || item.dueDate) === key)
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    return { key, label: financeMonthLabel(key), income, expenses, pending, balance: income - expenses };
+  });
+  const maxMonthValue = Math.max(1, ...monthlyRows.flatMap((item) => [item.income, item.expenses, item.pending]));
+  const companyRows = visibleCompanies
+    .map((company) => {
+      const income = filteredTransactions
+        .filter((item) => financeRecordCompanyId(item) === company.id && item.type === "Ingreso")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const expenses =
+        filteredTransactions
+          .filter((item) => financeRecordCompanyId(item) === company.id && item.type === "Egreso")
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0) +
+        filteredProviders
+          .filter((item) => financeRecordCompanyId(item) === company.id)
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const pending = filteredInvoices
+        .filter((item) => financeRecordCompanyId(item) === company.id && financeInvoiceStatus(item) !== "Pagada")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const documents = filteredInvoices.filter((item) => financeRecordCompanyId(item) === company.id).length;
+      return { company, income, expenses, pending, documents, balance: income - expenses };
+    })
+    .filter((row) => row.income || row.expenses || row.pending || row.documents)
+    .sort((left, right) => right.income + right.pending - (left.income + left.pending))
+    .slice(0, 5);
+  const maxCompanyValue = Math.max(1, ...companyRows.map((item) => Math.max(item.income, item.expenses, item.pending)));
+  const paidInvoices = filteredInvoices.filter((item) => financeInvoiceStatus(item) === "Pagada").length;
+  const pendingInvoices = filteredInvoices.filter((item) => financeInvoiceStatus(item) === "Pendiente").length;
+  const overdueInvoices = filteredInvoices.filter((item) => financeInvoiceStatus(item) === "Vencida").length;
+  const totalInvoices = Math.max(1, filteredInvoices.length);
+  const paidPercent = Math.round((paidInvoices / totalInvoices) * 100);
+  const pendingPercent = Math.round((pendingInvoices / totalInvoices) * 100);
+  const overduePercent = Math.round((overdueInvoices / totalInvoices) * 100);
+  return `
+    <section class="finance-report-panel" aria-label="Informes financieros">
+      <header>
+        <div>
+          <span class="workspace-label">Informes visuales</span>
+          <h3>Ingresos, egresos y cartera por periodo</h3>
+          <p>Los gráficos respetan los filtros de mes, año, empresa, estado y proveedores.</p>
+        </div>
+        <span class="pill ready">${monthKeys.length} periodos</span>
+      </header>
+      <div class="finance-report-grid">
+        <article class="finance-chart-card wide">
+          <div class="finance-chart-head">
+            <strong>Tendencia mensual</strong>
+            <small>Ingresos, egresos y cuentas pendientes</small>
+          </div>
+          <div class="finance-month-chart">
+            ${monthlyRows
+              .map(
+                (row) => `
+                  <div class="finance-month-row">
+                    <span>${escapeHtml(row.label)}</span>
+                    <div class="finance-bar-stack">
+                      <i class="income" style="width:${Math.max(3, Math.round((row.income / maxMonthValue) * 100))}%"></i>
+                      <i class="expense" style="width:${Math.max(3, Math.round((row.expenses / maxMonthValue) * 100))}%"></i>
+                      <i class="pending" style="width:${Math.max(3, Math.round((row.pending / maxMonthValue) * 100))}%"></i>
+                    </div>
+                    <strong class="${row.balance < 0 ? "negative" : "positive"}">${formatMoney(row.balance)}</strong>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+          <div class="finance-chart-legend">
+            <span><i class="income"></i>Ingresos</span>
+            <span><i class="expense"></i>Egresos</span>
+            <span><i class="pending"></i>Pendiente</span>
+          </div>
+        </article>
+
+        <article class="finance-chart-card">
+          <div class="finance-chart-head">
+            <strong>Por empresa / cliente</strong>
+            <small>Top por ingresos y cartera</small>
+          </div>
+          <div class="finance-client-chart">
+            ${
+              companyRows.length
+                ? companyRows
+                    .map(
+                      (row) => `
+                        <button type="button" data-finance-company-focus="${escapeHtml(row.company.id)}">
+                          <span class="company-avatar small" style="--company-color:${escapeHtml(row.company.primaryColor || "#111")}">${companyAvatarMarkup(row.company)}</span>
+                          <span>
+                            <strong>${escapeHtml(row.company.name)}</strong>
+                            <small>${row.documents} doc. · ${formatMoney(row.pending)} por cobrar</small>
+                            <i style="width:${Math.max(4, Math.round((Math.max(row.income, row.expenses, row.pending) / maxCompanyValue) * 100))}%"></i>
+                          </span>
+                          <em>${formatMoney(row.income)}</em>
+                        </button>
+                      `
+                    )
+                    .join("")
+                : `<div class="empty-state compact"><strong>Sin datos por empresa</strong><p>Crea documentos o registra movimientos para ver este informe.</p></div>`
+            }
+          </div>
+        </article>
+
+        <article class="finance-chart-card">
+          <div class="finance-chart-head">
+            <strong>Estado de cartera</strong>
+            <small>Pagadas, pendientes y vencidas</small>
+          </div>
+          <div class="finance-donut-grid">
+            <div class="finance-donut" style="--paid:${paidPercent}; --pending:${pendingPercent}; --overdue:${overduePercent}">
+              <strong>${paidPercent}%</strong>
+              <span>Pagado</span>
+            </div>
+            <div class="finance-status-breakdown">
+              <span><i class="paid"></i>Pagadas <strong>${paidInvoices}</strong></span>
+              <span><i class="pending"></i>Pendientes <strong>${pendingInvoices}</strong></span>
+              <span><i class="overdue"></i>Vencidas <strong>${overdueInvoices}</strong></span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 function renderFinancePanel() {
   if (!financePanel) return;
   purgeExpiredFinanceInvoices();
@@ -3774,6 +3950,7 @@ function renderFinancePanel() {
   financePanel.innerHTML = `
     <section class="finance-shell">
       ${renderFinanceExecutiveSummary({ income, expenses, pending, overdueInvoices, overdueProviders, upcomingProviders, recurringInvoices, recurringClients })}
+      ${renderFinanceReports({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies })}
       ${renderFinanceRoleGuide({ issuerProfile, activeClients, visibleCompanies, filteredInvoices, filteredProviders })}
       <details class="finance-disclosure">
         <summary>
@@ -13583,6 +13760,15 @@ financePanel?.addEventListener("click", (event) => {
     financeFilters.providerStatus = providerDueButton.dataset.financeShowProviderDue || "Próximo";
     persistState();
     renderFinancePanel();
+    return;
+  }
+
+  const companyFocusButton = event.target.closest("[data-finance-company-focus]");
+  if (companyFocusButton) {
+    financeFilters.companyId = companyFocusButton.dataset.financeCompanyFocus || "all";
+    persistState();
+    renderFinancePanel();
+    showToast("Informe filtrado por empresa.");
     return;
   }
 
