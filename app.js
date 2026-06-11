@@ -6091,6 +6091,33 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicSt
   const publicServices = services.filter((service) => service.clientVisible !== false);
   const privateServices = services.length - publicServices.length;
   const pendingOrders = activeOrders.filter((order) => ["Solicitado", "En proceso", "Pendiente"].includes(order.status)).length;
+  const completedOrders = activeOrders.filter((order) => order.status === "Completado").length;
+  const checklist = [
+    {
+      icon: "store",
+      title: "Servicios publicados",
+      detail: publicServices.length ? `${publicServices.length} servicios visibles en la página pública.` : "Publica al menos un servicio para poder vender afuera.",
+      ready: publicServices.length > 0,
+    },
+    {
+      icon: "shopping-bag",
+      title: "Pedidos centralizados",
+      detail: activeOrders.length ? `${activeOrders.length} pedidos o asignaciones dentro de la agencia.` : "Aún no hay pedidos recibidos o asignados.",
+      ready: activeOrders.length > 0,
+    },
+    {
+      icon: "workflow",
+      title: "Entrega operativa",
+      detail: pendingOrders ? `${pendingOrders} servicios en proceso requieren seguimiento.` : `${completedOrders} servicios completados o sin pendientes críticos.`,
+      ready: pendingOrders === 0 && activeOrders.length > 0,
+    },
+    {
+      icon: "external-link",
+      title: "Venta externa",
+      detail: "La página pública puede recibir compras y pasarlas a esta operación.",
+      ready: Boolean(publicStoreUrl),
+    },
+  ];
   return `
     <section class="store-admin-desk">
       <article class="store-admin-card featured">
@@ -6127,6 +6154,21 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicSt
           <i data-lucide="plus"></i>
           Agregar
         </button>
+      </div>
+      <div class="store-admin-checklist">
+        ${checklist
+          .map(
+            (item) => `
+              <article class="${item.ready ? "ready" : ""}">
+                <span class="status-icon small"><i data-lucide="${item.ready ? "check" : item.icon}"></i></span>
+                <div>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <small>${escapeHtml(item.detail)}</small>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
       </div>
     </section>
   `;

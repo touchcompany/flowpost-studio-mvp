@@ -12635,6 +12635,52 @@ input[type="file"] {
   font: inherit;
 }
 
+.store-admin-checklist {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.store-admin-checklist article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.store-admin-checklist article.ready .status-icon {
+  background: rgba(220, 252, 231, 0.95);
+  color: #15803d;
+}
+
+.store-admin-checklist strong,
+.store-admin-checklist small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-admin-checklist strong {
+  white-space: nowrap;
+}
+
+.store-admin-checklist small {
+  display: -webkit-box;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .store-orders-board {
   display: grid;
   gap: 12px;
@@ -13443,6 +13489,10 @@ input[type="file"] {
     grid-template-columns: 1fr;
   }
 
+  .store-admin-checklist {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .store-orders-board > header,
   .store-order-board-list {
     grid-template-columns: 1fr;
@@ -13633,6 +13683,14 @@ input[type="file"] {
 
   .store-mode-strip article {
     border-radius: 18px;
+  }
+
+  .store-admin-checklist {
+    grid-template-columns: 1fr;
+  }
+
+  .store-admin-checklist article {
+    min-height: 74px;
   }
 
   .dashboard-launchpad {
