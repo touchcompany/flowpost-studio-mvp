@@ -3907,6 +3907,163 @@ function renderFinanceReports({ filteredTransactions, filteredInvoices, filtered
   `;
 }
 
+function renderFinanceInsightBoard({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies, income, expenses, pending }) {
+  const balance = income - expenses;
+  const paidAmount = filteredInvoices
+    .filter((item) => financeInvoiceStatus(item) === "Pagada")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const invoiceTotal = filteredInvoices.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const collectionPercent = invoiceTotal ? Math.round((paidAmount / invoiceTotal) * 100) : 0;
+  const expensePercent = income ? Math.min(100, Math.round((expenses / income) * 100)) : expenses ? 100 : 0;
+  const pendingPercent = invoiceTotal ? Math.round((pending / invoiceTotal) * 100) : 0;
+  const topCompany = visibleCompanies
+    .map((company) => {
+      const companyIncome = filteredTransactions
+        .filter((item) => financeRecordCompanyId(item) === company.id && item.type === "Ingreso")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const companyPending = filteredInvoices
+        .filter((item) => financeRecordCompanyId(item) === company.id && financeInvoiceStatus(item) !== "Pagada")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const documents = filteredInvoices.filter((item) => financeRecordCompanyId(item) === company.id).length;
+      return { company, score: companyIncome + companyPending, income: companyIncome, pending: companyPending, documents };
+    })
+    .filter((row) => row.score || row.documents)
+    .sort((left, right) => right.score - left.score)[0];
+  const upcomingInvoices = filteredInvoices
+    .filter((invoice) => financeInvoiceStatus(invoice) !== "Pagada")
+    .sort((left, right) => String(left.dueDate || "").localeCompare(String(right.dueDate || "")));
+  const upcomingProviders = filteredProviders
+    .filter((provider) => ["Atrasado", "Próximo"].includes(financeProviderStatus(provider)))
+    .sort((left, right) => String(left.nextPaymentDate || "").localeCompare(String(right.nextPaymentDate || "")));
+  const nextInvoice = upcomingInvoices[0];
+  const nextProvider = upcomingProviders[0];
+  const actionItems = [
+    nextInvoice
+      ? {
+          icon: "receipt-text",
+          title: `Cobrar ${billingDocumentNumber(nextInvoice)}`,
+          text: `${formatMoney(nextInvoice.amount, nextInvoice.currency || "COP")} vence ${shortDateLabel(nextInvoice.dueDate)}`,
+          tone: financeInvoiceStatus(nextInvoice) === "Vencida" ? "danger" : "warning",
+        }
+      : {
+          icon: "circle-check-big",
+          title: "Cartera sin urgencias",
+          text: "No hay documentos pendientes en los filtros actuales.",
+          tone: "success",
+        },
+    nextProvider
+      ? {
+          icon: "hand-coins",
+          title: `Pagar ${nextProvider.name || "proveedor"}`,
+          text: `${formatMoney(nextProvider.amount, nextProvider.currency || "COP")} · ${shortDateLabel(nextProvider.nextPaymentDate)}`,
+          tone: financeProviderStatus(nextProvider) === "Atrasado" ? "danger" : "warning",
+        }
+      : {
+          icon: "shield-check",
+          title: "Proveedores al día",
+          text: "No aparecen pagos críticos para este periodo.",
+          tone: "success",
+        },
+  ];
+  const insightCards = [
+    {
+      icon: balance >= 0 ? "trending-up" : "trending-down",
+      label: "Caja neta",
+      value: formatMoney(balance),
+      detail: balance >= 0 ? "El periodo queda positivo." : "Hay más egresos que ingresos.",
+      tone: balance >= 0 ? "positive" : "negative",
+      percent: Math.min(100, income ? Math.round((Math.abs(balance) / Math.max(income, expenses, 1)) * 100) : 0),
+    },
+    {
+      icon: "wallet-cards",
+      label: "Cartera",
+      value: formatMoney(pending),
+      detail: `${pendingPercent}% del total facturado está pendiente.`,
+      tone: pending ? "warning" : "positive",
+      percent: Math.max(4, Math.min(100, pendingPercent)),
+    },
+    {
+      icon: "banknote-arrow-down",
+      label: "Gasto sobre ingreso",
+      value: `${expensePercent}%`,
+      detail: expenses ? `${formatMoney(expenses)} en egresos registrados.` : "Sin egresos en este filtro.",
+      tone: expensePercent > 70 ? "negative" : expensePercent > 40 ? "warning" : "positive",
+      percent: Math.max(4, expensePercent),
+    },
+    {
+      icon: "badge-dollar-sign",
+      label: "Recaudo",
+      value: `${collectionPercent}%`,
+      detail: `${formatMoney(paidAmount)} pagado de ${formatMoney(invoiceTotal)}.`,
+      tone: collectionPercent >= 70 ? "positive" : collectionPercent >= 35 ? "warning" : "negative",
+      percent: Math.max(4, collectionPercent),
+    },
+  ];
+  return `
+    <section class="finance-insight-board" aria-label="Lectura rápida financiera">
+      <header>
+        <div>
+          <span class="workspace-label">Lectura rápida</span>
+          <h3>Qué está pasando con el dinero</h3>
+          <p>Resumen ejecutivo para decidir a quién cobrar, qué pagar y cómo va la caja.</p>
+        </div>
+        <span class="pill ${balance >= 0 ? "ready" : "danger"}">${balance >= 0 ? "Caja saludable" : "Revisar caja"}</span>
+      </header>
+      <div class="finance-insight-grid">
+        ${insightCards
+          .map(
+            (card) => `
+              <article class="finance-insight-card ${card.tone}">
+                <span class="finance-insight-icon"><i data-lucide="${card.icon}"></i></span>
+                <div>
+                  <small>${escapeHtml(card.label)}</small>
+                  <strong>${escapeHtml(card.value)}</strong>
+                  <p>${escapeHtml(card.detail)}</p>
+                </div>
+                <i class="finance-mini-meter" style="--meter:${card.percent}%"></i>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="finance-insight-bottom">
+        <article class="finance-top-client">
+          <span class="finance-insight-icon"><i data-lucide="building-2"></i></span>
+          <div>
+            <small>Empresa más relevante</small>
+            <strong>${escapeHtml(topCompany?.company?.name || "Sin movimientos aún")}</strong>
+            <p>${
+              topCompany
+                ? `${formatMoney(topCompany.income)} recibido · ${formatMoney(topCompany.pending)} por cobrar`
+                : "Cuando registres ventas o documentos aparecerá el cliente principal."
+            }</p>
+          </div>
+          ${
+            topCompany
+              ? `<button type="button" class="secondary-button icon-button compact" data-finance-company-focus="${escapeHtml(topCompany.company.id)}" aria-label="Ver empresa"><i data-lucide="arrow-up-right"></i></button>`
+              : ""
+          }
+        </article>
+        <div class="finance-action-stack">
+          ${actionItems
+            .map(
+              (item) => `
+                <article class="finance-action-item ${item.tone}">
+                  <i data-lucide="${item.icon}"></i>
+                  <span>
+                    <strong>${escapeHtml(item.title)}</strong>
+                    <small>${escapeHtml(item.text)}</small>
+                  </span>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderFinancePanel() {
   if (!financePanel) return;
   purgeExpiredFinanceInvoices();
@@ -3951,6 +4108,7 @@ function renderFinancePanel() {
     <section class="finance-shell">
       ${renderFinanceExecutiveSummary({ income, expenses, pending, overdueInvoices, overdueProviders, upcomingProviders, recurringInvoices, recurringClients })}
       ${renderFinanceReports({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies })}
+      ${renderFinanceInsightBoard({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies, income, expenses, pending })}
       ${renderFinanceRoleGuide({ issuerProfile, activeClients, visibleCompanies, filteredInvoices, filteredProviders })}
       <details class="finance-disclosure">
         <summary>
