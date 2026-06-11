@@ -5177,6 +5177,116 @@ function renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore
   `;
 }
 
+function renderStorePipeline({ storeAdmin, selectedClient, activeOrders = [], selectedOrders = [] }) {
+  const orders = storeAdmin ? activeOrders : selectedOrders;
+  const openInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.status !== "Pagada");
+  const orderInvoice = (order) => openInvoices.find((invoice) => invoice.serviceOrderId === order.id || invoice.clientId === order.clientId);
+  const lanes = storeAdmin
+    ? [
+        {
+          icon: "mouse-pointer-click",
+          title: "Entrada",
+          detail: "Compras web y asignaciones internas.",
+          orders: orders.filter((order) => order.source === "landing" || order.status === "Solicitado"),
+        },
+        {
+          icon: "receipt-text",
+          title: "Cobro",
+          detail: "Documentos pendientes por enviar o pagar.",
+          orders: orders.filter((order) => orderInvoice(order)),
+        },
+        {
+          icon: "workflow",
+          title: "Producción",
+          detail: "Servicios en ejecución para la empresa.",
+          orders: orders.filter((order) => order.status === "En proceso"),
+        },
+        {
+          icon: "badge-check",
+          title: "Entrega",
+          detail: "Servicios completados o listos para cierre.",
+          orders: orders.filter((order) => order.status === "Completado"),
+        },
+      ]
+    : [
+        {
+          icon: "shopping-bag",
+          title: "Solicitado",
+          detail: "Servicios pedidos para esta empresa.",
+          orders: orders.filter((order) => order.status === "Solicitado"),
+        },
+        {
+          icon: "receipt-text",
+          title: "Por pagar",
+          detail: "Cobros activos asociados a tu empresa.",
+          orders: orders.filter((order) => orderInvoice(order)),
+        },
+        {
+          icon: "play",
+          title: "En proceso",
+          detail: "Trabajo activo del equipo.",
+          orders: orders.filter((order) => order.status === "En proceso"),
+        },
+        {
+          icon: "check",
+          title: "Listo",
+          detail: "Entregas completadas.",
+          orders: orders.filter((order) => order.status === "Completado"),
+        },
+      ];
+  const total = Math.max(orders.length, 1);
+  const featuredOrder = orders.find((order) => order.status !== "Completado") || orders[0];
+  const featuredClient = featuredOrder ? clients.find((client) => client.id === featuredOrder.clientId) : selectedClient;
+  const featuredInvoice = featuredOrder ? orderInvoice(featuredOrder) : null;
+  return `
+    <section class="store-pipeline">
+      <header>
+        <div>
+          <span class="workspace-label">${storeAdmin ? "Pipeline comercial" : "Estado de tus servicios"}</span>
+          <h3>${storeAdmin ? "Cada venta tiene un camino claro hasta la entrega" : "Así avanza lo que tienes contratado"}</h3>
+          <p>${
+            storeAdmin
+              ? "La tienda debe responder rápido: entrada, cobro, producción y entrega quedan visibles sin abrir otra pantalla."
+              : "Tu empresa ve un resumen simple de qué pidió, qué debe pagar, qué está en proceso y qué ya quedó listo."
+          }</p>
+        </div>
+        ${
+          featuredOrder
+            ? `<article class="store-pipeline-focus">
+                <span class="store-service-icon compact"><i data-lucide="${serviceIcon(serviceById(featuredOrder.serviceId))}"></i></span>
+                <div>
+                  <small>${escapeHtml(featuredClient?.name || "Empresa")}</small>
+                  <strong>${escapeHtml(featuredOrder.serviceName)}</strong>
+                  <p>${featuredInvoice ? `${escapeHtml(featuredInvoice.number || billingDocumentNumber(featuredInvoice))} · ${formatMoney(featuredInvoice.amount, featuredInvoice.currency || "COP")}` : escapeHtml(featuredOrder.status || "Solicitado")}</p>
+                </div>
+              </article>`
+            : `<span class="pill muted">Sin pedidos</span>`
+        }
+      </header>
+      <div class="store-pipeline-grid">
+        ${lanes
+          .map((lane) => {
+            const value = lane.orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+            const percent = Math.round((lane.orders.length / total) * 100);
+            return `
+              <article class="store-pipeline-lane">
+                <span class="status-icon small"><i data-lucide="${lane.icon}"></i></span>
+                <div>
+                  <small>${escapeHtml(lane.title)}</small>
+                  <strong>${lane.orders.length}</strong>
+                  <p>${escapeHtml(lane.detail)}</p>
+                  <div class="store-pipeline-meter"><span style="width:${percent}%"></span></div>
+                  <em>${formatMoney(value, "COP")}</em>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderStorePanel() {
   if (!storePanel) return;
   ensureAgencyClients();
@@ -5232,6 +5342,8 @@ function renderStorePanel() {
     ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
 
     ${renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
+
+    ${renderStorePipeline({ storeAdmin, selectedClient, activeOrders, selectedOrders })}
 
     ${renderStoreCommerceFlow({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicServices, pendingOrders, completedOrders })}
 
