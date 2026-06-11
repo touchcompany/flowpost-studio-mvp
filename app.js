@@ -7357,6 +7357,89 @@ function renderDashboardLaunchpad({ company, client, companyPosts, companyJobs, 
   `;
 }
 
+function renderDashboardActionPlan({ company, companyPosts, openInvoices, readyAccounts, scheduled, scripts }) {
+  const actions = [
+    {
+      icon: "plug-zap",
+      title: "Conecta la primera red",
+      detail: "Activa Instagram, Facebook o TikTok antes de pasar a pruebas reales.",
+      view: "accounts",
+      action: "Conectar",
+      done: readyAccounts > 0,
+      priority: "Alta",
+    },
+    {
+      icon: "image-plus",
+      title: "Agrega un recurso visual",
+      detail: "Guarda videos, fotos o referencias para que los guiones tengan contexto real.",
+      view: "library",
+      action: "Subir recurso",
+      done: Boolean(company.videos?.length),
+      priority: "Media",
+    },
+    {
+      icon: "notebook-pen",
+      title: "Crea un guion base",
+      detail: "Genera una idea editable para reels, carruseles o historias de esta empresa.",
+      view: "scripts",
+      action: "Crear guion",
+      done: scripts > 0,
+      priority: "Media",
+    },
+    {
+      icon: "calendar-plus",
+      title: "Programa la siguiente pieza",
+      detail: "Pon fecha y hora para que el calendario deje de ser solo una lista de ideas.",
+      view: "calendar",
+      action: "Planear",
+      done: scheduled > 0,
+      priority: "Alta",
+    },
+    {
+      icon: "receipt-text",
+      title: "Revisa cuentas abiertas",
+      detail: openInvoices.length
+        ? `${openInvoices.length} documento${openInvoices.length === 1 ? "" : "s"} necesita${openInvoices.length === 1 ? "" : "n"} seguimiento.`
+        : "Los cobros de esta empresa estan al dia.",
+      view: "finances",
+      action: openInvoices.length ? "Ver cobros" : "Crear cuenta",
+      done: openInvoices.length === 0,
+      priority: openInvoices.length ? "Alta" : "Lista",
+    },
+  ];
+  const pending = actions.filter((item) => !item.done);
+  const visibleActions = (pending.length ? pending : actions).slice(0, 3);
+  const progress = Math.round(((actions.length - pending.length) / actions.length) * 100);
+  return `
+    <section class="dashboard-action-plan">
+      <header>
+        <span class="dashboard-icon"><i data-lucide="sparkles"></i></span>
+        <div>
+          <span class="workspace-label">Siguiente mejor acción</span>
+          <strong>${pending.length ? "Hoy conviene hacer esto" : "Esta empresa ya tiene una base sólida"}</strong>
+          <p>${progress}% del flujo inicial listo para operar con más claridad.</p>
+        </div>
+      </header>
+      <div class="dashboard-action-list">
+        ${visibleActions
+          .map(
+            (item) => `
+              <button class="${item.done ? "done" : ""}" type="button" data-dashboard-action="${item.view}">
+                <span class="dashboard-icon small"><i data-lucide="${item.done ? "check" : item.icon}"></i></span>
+                <span>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <small>${escapeHtml(item.detail)}</small>
+                </span>
+                <em>${escapeHtml(item.action)}</em>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function activityIcon(type) {
   const icons = {
     automation: "workflow",
@@ -7435,6 +7518,7 @@ function renderDashboard() {
   const readyAccounts = (company.accounts || []).filter((account) => account.status === "Conectada").length;
   const scheduled = companyPosts.filter((post) => post.status === "Programado").length;
   const published = companyPosts.filter((post) => post.status === "Publicado").length;
+  const scripts = companyPosts.filter((post) => post.script || post.hook).length;
   const pendingJobs = companyJobs.filter((job) => job.status !== "Publicado").length;
   const nextPost = [...companyPosts].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0];
   const platformStats = (company.accounts || []).map((account) => {
@@ -7501,6 +7585,7 @@ function renderDashboard() {
     ${!isClientPortalSession() ? renderAccessSummary(company, client) : ""}
     ${!isClientPortalSession() ? renderOnboardingNextSteps(company, client) : ""}
     ${!isClientPortalSession() ? renderDashboardLaunchpad({ company, client, companyPosts, companyJobs, openInvoices, readyAccounts }) : ""}
+    ${!isClientPortalSession() ? renderDashboardActionPlan({ company, companyPosts, openInvoices, readyAccounts, scheduled, scripts }) : ""}
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
