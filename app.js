@@ -3661,6 +3661,76 @@ function renderFinanceRoleGuide({ issuerProfile, activeClients = [], visibleComp
   `;
 }
 
+function renderFinanceExecutiveSummary({ income, expenses, pending, overdueInvoices, overdueProviders, upcomingProviders, recurringInvoices, recurringClients }) {
+  const balance = income - expenses;
+  const riskCount = overdueInvoices.length + overdueProviders.length;
+  const health = riskCount ? "Atención" : pending ? "Por cobrar" : "Estable";
+  const healthIcon = riskCount ? "triangle-alert" : pending ? "receipt-text" : "badge-check";
+  const healthText = riskCount
+    ? `${riskCount} alerta${riskCount === 1 ? "" : "s"} necesita${riskCount === 1 ? "" : "n"} revisión.`
+    : pending
+      ? "Hay documentos por cobrar, pero sin señales críticas."
+      : "Sin alertas financieras en los filtros actuales.";
+  const cards = [
+    {
+      icon: balance >= 0 ? "arrow-up-right" : "arrow-down-left",
+      label: "Balance",
+      value: formatMoney(balance),
+      detail: `${formatMoney(income)} entran · ${formatMoney(expenses)} salen`,
+      tone: balance >= 0 ? "positive" : "negative",
+    },
+    {
+      icon: "receipt-text",
+      label: "Por cobrar",
+      value: formatMoney(pending),
+      detail: `${recurringInvoices.length} documento${recurringInvoices.length === 1 ? "" : "s"} recurrente${recurringInvoices.length === 1 ? "" : "s"}`,
+      tone: pending ? "warning" : "positive",
+    },
+    {
+      icon: "landmark",
+      label: "Por pagar",
+      value: `${upcomingProviders.length}`,
+      detail: `${overdueProviders.length} atrasado${overdueProviders.length === 1 ? "" : "s"} · proveedores próximos`,
+      tone: overdueProviders.length ? "negative" : "neutral",
+    },
+    {
+      icon: "calendar-clock",
+      label: "Automático",
+      value: `${recurringClients.length}`,
+      detail: "clientes con ciclo de cobro configurado",
+      tone: recurringClients.length ? "positive" : "neutral",
+    },
+  ];
+  return `
+    <section class="finance-executive-summary">
+      <article class="finance-health-card ${riskCount ? "is-alert" : ""}">
+        <span class="finance-health-icon"><i data-lucide="${healthIcon}"></i></span>
+        <div>
+          <span class="workspace-label">Salud financiera</span>
+          <strong>${escapeHtml(health)}</strong>
+          <p>${escapeHtml(healthText)}</p>
+        </div>
+      </article>
+      <div class="finance-executive-cards">
+        ${cards
+          .map(
+            (card) => `
+              <article class="${card.tone}">
+                <span><i data-lucide="${card.icon}"></i></span>
+                <div>
+                  <small>${escapeHtml(card.label)}</small>
+                  <strong>${escapeHtml(card.value)}</strong>
+                  <p>${escapeHtml(card.detail)}</p>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderFinancePanel() {
   if (!financePanel) return;
   purgeExpiredFinanceInvoices();
@@ -3703,6 +3773,7 @@ function renderFinancePanel() {
   ];
   financePanel.innerHTML = `
     <section class="finance-shell">
+      ${renderFinanceExecutiveSummary({ income, expenses, pending, overdueInvoices, overdueProviders, upcomingProviders, recurringInvoices, recurringClients })}
       ${renderFinanceRoleGuide({ issuerProfile, activeClients, visibleCompanies, filteredInvoices, filteredProviders })}
       <details class="finance-disclosure">
         <summary>
