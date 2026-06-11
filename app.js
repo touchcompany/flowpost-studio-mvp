@@ -5081,6 +5081,102 @@ function renderStoreCommerceFlow({ storeAdmin, selectedClient, servicesForStore 
   `;
 }
 
+function renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], publicStoreUrl = "" }) {
+  const publicServices = servicesForStore.filter((service) => service.clientVisible !== false);
+  const hiddenServices = servicesForStore.length - publicServices.length;
+  const orders = storeAdmin ? activeOrders : selectedOrders;
+  const openOrders = orders.filter((order) => order.status !== "Completado");
+  const completedOrders = orders.filter((order) => order.status === "Completado");
+  const revenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const avgTicket = orders.length ? Math.round(revenue / orders.length) : 0;
+  const conversion = servicesForStore.length ? Math.min(100, Math.round((orders.length / servicesForStore.length) * 100)) : 0;
+  const serviceLeaders = servicesForStore
+    .map((service) => {
+      const serviceOrders = orders.filter((order) => order.serviceId === service.id);
+      return {
+        service,
+        count: serviceOrders.length,
+        revenue: serviceOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0),
+      };
+    })
+    .sort((left, right) => right.revenue - left.revenue || right.count - left.count)
+    .slice(0, 3);
+  return `
+    <section class="store-command-center">
+      <header>
+        <div>
+          <span class="workspace-label">${storeAdmin ? "Centro comercial" : "Resumen de servicios"}</span>
+          <h3>${storeAdmin ? "Tu tienda, pedidos y operación en una sola vista" : `Servicios de ${escapeHtml(selectedClient?.name || activeCompany().name)}`}</h3>
+          <p>${
+            storeAdmin
+              ? "Mide qué se vende, qué está oculto, qué está en proceso y cuánto representa el catálogo activo."
+              : "Consulta lo comprado, lo pendiente y la inversión vinculada a esta empresa."
+          }</p>
+        </div>
+        ${
+          storeAdmin
+            ? `<a class="secondary-button icon-text-button compact" href="${escapeHtml(publicStoreUrl)}" target="_blank" rel="noreferrer">
+                <i data-lucide="external-link"></i>
+                Ver página pública
+              </a>`
+            : `<span class="pill ready">${selectedOrders.length} servicio${selectedOrders.length === 1 ? "" : "s"}</span>`
+        }
+      </header>
+      <div class="store-command-grid">
+        <article class="store-command-card featured">
+          <span class="status-icon large"><i data-lucide="chart-no-axes-combined"></i></span>
+          <div>
+            <small>${storeAdmin ? "Ventas gestionadas" : "Inversión activa"}</small>
+            <strong>${formatMoney(revenue, "COP")}</strong>
+            <p>${orders.length} pedido${orders.length === 1 ? "" : "s"} · ticket promedio ${formatMoney(avgTicket, "COP")}</p>
+          </div>
+        </article>
+        <article class="store-command-card">
+          <small>Catálogo público</small>
+          <strong>${publicServices.length}</strong>
+          <p>${hiddenServices} oculto${hiddenServices === 1 ? "" : "s"} para asignación manual</p>
+        </article>
+        <article class="store-command-card">
+          <small>En proceso</small>
+          <strong>${openOrders.length}</strong>
+          <p>${completedOrders.length} completado${completedOrders.length === 1 ? "" : "s"}</p>
+        </article>
+        <article class="store-command-card score">
+          <div class="store-command-ring" style="--score:${conversion}%">
+            <strong>${conversion}%</strong>
+          </div>
+          <p>${storeAdmin ? "Relación pedidos / catálogo" : "Servicios activados"}</p>
+        </article>
+      </div>
+      <div class="store-leader-strip">
+        ${
+          serviceLeaders.length
+            ? serviceLeaders
+                .map(
+                  ({ service, count, revenue: serviceRevenue }) => `
+                    <article>
+                      <span class="store-service-icon compact"><i data-lucide="${serviceIcon(service)}"></i></span>
+                      <div>
+                        <strong>${escapeHtml(service.name)}</strong>
+                        <small>${count} pedido${count === 1 ? "" : "s"} · ${formatMoney(serviceRevenue, "COP")}</small>
+                      </div>
+                    </article>
+                  `
+                )
+                .join("")
+            : `<article class="empty">
+                <span class="store-service-icon compact"><i data-lucide="sparkles"></i></span>
+                <div>
+                  <strong>Sin ventas todavía</strong>
+                  <small>Publica servicios o asigna uno a una empresa para activar el ranking.</small>
+                </div>
+              </article>`
+        }
+      </div>
+    </section>
+  `;
+}
+
 function renderStorePanel() {
   if (!storePanel) return;
   ensureAgencyClients();
@@ -5134,6 +5230,8 @@ function renderStorePanel() {
     </section>
 
     ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
+
+    ${renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
 
     ${renderStoreCommerceFlow({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicServices, pendingOrders, completedOrders })}
 
