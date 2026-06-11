@@ -266,49 +266,71 @@
           <h2>Compra lo que necesita tu cliente y adminístralo en su panel</h2>
           <p>Elige un servicio. Lo guardamos como compra pendiente y al entrar al panel aparece dentro de Clientes como orden administrable.</p>
         </div>
-        <div class="purchase-grid">
-          <article data-service-card="website">
-            <i data-lucide="globe-2"></i>
-            <h3>Página web landing</h3>
-            <p>Diseño, estructura, publicación y preparación para dominio.</p>
-            <strong>$1.200.000 COP</strong>
-            <button class="marketing-button dark" type="button" data-buy-service="website">Comprar web</button>
-          </article>
-          <article data-service-card="hosting">
-            <i data-lucide="server"></i>
-            <h3>Hosting administrado</h3>
-            <p>Servidor, soporte, renovación y conexión con cPanel.</p>
-            <strong>$180.000 COP</strong>
-            <button class="marketing-button light" type="button" data-buy-service="hosting">Comprar hosting</button>
-          </article>
-          <article data-service-card="domain">
-            <i data-lucide="badge-check"></i>
-            <h3>Dominio anual</h3>
-            <p>Compra o renovación de dominio para la marca del cliente.</p>
-            <strong>$85.000 COP</strong>
-            <button class="marketing-button light" type="button" data-buy-service="domain">Comprar dominio</button>
-          </article>
-          <article data-service-card="ads">
-            <i data-lucide="megaphone"></i>
-            <h3>Campañas Meta Ads</h3>
-            <p>Estrategia, anuncios y seguimiento para Facebook e Instagram.</p>
-            <strong>$420.000 COP</strong>
-            <button class="marketing-button light" type="button" data-buy-service="ads">Comprar campaña</button>
-          </article>
-          <article data-service-card="reels">
-            <i data-lucide="clapperboard"></i>
-            <h3>Paquete de reels</h3>
-            <p>Guiones, edición simple, copies y programación.</p>
-            <strong>$280.000 COP</strong>
-            <button class="marketing-button light" type="button" data-buy-service="reels">Comprar reels</button>
-          </article>
-          <article data-service-card="chatbot">
-            <i data-lucide="bot"></i>
-            <h3>Chatbot y soporte</h3>
-            <p>Asistente para responder dudas, captar leads y guiar clientes.</p>
-            <strong>$450.000 COP</strong>
-            <button class="marketing-button light" type="button" data-buy-service="chatbot">Comprar chatbot</button>
-          </article>
+        <div class="purchase-experience">
+          <div class="purchase-grid">
+            <article data-service-card="website">
+              <i data-lucide="globe-2"></i>
+              <h3>Página web landing</h3>
+              <p>Diseño, estructura, publicación y preparación para dominio.</p>
+              <strong>$1.200.000 COP</strong>
+              <button class="marketing-button dark" type="button" data-buy-service="website">Comprar web</button>
+            </article>
+            <article data-service-card="hosting">
+              <i data-lucide="server"></i>
+              <h3>Hosting administrado</h3>
+              <p>Servidor, soporte, renovación y conexión con cPanel.</p>
+              <strong>$180.000 COP</strong>
+              <button class="marketing-button light" type="button" data-buy-service="hosting">Comprar hosting</button>
+            </article>
+            <article data-service-card="domain">
+              <i data-lucide="badge-check"></i>
+              <h3>Dominio anual</h3>
+              <p>Compra o renovación de dominio para la marca del cliente.</p>
+              <strong>$85.000 COP</strong>
+              <button class="marketing-button light" type="button" data-buy-service="domain">Comprar dominio</button>
+            </article>
+            <article data-service-card="ads">
+              <i data-lucide="megaphone"></i>
+              <h3>Campañas Meta Ads</h3>
+              <p>Estrategia, anuncios y seguimiento para Facebook e Instagram.</p>
+              <strong>$420.000 COP</strong>
+              <button class="marketing-button light" type="button" data-buy-service="ads">Comprar campaña</button>
+            </article>
+            <article data-service-card="reels">
+              <i data-lucide="clapperboard"></i>
+              <h3>Paquete de reels</h3>
+              <p>Guiones, edición simple, copies y programación.</p>
+              <strong>$280.000 COP</strong>
+              <button class="marketing-button light" type="button" data-buy-service="reels">Comprar reels</button>
+            </article>
+            <article data-service-card="chatbot">
+              <i data-lucide="bot"></i>
+              <h3>Chatbot y soporte</h3>
+              <p>Asistente para responder dudas, captar leads y guiar clientes.</p>
+              <strong>$450.000 COP</strong>
+              <button class="marketing-button light" type="button" data-buy-service="chatbot">Comprar chatbot</button>
+            </article>
+          </div>
+          <aside class="purchase-admin-preview" aria-label="Vista de operación del pedido">
+            <span class="workspace-label">Así entra al panel</span>
+            <h3>Una compra se convierte en operación.</h3>
+            <div class="purchase-admin-card active">
+              <i data-lucide="shopping-bag"></i>
+              <div><strong>Pedido recibido</strong><span>Servicio ligado al cliente correcto</span></div>
+            </div>
+            <div class="purchase-admin-card">
+              <i data-lucide="receipt-text"></i>
+              <div><strong>Cuenta lista</strong><span>Cobro generado con emisor configurado</span></div>
+            </div>
+            <div class="purchase-admin-card">
+              <i data-lucide="workflow"></i>
+              <div><strong>Producción</strong><span>Tareas, guiones, archivos y estado</span></div>
+            </div>
+            <div class="purchase-admin-stats">
+              <article><strong>24h</strong><span>primer avance</span></article>
+              <article><strong>100%</strong><span>visible por cliente</span></article>
+            </div>
+          </aside>
         </div>
         <div class="purchase-result" id="purchaseResult" aria-live="polite">
           <i data-lucide="shopping-bag"></i>

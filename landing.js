@@ -9,6 +9,11 @@ const serviceCatalog = {
   chatbot: { id: "chatbot", name: "Chatbot y soporte", price: 450000, group: "Automatizacion" },
 };
 
+const socialIcons = {
+  instagram:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="landingIgGlow" cx="30%" cy="25%" r="85%"><stop offset="0%" stop-color="#ffd776"/><stop offset="34%" stop-color="#f56040"/><stop offset="62%" stop-color="#e1306c"/><stop offset="100%" stop-color="#833ab4"/></radialGradient></defs><rect x="2.4" y="2.4" width="19.2" height="19.2" rx="6" style="fill:url(#landingIgGlow)"/><rect x="6.8" y="6.8" width="10.4" height="10.4" rx="3.2" style="fill:none;stroke:#fff;stroke-width:1.65"/><circle cx="12" cy="12" r="2.65" style="fill:none;stroke:#fff;stroke-width:1.65"/><circle cx="16.1" cy="7.9" r="1.05" style="fill:#fff"/></svg>',
+};
+
 function formatMoney(amount) {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -40,7 +45,18 @@ function savePendingPurchase(service) {
   return purchase;
 }
 
+function renderSocialIcons() {
+  document.querySelectorAll('i[data-lucide="instagram"]').forEach((icon) => {
+    const wrapper = document.createElement("span");
+    wrapper.className = "social-icon instagram marketing-social-icon";
+    wrapper.setAttribute("aria-hidden", "true");
+    wrapper.innerHTML = socialIcons.instagram;
+    icon.replaceWith(wrapper);
+  });
+}
+
 function renderIcons() {
+  renderSocialIcons();
   if (window.lucide) {
     window.lucide.createIcons({
       attrs: {

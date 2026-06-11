@@ -2933,6 +2933,18 @@ body.modal-open {
   stroke-width: 1.55;
 }
 
+.marketing-social-icon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+}
+
+.marketing-social-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .service-marquee strong,
 .service-marquee span {
   display: block;
@@ -3428,11 +3440,19 @@ body.modal-open {
   border-radius: 28px;
 }
 
+.purchase-experience {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 18px;
+  align-items: start;
+  margin-top: 30px;
+}
+
 .purchase-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 30px;
+  margin-top: 0;
 }
 
 .purchase-grid article {
@@ -3536,6 +3556,98 @@ body.modal-open {
 .purchase-grid .marketing-button {
   width: 100%;
   margin-top: 4px;
+}
+
+.purchase-admin-preview {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(0, 149, 246, 0.1), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(246, 248, 250, 0.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 22px 62px rgba(17, 17, 17, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.purchase-admin-preview h3 {
+  margin: 2px 0 4px;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.04;
+}
+
+.purchase-admin-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.purchase-admin-card.active {
+  color: #fff;
+  background: #111;
+}
+
+.purchase-admin-card > svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.55;
+}
+
+.purchase-admin-card strong,
+.purchase-admin-card span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.purchase-admin-card span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.purchase-admin-card.active span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.purchase-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.purchase-admin-stats article {
+  padding: 13px;
+  border-radius: 20px;
+  background: rgba(17, 17, 17, 0.045);
+}
+
+.purchase-admin-stats strong,
+.purchase-admin-stats span {
+  display: block;
+}
+
+.purchase-admin-stats strong {
+  font-size: 1.3rem;
+}
+
+.purchase-admin-stats span {
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .purchase-result {
@@ -15969,9 +16081,14 @@ input[type="file"] {
   .audience-grid,
   .commerce-flow,
   .service-marquee,
+  .purchase-experience,
   .purchase-grid,
   .plan-grid {
     grid-template-columns: 1fr;
+  }
+
+  .purchase-admin-preview {
+    position: static;
   }
 
   .commerce-flow article {
