@@ -5445,6 +5445,148 @@ function renderStorePipeline({ storeAdmin, selectedClient, activeOrders = [], se
   `;
 }
 
+function renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], publicStoreUrl = "" }) {
+  const orders = storeAdmin ? activeOrders : selectedOrders;
+  const publicServices = servicesForStore.filter((service) => service.clientVisible !== false);
+  const privateServices = servicesForStore.length - publicServices.length;
+  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const pendingRevenue = orders.filter((order) => order.status !== "Completado").reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const linkedInvoices = invoices.filter((invoice) => !invoice.deletedAt && orders.some((order) => order.id === invoice.serviceOrderId || order.clientId === invoice.clientId));
+  const pendingInvoices = linkedInvoices.filter((invoice) => financeInvoiceStatus(invoice) !== "Pagada");
+  const catalogPotential = publicServices.reduce((sum, service) => sum + Number(service.price || 0), 0);
+  const clientRows = (storeAdmin ? activeAgencyClients() : selectedClient ? [selectedClient] : [])
+    .map((client) => {
+      const clientOrders = orders.filter((order) => order.clientId === client.id);
+      const company = companies.find((item) => item.id === client.companyId);
+      return {
+        client,
+        company,
+        count: clientOrders.length,
+        revenue: clientOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0),
+        open: clientOrders.filter((order) => order.status !== "Completado").length,
+      };
+    })
+    .filter((row) => row.count || storeAdmin)
+    .sort((left, right) => right.revenue - left.revenue || right.open - left.open)
+    .slice(0, 4);
+  const storeStats = [
+    {
+      icon: "store",
+      label: "Catálogo público",
+      value: publicServices.length,
+      detail: `${privateServices} privado${privateServices === 1 ? "" : "s"} para asignar`,
+      tone: publicServices.length ? "ready" : "warning",
+    },
+    {
+      icon: "mouse-pointer-click",
+      label: "Pedidos",
+      value: orders.length,
+      detail: `${orders.filter((order) => order.status !== "Completado").length} activos`,
+      tone: orders.length ? "ready" : "muted",
+    },
+    {
+      icon: "receipt-text",
+      label: "Cobros pendientes",
+      value: pendingInvoices.length,
+      detail: pendingInvoices.length ? formatMoney(pendingInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0), "COP") : "Sin cartera",
+      tone: pendingInvoices.length ? "warning" : "ready",
+    },
+    {
+      icon: "badge-dollar-sign",
+      label: "Potencial visible",
+      value: formatMoney(catalogPotential, "COP"),
+      detail: `${formatMoney(totalRevenue, "COP")} gestionado`,
+      tone: totalRevenue ? "ready" : "muted",
+    },
+  ];
+  return `
+    <section class="store-operations-board">
+      <header>
+        <div>
+          <span class="workspace-label">${storeAdmin ? "Administrador tipo tienda" : "Mi operación"}</span>
+          <h3>${storeAdmin ? "Controla lo que se vende, se cobra y se entrega" : "Tus servicios activos en una vista simple"}</h3>
+          <p>${
+            storeAdmin
+              ? "Esta vista conecta la página pública, el catálogo, los pedidos, los cobros y la entrega por empresa."
+              : "Solo aparece lo que esta empresa ha comprado o tiene asignado."
+          }</p>
+        </div>
+        <div class="store-operations-actions">
+          <a class="secondary-button icon-button compact" href="${escapeHtml(publicStoreUrl)}" target="_blank" rel="noreferrer" aria-label="Abrir tienda pública">
+            <i data-lucide="external-link"></i>
+          </a>
+          <button class="primary-button icon-button compact" type="button" data-store-open-finances aria-label="Ver cobros">
+            <i data-lucide="receipt-text"></i>
+          </button>
+        </div>
+      </header>
+      <div class="store-operations-grid">
+        ${storeStats
+          .map(
+            (stat) => `
+              <article class="store-operations-stat ${stat.tone}">
+                <span class="store-service-icon compact"><i data-lucide="${stat.icon}"></i></span>
+                <div>
+                  <small>${escapeHtml(stat.label)}</small>
+                  <strong>${escapeHtml(String(stat.value))}</strong>
+                  <p>${escapeHtml(stat.detail)}</p>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="store-operations-detail">
+        <article class="store-operations-panel">
+          <header>
+            <strong>${storeAdmin ? "Empresas con servicios" : "Empresa actual"}</strong>
+            <span class="pill muted">${clientRows.length}</span>
+          </header>
+          <div class="store-operations-clients">
+            ${
+              clientRows.length
+                ? clientRows
+                    .map(
+                      ({ client, company, count, revenue, open }) => `
+                        <button type="button" data-store-focus-client="${escapeHtml(client.id)}">
+                          <span class="company-avatar small" style="--company-color:${escapeHtml(company?.primaryColor || "#111")}">${company ? companyAvatarMarkup(company) : `<i data-lucide="building-2"></i>`}</span>
+                          <span>
+                            <strong>${escapeHtml(client.name || company?.name || "Empresa")}</strong>
+                            <small>${count} servicio${count === 1 ? "" : "s"} · ${open} activo${open === 1 ? "" : "s"}</small>
+                          </span>
+                          <em>${formatMoney(revenue, "COP")}</em>
+                        </button>
+                      `
+                    )
+                    .join("")
+                : `<div class="empty-state compact"><strong>Sin pedidos</strong><p>Publica o asigna servicios para ver empresas aquí.</p></div>`
+            }
+          </div>
+        </article>
+        <article class="store-operations-panel accent">
+          <header>
+            <strong>Próxima acción</strong>
+            <span class="pill ${pendingInvoices.length || pendingRevenue ? "warning" : "ready"}">${pendingInvoices.length || pendingRevenue ? "Pendiente" : "Listo"}</span>
+          </header>
+          <div class="store-next-action">
+            <span class="status-icon"><i data-lucide="${pendingInvoices.length ? "send" : pendingRevenue ? "workflow" : "circle-check-big"}"></i></span>
+            <div>
+              <strong>${pendingInvoices.length ? "Enviar o cobrar documentos" : pendingRevenue ? "Cerrar entregas activas" : "Operación sin bloqueos"}</strong>
+              <p>${
+                pendingInvoices.length
+                  ? `${pendingInvoices.length} documento${pendingInvoices.length === 1 ? "" : "s"} pendiente${pendingInvoices.length === 1 ? "" : "s"} conectado${pendingInvoices.length === 1 ? "" : "s"} a pedidos.`
+                  : pendingRevenue
+                    ? `${formatMoney(pendingRevenue, "COP")} en servicios activos por completar.`
+                    : "Cuando llegue una compra nueva, aparecerá aquí la acción prioritaria."
+              }</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 function renderStorePanel() {
   if (!storePanel) return;
   ensureAgencyClients();
@@ -5500,6 +5642,8 @@ function renderStorePanel() {
     ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
 
     ${renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
+
+    ${renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
 
     ${renderStorePipeline({ storeAdmin, selectedClient, activeOrders, selectedOrders })}
 
