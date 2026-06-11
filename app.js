@@ -8242,6 +8242,93 @@ function renderDashboardActionPlan({ company, companyPosts, openInvoices, readyA
   `;
 }
 
+function renderDashboardCommerceSnapshot({ company, client, openInvoices }) {
+  const companyOrders = client ? clientServiceOrders(client.id) : [];
+  const openOrders = companyOrders.filter((order) => order.status !== "Completado");
+  const completedOrders = companyOrders.filter((order) => order.status === "Completado");
+  const orderValue = companyOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const pendingValue = openInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+  const visibleServices = activeAgencyServices().filter((service) => service.clientVisible !== false).length;
+  const nextOrder = openOrders[0] || companyOrders[0];
+  const nextInvoice = openInvoices[0];
+  const cards = [
+    {
+      icon: "shopping-bag",
+      label: "Servicios",
+      value: companyOrders.length,
+      detail: `${openOrders.length} activo${openOrders.length === 1 ? "" : "s"} · ${completedOrders.length} listo${completedOrders.length === 1 ? "" : "s"}`,
+      action: "Ver tienda",
+      view: "store",
+      tone: companyOrders.length ? "ready" : "muted",
+    },
+    {
+      icon: "receipt-text",
+      label: "Por cobrar",
+      value: formatMoney(pendingValue, "COP"),
+      detail: `${openInvoices.length} cuenta${openInvoices.length === 1 ? "" : "s"} o factura${openInvoices.length === 1 ? "" : "s"} abierta${openInvoices.length === 1 ? "" : "s"}`,
+      action: "Cobros",
+      view: "finances",
+      tone: openInvoices.length ? "warning" : "ready",
+    },
+    {
+      icon: "store",
+      label: "Catálogo",
+      value: visibleServices,
+      detail: "Servicios visibles para comprar desde la página pública.",
+      action: "Gestionar",
+      view: "store",
+      tone: visibleServices ? "ready" : "warning",
+    },
+  ];
+  return `
+    <section class="dashboard-commerce-snapshot">
+      <header>
+        <div>
+          <span class="workspace-label">Negocio y servicios</span>
+          <h3>${escapeHtml(company.name)} en modo operación</h3>
+          <p>Servicios comprados, cobros abiertos y siguiente movimiento comercial de esta empresa.</p>
+        </div>
+        <button class="primary-button icon-text-button compact" type="button" data-dashboard-action="store">
+          <i data-lucide="store"></i>
+          Tienda
+        </button>
+      </header>
+      <div class="dashboard-commerce-grid">
+        ${cards
+          .map(
+            (card) => `
+              <button class="dashboard-commerce-card ${card.tone}" type="button" data-dashboard-action="${card.view}">
+                <span class="dashboard-icon"><i data-lucide="${card.icon}"></i></span>
+                <span>
+                  <small>${escapeHtml(card.label)}</small>
+                  <strong>${escapeHtml(String(card.value))}</strong>
+                  <p>${escapeHtml(card.detail)}</p>
+                </span>
+                <em>${escapeHtml(card.action)}</em>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+      <article class="dashboard-commerce-next">
+        <span class="dashboard-icon"><i data-lucide="${nextInvoice ? "send" : nextOrder ? "workflow" : "sparkles"}"></i></span>
+        <div>
+          <small>Siguiente acción recomendada</small>
+          <strong>${nextInvoice ? `Enviar ${nextInvoice.number || billingDocumentNumber(nextInvoice)}` : nextOrder ? `Avanzar ${nextOrder.serviceName}` : "Publicar o asignar el primer servicio"}</strong>
+          <p>${
+            nextInvoice
+              ? `${formatMoney(nextInvoice.amount, nextInvoice.currency || "COP")} pendiente para esta empresa.`
+              : nextOrder
+                ? `${formatMoney(nextOrder.amount, nextOrder.currency || "COP")} · estado ${nextOrder.status}.`
+                : "Cuando vendas o asignes un servicio, Inicio mostrará el paso prioritario aquí."
+          }</p>
+        </div>
+        <strong>${formatMoney(orderValue, "COP")}</strong>
+      </article>
+    </section>
+  `;
+}
+
 function activityIcon(type) {
   const icons = {
     automation: "workflow",
@@ -8316,7 +8403,12 @@ function renderDashboard() {
   const companyPosts = activePublications();
   const companyJobs = jobs.filter((job) => job.companyId === company.id);
   const client = clients.find((item) => item.companyId === company.id);
-  const openInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.companyId === company.id && invoice.status !== "Pagada");
+  const openInvoices = invoices.filter(
+    (invoice) =>
+      !invoice.deletedAt &&
+      (invoice.companyId === company.id || (client && invoice.clientId === client.id)) &&
+      invoice.status !== "Pagada"
+  );
   const readyAccounts = (company.accounts || []).filter((account) => account.status === "Conectada").length;
   const scheduled = companyPosts.filter((post) => post.status === "Programado").length;
   const published = companyPosts.filter((post) => post.status === "Publicado").length;
@@ -8388,6 +8480,7 @@ function renderDashboard() {
     ${!isClientPortalSession() ? renderOnboardingNextSteps(company, client) : ""}
     ${!isClientPortalSession() ? renderDashboardLaunchpad({ company, client, companyPosts, companyJobs, openInvoices, readyAccounts }) : ""}
     ${!isClientPortalSession() ? renderDashboardActionPlan({ company, companyPosts, openInvoices, readyAccounts, scheduled, scripts }) : ""}
+    ${!isClientPortalSession() ? renderDashboardCommerceSnapshot({ company, client, openInvoices }) : ""}
 
     <section class="dashboard-metrics">
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
