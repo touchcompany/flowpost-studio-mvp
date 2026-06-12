@@ -1346,6 +1346,24 @@ function filterStateForSession(state, session) {
   };
 }
 
+function publicServicesFromState(state) {
+  const services = Array.isArray(state?.agencyServices) ? state.agencyServices : [];
+  const visibleServices = services.filter((service) => service && service.clientVisible !== false && service.visible !== false);
+  return visibleServices.map((service) => ({
+    id: String(service.id || "").trim(),
+    name: String(service.name || "Servicio").trim(),
+    group: String(service.group || "Servicios").trim(),
+    price: Number(service.price || service.amount || 0),
+    currency: service.currency || "COP",
+    summary:
+      String(service.summary || service.description || "")
+        .trim()
+        .slice(0, 220) || `Servicio ${String(service.group || "operativo").toLowerCase()} listo para comprar y gestionar desde Touch Note.`,
+    detailAnchor: service.detailAnchor || "",
+    icon: service.icon || "",
+  })).filter((service) => service.id && service.name);
+}
+
 async function saveSessionCompanyAccess(session, companyIds) {
   if (!store.saveSession || !session?.id || !companyIds?.size) return session;
   const current = sessionCompanyAccess(session);
@@ -3407,6 +3425,17 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/version") {
     sendJson(res, 200, { ok: true, ...buildInfo() });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/public/services") {
+    const state = await store.getState();
+    sendJson(res, 200, {
+      ok: true,
+      dataProvider: store.provider,
+      currency: "COP",
+      services: publicServicesFromState(state),
+    });
     return;
   }
 

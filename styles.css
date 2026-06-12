@@ -4245,6 +4245,18 @@ body.modal-open {
   stroke-width: 1.55;
 }
 
+.store-card-kicker {
+  width: fit-content;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.06);
+  color: rgba(17, 17, 17, 0.68);
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
 .purchase-grid article[data-service-card="website"] {
   background:
     radial-gradient(circle at 86% 10%, rgba(0, 149, 246, 0.16), transparent 28%),
@@ -5176,9 +5188,22 @@ button {
 }
 
 .app-shell.sidebar-collapsed .sync-card {
-  justify-content: center;
-  width: 48px;
-  padding: 14px 0;
+  position: fixed;
+  bottom: 18px;
+  left: 20px;
+  z-index: 44;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  place-items: center;
+  padding: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    inset 0 0 0 1px rgba(17, 17, 17, 0.08),
+    0 16px 36px rgba(17, 17, 17, 0.08);
+  backdrop-filter: blur(18px);
 }
 
 .nav-icon {
@@ -5220,9 +5245,20 @@ button {
   box-shadow: 0 0 0 5px rgba(25, 169, 116, 0.14);
 }
 
+.app-shell.sidebar-collapsed .sync-card .status-dot {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  box-shadow: 0 0 0 9px rgba(25, 169, 116, 0.12);
+}
+
 .status-dot.offline {
   background: #f59e0b;
   box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.16);
+}
+
+.app-shell.sidebar-collapsed .sync-card .status-dot.offline {
+  box-shadow: 0 0 0 9px rgba(245, 158, 11, 0.13);
 }
 
 .backup-actions {

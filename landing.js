@@ -9,6 +9,24 @@ const serviceCatalog = {
   chatbot: { id: "chatbot", name: "Chatbot y soporte", price: 450000, group: "Automatizacion", summary: "Asistente para responder dudas, captar leads y guiar clientes." },
 };
 
+const serviceIconByGroup = {
+  web: "globe-2",
+  contenido: "sparkles",
+  produccion: "clapperboard",
+  publicidad: "megaphone",
+  automatizacion: "bot",
+  ia: "wand-sparkles",
+};
+
+const serviceAnchorByGroup = {
+  web: "web-hosting",
+  contenido: "contenido-ia",
+  produccion: "contenido-ia",
+  publicidad: "campanas-soporte",
+  automatizacion: "campanas-soporte",
+  ia: "contenido-ia",
+};
+
 const currencyRates = {
   COP: { label: "COP", symbol: "$", rate: 1, locale: "es-CO", maximumFractionDigits: 0 },
   USD: { label: "USD", symbol: "US$", rate: 0.00026, locale: "en-US", maximumFractionDigits: 0 },
@@ -17,6 +35,33 @@ const currencyRates = {
 };
 
 let selectedCurrency = localStorage.getItem("touch-note-public-currency") || "COP";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeGroup(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeService(service) {
+  const id = String(service.id || service.name || `service-${Date.now()}`).trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+  const group = String(service.group || "Servicios").trim();
+  return {
+    id,
+    name: String(service.name || "Servicio").trim(),
+    price: Number(service.price || service.amount || 0),
+    group,
+    summary: String(service.summary || service.description || `Servicio ${group.toLowerCase()} listo para operar dentro de Touch Note.`).trim(),
+    icon: service.icon || serviceIconByGroup[normalizeGroup(group)] || "sparkles",
+    detailAnchor: service.detailAnchor || serviceAnchorByGroup[normalizeGroup(group)] || "tienda",
+  };
+}
 
 const socialIcons = {
   instagram:
@@ -87,47 +132,85 @@ function renderIcons() {
   }
 }
 
-document.querySelectorAll("[data-buy-service]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    const service = serviceCatalog[button.dataset.buyService];
-    if (!service) return;
-    button.disabled = true;
-    const purchase = savePendingPurchase(service);
-    const result = document.querySelector("#purchaseResult");
-    try {
-      const response = await fetch("/api/store/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          serviceId: service.id,
-          serviceName: service.name,
-          description: service.summary,
-          amount: service.price,
-          currency: "COP",
-          reference: purchase.id,
-        }),
-      });
-      const checkout = await response.json().catch(() => ({}));
-      if (checkout.checkoutUrl) {
-        window.location.href = checkout.checkoutUrl;
-        return;
-      }
-    } catch {
-      // La landing conserva el pedido pendiente aunque la pasarela no este lista.
-    } finally {
-      button.disabled = false;
-    }
-    if (result) {
-      result.classList.add("is-ready");
-      result.innerHTML = `
-        <i data-lucide="check-circle-2"></i>
-        <span>${service.name} agregado por ${formatMoney(service.price)}. Entra para verlo en Clientes.</span>
-        <a class="marketing-button dark" href="login.html?service=${encodeURIComponent(service.id)}&next=%23store">Continuar</a>
-      `;
-      renderIcons();
-    }
+function renderPublicServices(services) {
+  const grid = document.querySelector("#publicServiceGrid");
+  if (!grid || !services.length) return;
+  services.forEach((service) => {
+    serviceCatalog[service.id] = service;
   });
+  grid.innerHTML = services
+    .map(
+      (service) => `
+        <article data-service-card="${escapeHtml(service.id)}">
+          <i data-lucide="${escapeHtml(service.icon)}"></i>
+          <span class="store-card-kicker">${escapeHtml(service.group)}</span>
+          <h3>${escapeHtml(service.name)}</h3>
+          <p>${escapeHtml(service.summary)}</p>
+          <strong data-price-service="${escapeHtml(service.id)}">${formatMoney(service.price)} ${selectedCurrency}</strong>
+          <a class="store-card-link" href="#${escapeHtml(service.detailAnchor)}">Detalles</a>
+          <button class="marketing-button light" type="button" data-buy-service="${escapeHtml(service.id)}">Comprar</button>
+        </article>
+      `
+    )
+    .join("");
+  updateCurrencyLabels();
+  renderIcons();
+}
+
+async function hydratePublicCatalog() {
+  const grid = document.querySelector("#publicServiceGrid");
+  if (!grid) return;
+  try {
+    const response = await fetch("/api/public/services", { credentials: "include" });
+    const payload = await response.json().catch(() => ({}));
+    const services = Array.isArray(payload.services) ? payload.services.map(normalizeService).filter((service) => service.id && service.name) : [];
+    if (services.length) renderPublicServices(services);
+  } catch {
+    // La tienda conserva las tarjetas base cuando el backend aun no esta disponible.
+  }
+}
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-buy-service]");
+  if (!button) return;
+  const service = serviceCatalog[button.dataset.buyService];
+  if (!service) return;
+  button.disabled = true;
+  const purchase = savePendingPurchase(service);
+  const result = document.querySelector("#purchaseResult");
+  try {
+    const response = await fetch("/api/store/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        serviceId: service.id,
+        serviceName: service.name,
+        description: service.summary,
+        amount: service.price,
+        currency: "COP",
+        reference: purchase.id,
+      }),
+    });
+    const checkout = await response.json().catch(() => ({}));
+    if (checkout.checkoutUrl) {
+      window.location.href = checkout.checkoutUrl;
+      return;
+    }
+  } catch {
+    // La landing conserva el pedido pendiente aunque la pasarela no este lista.
+  } finally {
+    button.disabled = false;
+  }
+  if (result) {
+    result.classList.add("is-ready");
+    result.innerHTML = `
+      <i data-lucide="check-circle-2"></i>
+      <span>${escapeHtml(service.name)} agregado por ${formatMoney(service.price)}. Entra para verlo en Clientes.</span>
+      <a class="marketing-button dark" href="login.html?service=${encodeURIComponent(service.id)}&next=%23store">Continuar</a>
+    `;
+    renderIcons();
+  }
 });
 
 document.querySelectorAll("[data-currency-select]").forEach((select) => {
@@ -141,4 +224,5 @@ document.querySelectorAll("[data-currency-select]").forEach((select) => {
 window.addEventListener("load", () => {
   updateCurrencyLabels();
   renderIcons();
+  hydratePublicCatalog();
 });
