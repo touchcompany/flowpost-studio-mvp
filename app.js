@@ -832,6 +832,12 @@ let financeFilters = {
   providerStatus: "all",
 };
 let financeFocusInvoiceId = "";
+let storeFilters = {
+  search: "",
+  group: "all",
+  visibility: "all",
+};
+let storeFilterRenderTimer = null;
 let companyListSearch = "";
 let companyListFilter = "all";
 let selectedCompanyDetailId = "";
@@ -5699,6 +5705,19 @@ function renderStorePanel() {
   const clientsForStore = storeAdmin ? activeAgencyClients() : portalMode && portalClient ? [portalClient] : [clientForCompany()].filter(Boolean);
   const selectedClient = storeAdmin ? clients.find((client) => client.id === billingDraft.clientId) || clientsForStore[0] : portalClient || clientsForStore[0];
   const servicesForStore = storeAdmin ? activeAgencyServices() : activeAgencyServices().filter((service) => service.clientVisible !== false);
+  const serviceSearch = storeFilters.search.trim().toLowerCase();
+  const filteredServicesForStore = servicesForStore.filter((service) => {
+    const matchesSearch = !serviceSearch || [service.name, service.group, serviceStoreDescription(service, selectedClient)]
+      .join(" ")
+      .toLowerCase()
+      .includes(serviceSearch);
+    const matchesGroup = storeFilters.group === "all" || (service.group || "Servicio") === storeFilters.group;
+    const matchesVisibility =
+      storeFilters.visibility === "all" ||
+      (storeFilters.visibility === "public" && service.clientVisible !== false) ||
+      (storeFilters.visibility === "private" && service.clientVisible === false);
+    return matchesSearch && matchesGroup && matchesVisibility;
+  });
   const activeOrders = storeAdmin ? serviceOrders.filter((order) => order.agencyId === activeAgencyId) : selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const selectedOrders = selectedClient ? clientServiceOrders(selectedClient.id) : [];
   const revenue = activeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
@@ -5707,7 +5726,10 @@ function renderStorePanel() {
   const pendingOrders = activeOrders.filter((order) => ["Solicitado", "En proceso", "Pendiente"].includes(order.status)).length;
   const completedOrders = activeOrders.filter((order) => order.status === "Completado").length;
   const selectedRevenue = selectedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
-  const groups = [...new Set(servicesForStore.map((service) => service.group || "Servicio"))];
+  const allGroups = [...new Set(servicesForStore.map((service) => service.group || "Servicio"))];
+  const groups = [...new Set(filteredServicesForStore.map((service) => service.group || "Servicio"))];
+  const publicCatalogCount = servicesForStore.filter((service) => service.clientVisible !== false).length;
+  const catalogValue = filteredServicesForStore.reduce((sum, service) => sum + Number(service.price || 0), 0);
   const publicStoreUrl = `${window.location.origin || "https://app.touch.com.co"}/landing.html#planes`;
   const cpanelPlans = provisioningStatus?.cpanel?.plans || {};
   const planOptions = [...new Set([cpanelPlans.defaultPlan, cpanelPlans.hostingPlan, cpanelPlans.websitePlan, serviceProvisionDraft.hostingPlan].filter(Boolean))];
@@ -5751,6 +5773,39 @@ function renderStorePanel() {
     ${renderStorePipeline({ storeAdmin, selectedClient, activeOrders, selectedOrders })}
 
     ${renderStoreCommerceFlow({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicServices, pendingOrders, completedOrders })}
+
+    <section class="store-catalog-console">
+      <header>
+        <div>
+          <span class="workspace-label">${storeAdmin ? "Catálogo administrable" : "Catálogo disponible"}</span>
+          <h3>${storeAdmin ? "Gestiona servicios como una tienda real" : "Encuentra el servicio que necesitas"}</h3>
+          <p>${storeAdmin ? "Filtra, publica, oculta y asigna servicios sin perder de vista pedidos y valor del catálogo." : "Busca por tipo de servicio, precio o necesidad de tu empresa."}</p>
+        </div>
+        <div class="store-catalog-kpis">
+          <article><strong>${filteredServicesForStore.length}</strong><span>vistos</span></article>
+          <article><strong>${publicCatalogCount}</strong><span>publicos</span></article>
+          <article><strong>${formatMoney(catalogValue, "COP")}</strong><span>valor filtro</span></article>
+        </div>
+      </header>
+      <div class="store-catalog-toolbar">
+        <label class="store-search-field">
+          <i data-lucide="search"></i>
+          <input data-store-filter="search" type="search" value="${escapeHtml(storeFilters.search)}" placeholder="Buscar servicio, producto o categoria" />
+        </label>
+        <select data-store-filter="visibility" aria-label="Filtrar visibilidad">
+          <option value="all" ${storeFilters.visibility === "all" ? "selected" : ""}>Todos</option>
+          <option value="public" ${storeFilters.visibility === "public" ? "selected" : ""}>Publicos</option>
+          <option value="private" ${storeFilters.visibility === "private" ? "selected" : ""}>Privados</option>
+        </select>
+        <button class="secondary-button icon-button compact" type="button" data-store-reset-filters aria-label="Limpiar filtros">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+      </div>
+      <div class="store-category-chips" aria-label="Categorias del catalogo">
+        <button class="${storeFilters.group === "all" ? "active" : ""}" type="button" data-store-group-filter="all">Todo</button>
+        ${allGroups.map((group) => `<button class="${storeFilters.group === group ? "active" : ""}" type="button" data-store-group-filter="${escapeHtml(group)}">${escapeHtml(group)}</button>`).join("")}
+      </div>
+    </section>
 
     <section class="store-mode-strip">
       <article>
@@ -5845,9 +5900,11 @@ function renderStorePanel() {
 
     <section class="store-layout">
       <div class="store-catalog">
-        ${groups
+        ${
+          groups.length
+            ? groups
           .map((group) => {
-            const services = servicesForStore.filter((service) => (service.group || "Servicio") === group);
+            const services = filteredServicesForStore.filter((service) => (service.group || "Servicio") === group);
             return `
               <section class="store-group">
                 <header>
@@ -5904,7 +5961,14 @@ function renderStorePanel() {
               </section>
             `;
           })
-          .join("")}
+          .join("")
+            : `<section class="store-group">
+                <div class="empty-state compact">
+                  <strong>No hay servicios con esos filtros</strong>
+                  <p>Prueba otra busqueda o limpia los filtros para volver a ver el catalogo.</p>
+                </div>
+              </section>`
+        }
       </div>
 
       <aside class="store-client-panel">
@@ -15118,6 +15182,21 @@ storePanel.addEventListener("click", (event) => {
     return;
   }
 
+  const groupFilterButton = event.target.closest("[data-store-group-filter]");
+  if (groupFilterButton) {
+    storeFilters.group = groupFilterButton.dataset.storeGroupFilter || "all";
+    renderStorePanel();
+    return;
+  }
+
+  const resetStoreFiltersButton = event.target.closest("[data-store-reset-filters]");
+  if (resetStoreFiltersButton) {
+    storeFilters = { search: "", group: "all", visibility: "all" };
+    renderStorePanel();
+    showToast("Filtros de tienda limpiados.");
+    return;
+  }
+
   const openClientsButton = event.target.closest("[data-store-open-clients]");
   if (openClientsButton) {
     renderClientBillingPanel();
@@ -15138,6 +15217,14 @@ storePanel.addEventListener("click", (event) => {
 });
 
 storePanel.addEventListener("change", (event) => {
+  const storeFilter = event.target.closest("[data-store-filter]");
+  if (storeFilter) {
+    const field = storeFilter.dataset.storeFilter;
+    storeFilters[field] = storeFilter.value;
+    renderStorePanel();
+    return;
+  }
+
   const clientSelect = event.target.closest("[data-store-client]");
   if (clientSelect) {
     billingDraft.clientId = clientSelect.value;
@@ -15151,6 +15238,15 @@ storePanel.addEventListener("change", (event) => {
 });
 
 storePanel.addEventListener("input", (event) => {
+  const storeFilter = event.target.closest("[data-store-filter]");
+  if (storeFilter) {
+    const field = storeFilter.dataset.storeFilter;
+    storeFilters[field] = storeFilter.value;
+    window.clearTimeout(storeFilterRenderTimer);
+    storeFilterRenderTimer = window.setTimeout(() => renderStorePanel(), 180);
+    return;
+  }
+
   const provisionField = event.target.closest("[data-provision-field]");
   if (!provisionField) return;
   updateProvisionDraftField(provisionField);
