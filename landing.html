@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Touch Note" />
-    <link rel="stylesheet" href="styles.css?v=20260612c" />
+    <link rel="stylesheet" href="styles.css?v=20260612d" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
   </head>
   <body class="marketing-page">
@@ -27,6 +27,7 @@
       <nav aria-label="Principal">
         <a href="#servicios">Servicios</a>
         <a href="#soluciones">Soluciones</a>
+        <a href="#explorar">Explorar</a>
         <a href="#ecosistema">Ecosistema</a>
         <a href="#planes">Planes</a>
         <a href="#tienda">Tienda</a>
@@ -42,7 +43,7 @@
         <div class="hero-copy">
           <h1>La plataforma para vender y operar servicios digitales sin desorden.</h1>
           <p>
-            Touch Note une tienda, clientes, cobros, contenido, IA, hosting, dominios y páginas web en una experiencia elegante para agencias, pymes y marcas personales.
+            Touch Note une tienda, clientes, cobros, contenido, IA, hosting, dominios y páginas web en una experiencia elegante para agencias, pymes, creadores y marcas personales.
           </p>
           <div class="hero-actions">
             <a class="marketing-button dark large" href="#tienda">Comprar servicios</a>
@@ -102,6 +103,59 @@
           <article><i data-lucide="bot"></i><strong>Chatbot</strong><span>Soporte, leads y respuestas conectables.</span></article>
           <article><i data-lucide="wand-sparkles"></i><strong>IA creativa</strong><span>Copies, guiones, imágenes y perfiles de cliente.</span></article>
           <article><i data-lucide="hard-drive"></i><strong>Recursos</strong><span>Biblioteca, Drive, videos y referencias por empresa.</span></article>
+        </div>
+      </section>
+
+      <section class="marketing-section service-library-section" id="explorar">
+        <div class="service-library-head">
+          <h2>Una vitrina profesional para cada servicio que vendes.</h2>
+          <p>La web publica no solo muestra precios: explica el valor, enseña el resultado esperado y lleva al cliente directo a comprar o solicitar el servicio correcto.</p>
+        </div>
+        <div class="service-library-grid">
+          <article class="service-library-card feature">
+            <div class="service-card-media web-media" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div>
+              <i data-lucide="globe-2"></i>
+              <h3>Pagina web + publicacion</h3>
+              <p>Landing, estructura comercial, conexion a dominio y entrega lista para operar.</p>
+              <a href="#web-hosting">Ampliar servicio</a>
+            </div>
+          </article>
+          <article class="service-library-card">
+            <div class="service-card-media hosting-media" aria-hidden="true">
+              <span></span><span></span>
+            </div>
+            <div>
+              <i data-lucide="server-cog"></i>
+              <h3>Hosting administrado</h3>
+              <p>Planes de alojamiento, soporte, renovacion y provisionamiento conectado al panel.</p>
+              <a href="#web-hosting">Ver hosting</a>
+            </div>
+          </article>
+          <article class="service-library-card">
+            <div class="service-card-media content-media" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div>
+              <i data-lucide="clapperboard"></i>
+              <h3>Reels, guiones y contenido</h3>
+              <p>Produccion por empresa con prompts, referencias, estados y calendario editorial.</p>
+              <a href="#contenido-ia">Ver contenido</a>
+            </div>
+          </article>
+          <article class="service-library-card">
+            <div class="service-card-media ads-media" aria-hidden="true">
+              <span></span><span></span>
+            </div>
+            <div>
+              <i data-lucide="megaphone"></i>
+              <h3>Campanas Meta Ads</h3>
+              <p>Planeacion, piezas, copies, seguimiento y cobros por cliente o campana.</p>
+              <a href="#campanas-soporte">Ver campanas</a>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -168,6 +222,26 @@
             <a class="marketing-button dark" href="#tienda">Comprar contenido</a>
             <a class="marketing-button light" href="login.html#calendar">Crear guion</a>
           </div>
+        </div>
+      </section>
+
+      <section class="marketing-section service-detail-section" id="campanas-soporte">
+        <div class="service-detail-copy">
+          <span class="marketing-eyebrow">Campanas, chatbot y soporte</span>
+          <h2>Servicios recurrentes que el cliente puede comprar sin escribirte primero.</h2>
+          <p>Paquetes de anuncios, soporte, chatbots y mantenimiento se convierten en pedidos con estado, responsable, cobro y visibilidad por cliente.</p>
+          <div class="detail-actions">
+            <a class="marketing-button dark" href="#tienda">Comprar campana</a>
+            <a class="marketing-button light" href="login.html#store">Administrar servicios</a>
+          </div>
+        </div>
+        <div class="service-detail-device campaign-device" aria-label="Vista previa de campanas y soporte">
+          <header><span></span><span></span><span></span></header>
+          <section>
+            <strong>Campaña activa</strong>
+            <p>Meta Ads · Chatbot · Soporte · Reporte mensual</p>
+            <div class="campaign-orbits" aria-hidden="true"><i></i><i></i><i></i></div>
+          </section>
         </div>
       </section>
 
@@ -363,6 +437,7 @@
               <h3>Página web landing</h3>
               <p>Diseño, estructura, publicación y preparación para dominio.</p>
               <strong data-price-service="website">$1.200.000 COP</strong>
+              <a class="store-card-link" href="#web-hosting">Detalles</a>
               <button class="marketing-button dark" type="button" data-buy-service="website">Comprar web</button>
             </article>
             <article data-service-card="hosting">
@@ -370,6 +445,7 @@
               <h3>Hosting administrado</h3>
               <p>Servidor, soporte, renovación y conexión con cPanel.</p>
               <strong data-price-service="hosting">$180.000 COP</strong>
+              <a class="store-card-link" href="#web-hosting">Detalles</a>
               <button class="marketing-button light" type="button" data-buy-service="hosting">Comprar hosting</button>
             </article>
             <article data-service-card="domain">
@@ -377,6 +453,7 @@
               <h3>Dominio anual</h3>
               <p>Compra o renovación de dominio para la marca del cliente.</p>
               <strong data-price-service="domain">$85.000 COP</strong>
+              <a class="store-card-link" href="#web-hosting">Detalles</a>
               <button class="marketing-button light" type="button" data-buy-service="domain">Comprar dominio</button>
             </article>
             <article data-service-card="ads">
@@ -384,6 +461,7 @@
               <h3>Campañas Meta Ads</h3>
               <p>Estrategia, anuncios y seguimiento para Facebook e Instagram.</p>
               <strong data-price-service="ads">$420.000 COP</strong>
+              <a class="store-card-link" href="#campanas-soporte">Detalles</a>
               <button class="marketing-button light" type="button" data-buy-service="ads">Comprar campaña</button>
             </article>
             <article data-service-card="reels">
@@ -391,6 +469,7 @@
               <h3>Paquete de reels</h3>
               <p>Guiones, edición simple, copies y programación.</p>
               <strong data-price-service="reels">$280.000 COP</strong>
+              <a class="store-card-link" href="#contenido-ia">Detalles</a>
               <button class="marketing-button light" type="button" data-buy-service="reels">Comprar reels</button>
             </article>
             <article data-service-card="chatbot">
@@ -398,6 +477,7 @@
               <h3>Chatbot y soporte</h3>
               <p>Asistente para responder dudas, captar leads y guiar clientes.</p>
               <strong data-price-service="chatbot">$450.000 COP</strong>
+              <a class="store-card-link" href="#campanas-soporte">Detalles</a>
               <button class="marketing-button light" type="button" data-buy-service="chatbot">Comprar chatbot</button>
             </article>
           </div>
@@ -439,6 +519,6 @@
         </div>
       </section>
     </main>
-    <script src="landing.js?v=20260612c"></script>
+    <script src="landing.js?v=20260612d"></script>
   </body>
 </html>
