@@ -494,6 +494,10 @@ function normalizeSession(payload) {
   const nit = payload.nit || payload.metadata?.nit || "";
   const phone = payload.phone || payload.metadata?.phone || "";
   const address = payload.address || payload.metadata?.address || "";
+  const rawModuleAccessMode = payload.moduleAccessMode || payload.metadata?.moduleAccessMode;
+  const moduleAccessMode = ["manual", "auto"].includes(rawModuleAccessMode) ? rawModuleAccessMode : "auto";
+  const rawEnabledModules = Array.isArray(payload.enabledModules) ? payload.enabledModules : payload.metadata?.enabledModules;
+  const enabledModules = Array.isArray(rawEnabledModules) ? rawEnabledModules.filter(Boolean) : [];
   return {
     id: payload.id || (isTouch ? "touch-super-admin" : "demo-profile"),
     name: payload.name || (isTouch ? "Touch Studio" : "Usuario MVP"),
@@ -508,12 +512,16 @@ function normalizeSession(payload) {
     role,
     roleLabel: payload.roleLabel || roleLabels[role] || "",
     companyAccess: Array.isArray(payload.companyAccess) ? payload.companyAccess : [],
+    moduleAccessMode,
+    enabledModules,
     metadata: {
       ...(payload.metadata || {}),
       avatarUrl,
       nit,
       phone,
       address,
+      moduleAccessMode,
+      enabledModules,
     },
     inviteToken: payload.inviteToken || "",
     status: isTouch ? "active" : payload.status || "trial",

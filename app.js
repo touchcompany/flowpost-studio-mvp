@@ -1406,6 +1406,10 @@ function normalizeClientSession(session = {}) {
   const nit = session.nit || session.metadata?.nit || "";
   const phone = session.phone || session.metadata?.phone || "";
   const address = session.address || session.metadata?.address || "";
+  const rawModuleAccessMode = session.moduleAccessMode || session.metadata?.moduleAccessMode;
+  const moduleAccessMode = ["manual", "auto"].includes(rawModuleAccessMode) ? rawModuleAccessMode : "auto";
+  const rawEnabledModules = Array.isArray(session.enabledModules) ? session.enabledModules : session.metadata?.enabledModules;
+  const enabledModules = Array.isArray(rawEnabledModules) ? rawEnabledModules.filter(Boolean) : [];
   return {
     ...session,
     id: session.id || (isTouch ? "touch-super-admin" : ""),
@@ -1419,12 +1423,16 @@ function normalizeClientSession(session = {}) {
     role,
     roleLabel: roleProfiles[role]?.label || "Empresa",
     status: isTouch ? "active" : session.status || "trial",
+    moduleAccessMode,
+    enabledModules,
     metadata: {
       ...(session.metadata || {}),
       avatarUrl,
       nit,
       phone,
       address,
+      moduleAccessMode,
+      enabledModules,
     },
   };
 }
@@ -1574,6 +1582,9 @@ function featureEnabled(feature, session = currentSession()) {
   if (isClientPortalSession(session)) {
     return ["content", "library", "aiScripts"].includes(feature.key);
   }
+  if (session.moduleAccessMode === "manual") {
+    return Array.isArray(session.enabledModules) && session.enabledModules.includes(feature.key);
+  }
   const plan = currentPlan();
   return feature.plans.includes(plan);
 }
@@ -1603,10 +1614,11 @@ function syncViewEntitlements() {
   const session = currentSession();
   viewLinks.forEach((link) => {
     const locked = !canAccessView(link.dataset.viewLink, session);
+    link.hidden = false;
     link.classList.toggle("locked", locked);
     link.setAttribute("aria-disabled", locked ? "true" : "false");
     link.setAttribute("title", locked ? "Disponible al comprar o activar este servicio" : "");
-    link.hidden = locked;
+    link.classList.toggle("manual-hidden", session.moduleAccessMode === "manual" && locked);
   });
 }
 
@@ -4701,6 +4713,8 @@ function renderSettingsPanel() {
         </div>
       </section>
 
+      ${renderModuleAccessSettings(session)}
+
       <section class="settings-group settings-company-group">
         <header>
           <span class="status-icon"><i data-lucide="building-2"></i></span>
@@ -6111,6 +6125,71 @@ function renderStorePanel() {
     </section>
   `;
   renderIcons();
+}
+
+function renderModuleAccessSettings(session = currentSession()) {
+  const canManageModules = isTouchSuperAdmin(session);
+  const mode = session.moduleAccessMode === "manual" ? "manual" : "auto";
+  const enabled = new Set(Array.isArray(session.enabledModules) ? session.enabledModules : []);
+  const editableFeatures = featureCatalog.filter((feature) => !feature.adminOnly);
+  const adminFeatures = featureCatalog.filter((feature) => feature.adminOnly);
+  return `
+    <section class="settings-group settings-module-access">
+      <header>
+        <span class="status-icon"><i data-lucide="sliders-horizontal"></i></span>
+        <div>
+          <h3>Módulos del perfil</h3>
+          <p>Automático usa el plan. Manual permite prender o quitar módulos específicos del perfil.</p>
+          <small class="settings-sync-note"><i data-lucide="cloud-check"></i> Se guarda en el perfil y se respeta en menú, accesos y rutas directas.</small>
+        </div>
+      </header>
+      <div class="module-access-mode" role="group" aria-label="Modo de acceso a módulos">
+        <label class="${mode === "auto" ? "active" : ""}">
+          <input data-settings-module-mode type="radio" name="settingsModuleMode" value="auto" ${mode === "auto" ? "checked" : ""} ${canManageModules ? "" : "disabled"} />
+          <span><i data-lucide="sparkles"></i> Automático por plan</span>
+        </label>
+        <label class="${mode === "manual" ? "active" : ""}">
+          <input data-settings-module-mode type="radio" name="settingsModuleMode" value="manual" ${mode === "manual" ? "checked" : ""} ${canManageModules ? "" : "disabled"} />
+          <span><i data-lucide="toggle-right"></i> Manual por perfil</span>
+        </label>
+      </div>
+      <div class="module-access-grid">
+        ${editableFeatures
+          .map((feature) => {
+            const active = mode === "manual" ? enabled.has(feature.key) : featureEnabled(feature, session);
+            return `
+              <label class="module-access-card ${active ? "enabled" : "disabled"}">
+                <input data-settings-module-toggle="${feature.key}" type="checkbox" ${active ? "checked" : ""} ${mode === "manual" && canManageModules ? "" : "disabled"} />
+                <span class="status-icon small"><i data-lucide="${feature.icon}"></i></span>
+                <div>
+                  <strong>${escapeHtml(feature.label)}</strong>
+                  <small>${mode === "manual" ? (active ? "Habilitado manualmente" : "Oculto manualmente") : `Según plan ${escapeHtml(session.planLabel || planLimits[currentPlan()]?.label || "Starter")}`}</small>
+                </div>
+              </label>
+            `;
+          })
+          .join("")}
+        ${adminFeatures
+          .map(
+            (feature) => `
+              <article class="module-access-card admin-only ${isTouchSuperAdmin(session) ? "enabled" : "disabled"}">
+                <span class="status-icon small"><i data-lucide="${feature.icon}"></i></span>
+                <div>
+                  <strong>${escapeHtml(feature.label)}</strong>
+                  <small>Solo propietario de plataforma</small>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      ${
+        canManageModules
+          ? `<p class="settings-module-note">Para usuarios nuevos o clientes, el mismo campo se guarda como <code>moduleAccessMode</code> y <code>enabledModules</code>.</p>`
+          : `<p class="settings-module-note">El propietario de la plataforma define si tu acceso es automático por plan o manual.</p>`
+      }
+    </section>
+  `;
 }
 
 function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore = [], activeOrders = [], selectedOrders = [], revenue = 0, publicStoreUrl = "" }) {
@@ -14776,6 +14855,54 @@ settingsPanel?.addEventListener("input", async (event) => {
 });
 
 settingsPanel?.addEventListener("change", async (event) => {
+  const moduleModeField = event.target.closest("[data-settings-module-mode]");
+  if (moduleModeField) {
+    if (!isTouchSuperAdmin()) {
+      showToast("Solo el propietario puede cambiar el acceso a módulos.");
+      renderSettingsPanel();
+      return;
+    }
+    const session = currentSession();
+    const nextMode = moduleModeField.value === "manual" ? "manual" : "auto";
+    const defaultManualModules = featureCatalog.filter((feature) => !feature.adminOnly && featureEnabled(feature, { ...session, moduleAccessMode: "auto" })).map((feature) => feature.key);
+    const nextSession = await saveClientSession({
+      ...session,
+      moduleAccessMode: nextMode,
+      enabledModules: nextMode === "manual" ? session.enabledModules?.length ? session.enabledModules : defaultManualModules : session.enabledModules || [],
+    });
+    renderAccount();
+    updateMobileProfileNav();
+    renderSettingsPanel();
+    syncViewEntitlements();
+    showToast(nextSession.moduleAccessMode === "manual" ? "Modo manual activado para este perfil." : "Modo automático por plan activado.");
+    return;
+  }
+
+  const moduleToggleField = event.target.closest("[data-settings-module-toggle]");
+  if (moduleToggleField) {
+    if (!isTouchSuperAdmin()) {
+      showToast("Solo el propietario puede cambiar módulos.");
+      renderSettingsPanel();
+      return;
+    }
+    const session = currentSession();
+    const featureKey = moduleToggleField.dataset.settingsModuleToggle;
+    const currentModules = new Set(Array.isArray(session.enabledModules) ? session.enabledModules : []);
+    if (moduleToggleField.checked) currentModules.add(featureKey);
+    else currentModules.delete(featureKey);
+    await saveClientSession({
+      ...session,
+      moduleAccessMode: "manual",
+      enabledModules: [...currentModules],
+    });
+    renderAccount();
+    updateMobileProfileNav();
+    renderSettingsPanel();
+    syncViewEntitlements();
+    showToast("Módulos del perfil actualizados.");
+    return;
+  }
+
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
     const field = profileField.dataset.settingsProfileField;
