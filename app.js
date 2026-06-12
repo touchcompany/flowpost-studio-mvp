@@ -5651,6 +5651,8 @@ function renderStorePanel() {
 
     ${renderPendingLandingPurchases({ selectedClient, storeAdmin })}
 
+    ${renderStoreActivationGuide({ storeAdmin, selectedClient, activeOrders, selectedOrders, publicServices })}
+
     ${renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
 
     ${renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
@@ -6936,6 +6938,57 @@ function renderPendingLandingPurchases({ selectedClient, storeAdmin = false }) {
           <i data-lucide="download-cloud"></i>
           ${storeAdmin ? `Importar a ${escapeHtml(targetName)}` : "Activar solicitud"}
         </button>
+      </div>
+    </section>
+  `;
+}
+
+function renderStoreActivationGuide({ storeAdmin, selectedClient, activeOrders = [], selectedOrders = [], publicServices = [] }) {
+  const orders = storeAdmin ? activeOrders : selectedOrders;
+  const latestOrder = orders[0];
+  const progress = latestOrder ? orderAutomationProgress(latestOrder) : 0;
+  const openOrders = orders.filter((order) => order.status !== "Completado").length;
+  const completedOrders = orders.filter((order) => order.status === "Completado").length;
+  const steps = storeAdmin
+    ? [
+        { icon: "store", label: "Vitrina", value: publicServices.length, detail: "Servicios visibles afuera" },
+        { icon: "inbox", label: "Entrada", value: pendingLandingPurchases().length, detail: "Compras por revisar" },
+        { icon: "workflow", label: "Operación", value: openOrders, detail: "Pedidos en marcha" },
+        { icon: "circle-check-big", label: "Cierre", value: completedOrders, detail: "Entregas completadas" },
+      ]
+    : [
+        { icon: "mouse-pointer-click", label: "Solicitar", value: latestOrder ? "Listo" : "1", detail: latestOrder ? latestOrder.serviceName : "Elige un servicio" },
+        { icon: "receipt-text", label: "Cobro", value: selectedOrders.length, detail: selectedOrders.length ? "Documento vinculado" : "Se genera al comprar" },
+        { icon: "sparkles", label: "Producción", value: `${progress}%`, detail: latestOrder ? latestOrder.status : "Aún sin pedido activo" },
+        { icon: "badge-check", label: "Entrega", value: completedOrders, detail: completedOrders ? "Servicios cerrados" : "Seguimiento pendiente" },
+      ];
+  return `
+    <section class="store-activation-guide ${storeAdmin ? "admin" : "customer"}">
+      <header>
+        <div>
+          <span class="eyebrow">${storeAdmin ? "Consola comercial" : "Ruta sencilla"}</span>
+          <h3>${storeAdmin ? "Controla lo que se vende, cobra y entrega" : `Así avanza ${escapeHtml(selectedClient?.name || activeCompany().name)}`}</h3>
+        </div>
+        <button class="secondary-button icon-text-button compact" type="button" ${storeAdmin ? "data-store-open-clients" : "data-store-open-accounts"}>
+          <i data-lucide="${storeAdmin ? "users" : "user-round"}"></i>
+          ${storeAdmin ? "Ver operación" : "Mi perfil"}
+        </button>
+      </header>
+      <div class="store-activation-steps">
+        ${steps
+          .map(
+            (step) => `
+              <article>
+                <span class="status-icon small"><i data-lucide="${step.icon}"></i></span>
+                <div>
+                  <small>${escapeHtml(step.label)}</small>
+                  <strong>${escapeHtml(String(step.value))}</strong>
+                  <p>${escapeHtml(step.detail)}</p>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
       </div>
     </section>
   `;
