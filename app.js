@@ -265,7 +265,7 @@ const featureCatalog = [
   { key: "billing", label: "Cobros y facturas", icon: "receipt-text", plans: ["pro", "agency"] },
   { key: "store", label: "Venta de servicios", icon: "store", plans: ["pro", "agency"] },
   { key: "hosting", label: "Hosting y dominios", icon: "server", plans: ["agency"] },
-  { key: "apiAdmin", label: "APIs y automatizaciones", icon: "workflow", plans: ["agency"] },
+  { key: "apiAdmin", label: "APIs y automatizaciones", icon: "workflow", plans: [], adminOnly: true },
 ];
 const memberRoles = {
   owner: {
@@ -1570,7 +1570,7 @@ function updateMobileProfileNav() {
 
 function featureEnabled(feature, session = currentSession()) {
   if (isTouchSuperAdmin(session)) return true;
-  if (session.role === "agency_owner" && ["clients", "billing", "store"].includes(feature.key)) return true;
+  if (feature.adminOnly) return false;
   if (isClientPortalSession(session)) {
     return ["content", "library", "aiScripts"].includes(feature.key);
   }
@@ -1584,7 +1584,7 @@ const viewFeatureMap = {
   scripts: "aiScripts",
   clients: "clients",
   store: "store",
-  finances: "clients",
+  finances: "billing",
   automations: "apiAdmin",
   accounts: "apiAdmin",
 };
@@ -1606,6 +1606,7 @@ function syncViewEntitlements() {
     link.classList.toggle("locked", locked);
     link.setAttribute("aria-disabled", locked ? "true" : "false");
     link.setAttribute("title", locked ? "Disponible al comprar o activar este servicio" : "");
+    link.hidden = locked;
   });
 }
 
@@ -3359,8 +3360,26 @@ function serviceIcon(service) {
   return "package-check";
 }
 
+function servicePublicSummary(service) {
+  const custom = String(service?.summary || service?.description || "").trim();
+  if (custom) return custom;
+  return serviceStoreDescription(service, { name: "tu empresa" });
+}
+
+function serviceDetailAnchor(service) {
+  const custom = String(service?.detailAnchor || "").trim().replace(/^#/, "");
+  if (custom) return custom;
+  const text = `${service?.id || ""} ${service?.name || ""} ${service?.group || ""}`.toLowerCase();
+  if (/hosting|server|cpanel|whm|dominio|domain|web|landing|sitio|pagina/.test(text)) return "web-hosting";
+  if (/reel|video|produccion|producción|guion|guión|ia|copy|contenido/.test(text)) return "contenido-ia";
+  if (/ads|campana|campaña|publicidad|meta|facebook|instagram|chat|soporte|bot|automat/.test(text)) return "campanas-soporte";
+  return "tienda";
+}
+
 function serviceStoreDescription(service, selectedClient) {
   const clientName = selectedClient?.name || "tu empresa";
+  const custom = String(service?.summary || service?.description || "").trim();
+  if (custom) return custom;
   const text = `${service?.id || ""} ${service?.name || ""} ${service?.group || ""}`.toLowerCase();
   if (/hosting|server|cpanel|whm/.test(text)) return `Hosting administrado, acceso y entrega técnica para ${clientName}.`;
   if (/dominio|domain/.test(text)) return `Registro, DNS y seguimiento de renovación para ${clientName}.`;
@@ -5974,8 +5993,16 @@ function renderStorePanel() {
                       const serviceOrder = serviceOrderForCard(service, selectedOrders);
                       const status = serviceCardStatus(service, serviceOrder);
                       const canBuy = Boolean(selectedClient) && !serviceOrder;
+                      const serviceImage = publicMediaUrl(service.imageUrl || service.coverUrl || "");
                       return `
-                        <article class="store-service-card ${serviceOrder ? "has-order" : ""}">
+                        <article class="store-service-card ${serviceOrder ? "has-order" : ""}" data-service-id="${escapeHtml(service.id)}">
+                          ${
+                            serviceImage
+                              ? `<div class="store-service-media">
+                                  <img src="${escapeHtml(serviceImage)}" alt="${escapeHtml(service.name)}" loading="lazy" />
+                                </div>`
+                              : ""
+                          }
                           <div class="store-service-head">
                             <span class="store-service-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
                             <span class="store-visibility-pill ${status.className}">
@@ -6010,6 +6037,21 @@ function renderStorePanel() {
                                 : ""
                             }
                           </div>
+                          ${
+                            storeAdmin
+                              ? `<div class="store-service-editor">
+                                  <input data-store-service-field="name" value="${escapeHtml(service.name)}" aria-label="Nombre del servicio" />
+                                  <input data-store-service-field="group" value="${escapeHtml(service.group || "Servicio")}" aria-label="Categoría del servicio" />
+                                  <input data-store-service-field="price" type="number" min="0" value="${escapeHtml(service.price || 0)}" aria-label="Precio del servicio" />
+                                  <input data-store-service-field="imageUrl" value="${escapeHtml(mediaInputValue(service.imageUrl || service.coverUrl || ""))}" aria-label="Imagen pública del servicio" placeholder="/content/uploads/servicio.jpg" />
+                                  <textarea data-store-service-field="summary" aria-label="Descripción pública del servicio" placeholder="Descripción pública">${escapeHtml(servicePublicSummary(service))}</textarea>
+                                  <div>
+                                    <button class="secondary-button icon-button compact" type="button" data-store-service-save="${escapeHtml(service.id)}" aria-label="Guardar servicio"><i data-lucide="save"></i></button>
+                                    <button class="danger-button icon-button compact" type="button" data-store-service-delete="${escapeHtml(service.id)}" aria-label="Eliminar servicio"><i data-lucide="trash-2"></i></button>
+                                  </div>
+                                </div>`
+                              : ""
+                          }
                         </article>
                       `;
                     })
@@ -7330,6 +7372,8 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicSt
         <input data-store-new-service="name" placeholder="Nuevo servicio o producto" />
         <input data-store-new-service="group" placeholder="Categoría" />
         <input data-store-new-service="price" type="number" min="0" placeholder="Valor COP" />
+        <input data-store-new-service="summary" placeholder="Descripción pública breve" />
+        <input data-store-new-service="imageUrl" placeholder="Imagen pública o ruta /content/uploads/..." />
         <button class="primary-button icon-text-button" type="button" data-add-store-service>
           <i data-lucide="plus"></i>
           Agregar
@@ -8355,7 +8399,7 @@ function setView(viewName, options = {}) {
   syncViewEntitlements();
   if (!canAccessView(targetView)) {
     const lockedFeature = featureCatalog.find((item) => item.key === viewFeatureMap[targetView]);
-    targetView = isClientPortalSession() ? "store" : "accounts";
+    targetView = isClientPortalSession() ? "store" : "dashboard";
     if (!options.silent) {
       showToast(
         isClientPortalSession()
@@ -15218,6 +15262,8 @@ storePanel.addEventListener("click", (event) => {
     const name = storePanel.querySelector('[data-store-new-service="name"]')?.value.trim();
     const group = storePanel.querySelector('[data-store-new-service="group"]')?.value.trim() || "Servicio";
     const price = Number(storePanel.querySelector('[data-store-new-service="price"]')?.value || 0);
+    const summary = storePanel.querySelector('[data-store-new-service="summary"]')?.value.trim() || "";
+    const imageUrl = persistableMediaUrl(storePanel.querySelector('[data-store-new-service="imageUrl"]')?.value || "");
     if (!name || !price) {
       showToast("Agrega nombre y valor del servicio.");
       return;
@@ -15230,12 +15276,74 @@ storePanel.addEventListener("click", (event) => {
         name,
         group,
         price,
+        summary,
+        imageUrl,
+        icon: serviceIcon({ id: name, name, group }),
+        detailAnchor: serviceDetailAnchor({ id: name, name, group }),
         clientVisible: true,
       },
     ];
     persistState();
     renderStorePanel();
     showToast("Servicio agregado al catálogo público.");
+    return;
+  }
+
+  const saveServiceButton = event.target.closest("[data-store-service-save]");
+  if (saveServiceButton) {
+    if (!isTouchSuperAdmin()) {
+      showToast("Solo el super admin puede editar el catálogo.");
+      return;
+    }
+    const card = saveServiceButton.closest("[data-service-id]");
+    const serviceId = saveServiceButton.dataset.storeServiceSave;
+    const getValue = (field) => card?.querySelector(`[data-store-service-field="${field}"]`)?.value?.trim() || "";
+    const nextName = getValue("name");
+    const nextGroup = getValue("group") || "Servicio";
+    const nextPrice = Number(getValue("price") || 0);
+    if (!nextName || !nextPrice) {
+      showToast("Nombre y valor son obligatorios.");
+      return;
+    }
+    agencyServices = agencyServices.map((service) =>
+      service.id === serviceId
+        ? {
+            ...service,
+            name: nextName,
+            group: nextGroup,
+            price: nextPrice,
+            summary: getValue("summary"),
+            imageUrl: persistableMediaUrl(getValue("imageUrl")),
+            icon: service.icon || serviceIcon({ ...service, name: nextName, group: nextGroup }),
+            detailAnchor: serviceDetailAnchor({ ...service, name: nextName, group: nextGroup }),
+          }
+        : service
+    );
+    persistState();
+    renderStorePanel();
+    showToast("Servicio actualizado y listo para la página pública.");
+    return;
+  }
+
+  const deleteServiceButton = event.target.closest("[data-store-service-delete]");
+  if (deleteServiceButton) {
+    if (!isTouchSuperAdmin()) {
+      showToast("Solo el super admin puede eliminar servicios.");
+      return;
+    }
+    const serviceId = deleteServiceButton.dataset.storeServiceDelete;
+    const hasOrders = serviceOrders.some((order) => order.serviceId === serviceId);
+    if (hasOrders) {
+      agencyServices = agencyServices.map((service) =>
+        service.id === serviceId ? { ...service, clientVisible: false, archivedAt: new Date().toISOString() } : service
+      );
+      showToast("Tiene pedidos: se ocultó del catálogo público.");
+    } else {
+      agencyServices = agencyServices.filter((service) => service.id !== serviceId);
+      showToast("Servicio eliminado del catálogo.");
+    }
+    persistState();
+    renderStorePanel();
     return;
   }
 

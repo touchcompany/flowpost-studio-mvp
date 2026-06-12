@@ -45,6 +45,18 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function publicMediaUrl(value = "") {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "";
+  if (/^(https?:|data:|blob:)/i.test(rawValue)) return rawValue;
+  if (/^www\./i.test(rawValue)) return `https://${rawValue}`;
+  const cleaned = rawValue.replace(/^\.+/, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("/")) return cleaned;
+  if (cleaned.includes("/")) return `/${cleaned}`;
+  return "";
+}
+
 function normalizeGroup(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -58,6 +70,8 @@ function normalizeService(service) {
     price: Number(service.price || service.amount || 0),
     group,
     summary: String(service.summary || service.description || `Servicio ${group.toLowerCase()} listo para operar dentro de Touch Note.`).trim(),
+    description: String(service.description || service.summary || "").trim(),
+    imageUrl: publicMediaUrl(service.imageUrl || service.coverUrl || service.publicImageUrl || ""),
     icon: service.icon || serviceIconByGroup[normalizeGroup(group)] || "sparkles",
     detailAnchor: service.detailAnchor || serviceAnchorByGroup[normalizeGroup(group)] || "tienda",
   };
@@ -142,7 +156,11 @@ function renderPublicServices(services) {
     .map(
       (service) => `
         <article data-service-card="${escapeHtml(service.id)}">
-          <i data-lucide="${escapeHtml(service.icon)}"></i>
+          ${
+            service.imageUrl
+              ? `<div class="store-card-media"><img src="${escapeHtml(service.imageUrl)}" alt="${escapeHtml(service.name)}" loading="lazy" /></div>`
+              : `<i data-lucide="${escapeHtml(service.icon)}"></i>`
+          }
           <span class="store-card-kicker">${escapeHtml(service.group)}</span>
           <h3>${escapeHtml(service.name)}</h3>
           <p>${escapeHtml(service.summary)}</p>

@@ -1359,6 +1359,11 @@ function publicServicesFromState(state) {
       String(service.summary || service.description || "")
         .trim()
         .slice(0, 220) || `Servicio ${String(service.group || "operativo").toLowerCase()} listo para comprar y gestionar desde Touch Note.`,
+    description:
+      String(service.description || service.summary || "")
+        .trim()
+        .slice(0, 480) || "",
+    imageUrl: String(service.imageUrl || service.coverUrl || service.publicImageUrl || "").trim(),
     detailAnchor: service.detailAnchor || "",
     icon: service.icon || "",
   })).filter((service) => service.id && service.name);
