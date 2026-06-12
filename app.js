@@ -4831,6 +4831,16 @@ function renderSettingsCommandCenter({ session, company, issuerProfile, userPhot
   const profileReady = missingProfile >= 2;
   const companyReady = missingCompany >= 2;
   const issuerReady = missingIssuer >= 3;
+  const readyCount = [profileReady, companyReady, issuerReady].filter(Boolean).length;
+  const readiness = Math.round((readyCount / 3) * 100);
+  const activeInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.agencyId === activeAgencyId).length;
+  const activeServices = activeAgencyServices().filter((service) => service.clientVisible !== false).length;
+  const commandStats = [
+    { label: "Preparación", value: `${readiness}%`, icon: "gauge" },
+    { label: "Empresas", value: companies.filter((item) => !item.deletedAt).length, icon: "building-2" },
+    { label: "Cobros", value: activeInvoices, icon: "receipt-text" },
+    { label: "Servicios", value: activeServices, icon: "shopping-bag" },
+  ];
   const cards = [
     {
       icon: "user-round-check",
@@ -4864,6 +4874,21 @@ function renderSettingsCommandCenter({ session, company, issuerProfile, userPhot
         <span class="workspace-label">Configuración general</span>
         <h2>Tu espacio de trabajo</h2>
         <p>Administra usuario, empresa activa, emisor de cobros, tienda y conexiones desde una sola pantalla.</p>
+        <div class="settings-command-overview" aria-label="Resumen de configuración">
+          ${commandStats
+            .map(
+              (stat) => `
+                <article>
+                  <i data-lucide="${stat.icon}"></i>
+                  <div>
+                    <strong>${escapeHtml(stat.value)}</strong>
+                    <span>${escapeHtml(stat.label)}</span>
+                  </div>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
       </div>
       <div class="settings-command-cards">
         ${cards
