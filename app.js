@@ -262,7 +262,7 @@ const featureCatalog = [
   { key: "library", label: "Biblioteca y recursos", icon: "layers", plans: ["starter", "pro", "agency"] },
   { key: "aiScripts", label: "Guiones con IA", icon: "sparkles", plans: ["starter", "pro", "agency"] },
   { key: "clients", label: "Empresas gestionadas", icon: "users", plans: ["agency"] },
-  { key: "billing", label: "Cobros y facturas", icon: "receipt", plans: ["pro", "agency"] },
+  { key: "billing", label: "Cobros y facturas", icon: "receipt-text", plans: ["pro", "agency"] },
   { key: "store", label: "Venta de servicios", icon: "store", plans: ["pro", "agency"] },
   { key: "hosting", label: "Hosting y dominios", icon: "server", plans: ["agency"] },
   { key: "apiAdmin", label: "APIs y automatizaciones", icon: "workflow", plans: ["agency"] },
@@ -8697,7 +8697,7 @@ function renderDashboardCommerceSnapshot({ company, client, openInvoices }) {
 function activityIcon(type) {
   const icons = {
     automation: "workflow",
-    billing: "receipt",
+    billing: "receipt-text",
     publish: "send",
     service: "shopping-bag",
     queue: "shield",
