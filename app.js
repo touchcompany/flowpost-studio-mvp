@@ -3915,6 +3915,96 @@ function renderFinanceReports({ filteredTransactions, filteredInvoices, filtered
   `;
 }
 
+function renderFinanceCompanySnapshot({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies }) {
+  const companyRows = visibleCompanies
+    .map((company) => {
+      const companyId = company.id;
+      const income = filteredTransactions
+        .filter((item) => financeRecordCompanyId(item) === companyId && item.type === "Ingreso")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const expenses =
+        filteredTransactions
+          .filter((item) => financeRecordCompanyId(item) === companyId && item.type === "Egreso")
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0) +
+        filteredProviders
+          .filter((item) => financeRecordCompanyId(item) === companyId)
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const pending = filteredInvoices
+        .filter((item) => financeRecordCompanyId(item) === companyId && financeInvoiceStatus(item) !== "Pagada")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const paid = filteredInvoices
+        .filter((item) => financeRecordCompanyId(item) === companyId && financeInvoiceStatus(item) === "Pagada")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const documents = filteredInvoices.filter((item) => financeRecordCompanyId(item) === companyId).length;
+      const providers = filteredProviders.filter((item) => financeRecordCompanyId(item) === companyId).length;
+      return {
+        company,
+        documents,
+        expenses,
+        income: income + paid,
+        pending,
+        providers,
+        balance: income + paid - expenses,
+      };
+    })
+    .filter((row) => row.income || row.pending || row.expenses || row.documents || row.providers)
+    .sort((left, right) => Math.abs(right.balance) + right.pending - (Math.abs(left.balance) + left.pending));
+  const maxValue = Math.max(1, ...companyRows.flatMap((row) => [row.income, row.pending, row.expenses]));
+  const periodLabel =
+    financeFilters.companyId !== "all"
+      ? "Empresa filtrada"
+      : financeFilters.month !== "all" || financeFilters.year !== "all"
+        ? "Periodo filtrado"
+        : "Todas las empresas";
+  return `
+    <section class="finance-company-snapshot" aria-label="Resumen financiero por empresa">
+      <header>
+        <div>
+          <span class="workspace-label">Por empresa</span>
+          <h3>Quién genera dinero y quién necesita gestión</h3>
+          <p>Lee ingresos, cartera, egresos y saldo sin entrar a cada documento.</p>
+        </div>
+        <span class="pill ready">${escapeHtml(periodLabel)}</span>
+      </header>
+      <div class="finance-company-table">
+        ${
+          companyRows.length
+            ? companyRows
+                .map(
+                  (row) => `
+                    <button class="finance-company-row ${row.balance < 0 ? "is-negative" : ""}" type="button" data-finance-company-focus="${escapeHtml(row.company.id)}">
+                      <span class="company-avatar small" style="--company-color:${escapeHtml(row.company.primaryColor || "#111")}">${companyAvatarMarkup(row.company)}</span>
+                      <span class="finance-company-main">
+                        <strong>${escapeHtml(row.company.name)}</strong>
+                        <small>${row.documents} documento${row.documents === 1 ? "" : "s"} · ${row.providers} proveedor${row.providers === 1 ? "" : "es"}</small>
+                      </span>
+                      <span>
+                        <small>Recibido</small>
+                        <strong>${formatMoney(row.income)}</strong>
+                        <i class="income" style="width:${Math.max(4, Math.round((row.income / maxValue) * 100))}%"></i>
+                      </span>
+                      <span>
+                        <small>Por cobrar</small>
+                        <strong>${formatMoney(row.pending)}</strong>
+                        <i class="pending" style="width:${Math.max(4, Math.round((row.pending / maxValue) * 100))}%"></i>
+                      </span>
+                      <span>
+                        <small>Egresos</small>
+                        <strong>${formatMoney(row.expenses)}</strong>
+                        <i class="expense" style="width:${Math.max(4, Math.round((row.expenses / maxValue) * 100))}%"></i>
+                      </span>
+                      <em class="${row.balance < 0 ? "negative" : "positive"}">${formatMoney(row.balance)}</em>
+                    </button>
+                  `
+                )
+                .join("")
+            : `<div class="empty-state compact"><strong>Sin actividad financiera</strong><p>Crea una cuenta de cobro, factura o transacción para ver el resumen por empresa.</p></div>`
+        }
+      </div>
+    </section>
+  `;
+}
+
 function renderFinanceInsightBoard({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies, income, expenses, pending }) {
   const balance = income - expenses;
   const paidAmount = filteredInvoices
@@ -4116,6 +4206,7 @@ function renderFinancePanel() {
     <section class="finance-shell">
       ${renderFinanceExecutiveSummary({ income, expenses, pending, overdueInvoices, overdueProviders, upcomingProviders, recurringInvoices, recurringClients })}
       ${renderFinanceReports({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies })}
+      ${renderFinanceCompanySnapshot({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies })}
       ${renderFinanceInsightBoard({ filteredTransactions, filteredInvoices, filteredProviders, visibleCompanies, income, expenses, pending })}
       ${renderFinanceRoleGuide({ issuerProfile, activeClients, visibleCompanies, filteredInvoices, filteredProviders })}
       <details class="finance-disclosure">

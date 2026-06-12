@@ -992,6 +992,130 @@
   font-weight: 900;
 }
 
+.finance-company-snapshot {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.78)),
+    radial-gradient(circle at top right, rgba(0, 149, 246, 0.12), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(163, 230, 53, 0.14), transparent 30%);
+  box-shadow:
+    0 18px 60px rgba(17, 24, 39, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.finance-company-snapshot > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.finance-company-snapshot h3,
+.finance-company-snapshot p {
+  margin: 0;
+}
+
+.finance-company-snapshot p {
+  color: var(--muted);
+}
+
+.finance-company-table {
+  display: grid;
+  gap: 8px;
+}
+
+.finance-company-row {
+  display: grid;
+  grid-template-columns: auto minmax(150px, 1.4fr) repeat(3, minmax(112px, 0.72fr)) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.finance-company-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 149, 246, 0.24);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 34px rgba(17, 24, 39, 0.08);
+}
+
+.finance-company-main,
+.finance-company-row > span:not(.company-avatar) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.finance-company-row strong,
+.finance-company-row small,
+.finance-company-row em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-company-row small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.finance-company-row em {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.05);
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.finance-company-row em.positive {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.finance-company-row em.negative {
+  background: rgba(244, 63, 94, 0.12);
+  color: #9f1239;
+}
+
+.finance-company-row i {
+  display: block;
+  height: 5px;
+  min-width: 6px;
+  border-radius: 999px;
+}
+
+.finance-company-row i.income {
+  background: linear-gradient(90deg, #111, #0095f6);
+}
+
+.finance-company-row i.pending {
+  background: linear-gradient(90deg, #f59e0b, #fde68a);
+}
+
+.finance-company-row i.expense {
+  background: linear-gradient(90deg, #fb7185, #ef4444);
+}
+
 .finance-donut-grid {
   display: grid;
   grid-template-columns: 128px minmax(0, 1fr);
@@ -15408,6 +15532,7 @@ input[type="file"] {
   .commerce-admin-section,
   .finance-executive-summary,
   .finance-report-grid,
+  .finance-company-row,
   .finance-insight-grid,
   .finance-insight-bottom,
   .finance-action-stack,
@@ -15464,7 +15589,25 @@ input[type="file"] {
   }
 
   .finance-report-panel > header .pill,
+  .finance-company-snapshot > header .pill,
   .finance-insight-board > header .pill {
+    justify-self: start;
+  }
+
+  .finance-company-snapshot > header {
+    display: grid;
+  }
+
+  .finance-company-row {
+    align-items: flex-start;
+  }
+
+  .finance-company-row > span:not(.company-avatar),
+  .finance-company-row em {
+    grid-column: 2;
+  }
+
+  .finance-company-row em {
     justify-self: start;
   }
 
@@ -15690,12 +15833,23 @@ input[type="file"] {
   .finance-health-card,
   .finance-executive-cards article,
   .finance-report-panel,
+  .finance-company-snapshot,
   .finance-chart-card {
     border-radius: 20px;
   }
 
-  .finance-report-panel {
+  .finance-report-panel,
+  .finance-company-snapshot {
     padding: 12px;
+  }
+
+  .finance-company-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    border-radius: 18px;
+  }
+
+  .finance-company-row > span:not(.company-avatar) {
+    gap: 3px;
   }
 
   .finance-month-row {
