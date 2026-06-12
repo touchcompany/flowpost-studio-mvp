@@ -1460,6 +1460,29 @@ function publicMediaUrl(value = "") {
   return normalized.startsWith("/") ? `${base}${normalized}` : `${base}/${normalized}`;
 }
 
+function persistableMediaUrl(value = "") {
+  const normalized = normalizeMediaUrl(value);
+  if (!normalized) return "";
+  if (/^(data:|blob:|file:)/i.test(normalized)) return normalized;
+  if (!/^https?:/i.test(normalized)) return normalized;
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.toLowerCase();
+    const isLocal = ["localhost", "127.0.0.1", "0.0.0.0"].includes(host);
+    const isAppHost = host === "app.touch.com.co";
+    if ((isLocal || isAppHost) && url.pathname) {
+      return `${url.pathname}${url.search || ""}${url.hash || ""}`;
+    }
+  } catch {
+    return normalized;
+  }
+  return normalized;
+}
+
+function mediaInputValue(value = "") {
+  return persistableMediaUrl(value);
+}
+
 function absoluteMediaPreviewUrl(value = "") {
   const normalized = normalizeMediaUrl(value);
   if (!normalized) return "";
@@ -1651,12 +1674,21 @@ async function hydrateSessionFromBackend() {
 
 async function saveClientSession(session) {
   const normalized = normalizeClientSession(session);
+  const savedAvatarUrl = persistableMediaUrl(session.avatarUrl || session.metadata?.avatarUrl || normalized.avatarUrl || "");
+  const payload = {
+    ...normalized,
+    avatarUrl: savedAvatarUrl,
+    metadata: {
+      ...(normalized.metadata || {}),
+      avatarUrl: savedAvatarUrl,
+    },
+  };
   if (window.location.protocol !== "file:") {
     try {
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(normalized),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const result = await response.json();
@@ -1673,7 +1705,7 @@ async function saveClientSession(session) {
     }
     return currentSession();
   }
-  localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
+  localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
   return currentSession();
 }
 
@@ -4642,9 +4674,9 @@ function renderSettingsPanel() {
             </span>
             <label class="field compact">
               <span>Foto de perfil</span>
-              <input data-settings-profile-field="avatarUrl" type="text" value="${escapeHtml(userPhotoUrl)}" placeholder="/content/uploads/perfil.jpg o https://..." />
+              <input data-settings-profile-field="avatarUrl" type="text" value="${escapeHtml(mediaInputValue(userPhotoUrl))}" placeholder="/content/uploads/perfil.jpg o https://..." />
               <small>Pega una URL completa o una ruta del sitio. Se normaliza antes de guardar.</small>
-              ${mediaUrlHelperMarkup(userPhotoUrl, "perfil")}
+              ${mediaUrlHelperMarkup(mediaInputValue(userPhotoUrl), "perfil")}
             </label>
           </div>
         </div>
@@ -4682,9 +4714,9 @@ function renderSettingsPanel() {
             </span>
             <label class="field compact">
               <span>Foto o logo</span>
-              <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(companyPhotoUrl)}" placeholder="/content/uploads/logo.jpg o https://..." />
+              <input data-settings-company-field="avatarUrl" type="text" value="${escapeHtml(mediaInputValue(companyPhotoUrl))}" placeholder="/content/uploads/logo.jpg o https://..." />
               <small>Esta imagen se usa en empresa, calendario, operación, cobros y menú móvil.</small>
-              ${mediaUrlHelperMarkup(companyPhotoUrl, "logo")}
+              ${mediaUrlHelperMarkup(mediaInputValue(companyPhotoUrl), "logo")}
             </label>
           </div>
           <label class="field compact wide">
@@ -4951,7 +4983,7 @@ function renderIssuerProfileManager(issuerProfile = currentIssuerProfile()) {
 }
 
 async function syncSettingsCompanyField(field, rawValue, options = {}) {
-  const value = field === "avatarUrl" ? publicMediaUrl(rawValue) : options.trim ? String(rawValue || "").trim() : rawValue;
+  const value = field === "avatarUrl" ? persistableMediaUrl(rawValue) : options.trim ? String(rawValue || "").trim() : rawValue;
   companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: value } : company));
   activeCompanyName.textContent = activeCompany().name || "";
   refreshCompanyContext();
@@ -4966,7 +4998,7 @@ async function saveSettingsProfileFromPanel() {
   settingsPanel.querySelectorAll("[data-settings-profile-field]").forEach((fieldNode) => {
     const field = fieldNode.dataset.settingsProfileField;
     const rawValue = fieldNode.value || "";
-    updates[field] = field === "avatarUrl" ? publicMediaUrl(rawValue) : rawValue.trim();
+    updates[field] = field === "avatarUrl" ? persistableMediaUrl(rawValue) : rawValue.trim();
   });
   await saveClientSession({ ...currentSession(), ...updates });
   renderAccount();
@@ -4980,7 +5012,7 @@ async function saveSettingsCompanyFromPanel() {
   settingsPanel.querySelectorAll("[data-settings-company-field]").forEach((fieldNode) => {
     const field = fieldNode.dataset.settingsCompanyField;
     const rawValue = fieldNode.value || "";
-    updates[field] = field === "avatarUrl" ? publicMediaUrl(rawValue) : String(rawValue).trim();
+    updates[field] = field === "avatarUrl" ? persistableMediaUrl(rawValue) : String(rawValue).trim();
   });
   companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, ...updates } : company));
   activeCompanyName.textContent = activeCompany().name || "";
@@ -14572,12 +14604,13 @@ settingsPanel?.addEventListener("input", async (event) => {
     if (mediaWrapper && profileField.dataset.settingsProfileField === "avatarUrl") {
       const preview = mediaWrapper.querySelector(".settings-media-preview");
       const helper = mediaWrapper.querySelector(".settings-media-helper");
-      const previewUrl = publicMediaUrl(profileField.value);
+      const savedUrl = persistableMediaUrl(profileField.value);
+      const previewUrl = publicMediaUrl(savedUrl);
       if (preview) {
         preview.classList.remove("is-broken-media");
         preview.innerHTML = previewUrl ? avatarImageMarkup(previewUrl, currentSession().name || "Usuario Touch") : `<i data-lucide="user-round"></i>`;
       }
-      if (helper) helper.outerHTML = mediaUrlHelperMarkup(previewUrl, "perfil");
+      if (helper) helper.outerHTML = mediaUrlHelperMarkup(savedUrl, "perfil");
       renderIcons();
     }
     return;
@@ -14586,7 +14619,7 @@ settingsPanel?.addEventListener("input", async (event) => {
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    const value = field === "avatarUrl" ? publicMediaUrl(companyField.value) : companyField.value;
+    const value = field === "avatarUrl" ? persistableMediaUrl(companyField.value) : companyField.value;
     companies = companies.map((company) => (company.id === activeCompanyId ? { ...company, [field]: value } : company));
     activeCompanyName.textContent = activeCompany().name || "";
     if (field === "primaryColor") {
@@ -14600,7 +14633,7 @@ settingsPanel?.addEventListener("input", async (event) => {
       const helper = mediaWrapper.querySelector(".settings-media-helper");
       if (preview) {
         preview.classList.remove("is-broken-media");
-        preview.innerHTML = value ? avatarImageMarkup(value, activeCompany().name || "Empresa") : `<i data-lucide="briefcase-business"></i>`;
+        preview.innerHTML = value ? avatarImageMarkup(publicMediaUrl(value), activeCompany().name || "Empresa") : `<i data-lucide="briefcase-business"></i>`;
       }
       if (helper) helper.outerHTML = mediaUrlHelperMarkup(value, "logo");
       renderIcons();
@@ -14622,7 +14655,7 @@ settingsPanel?.addEventListener("change", async (event) => {
   const profileField = event.target.closest("[data-settings-profile-field]");
   if (profileField) {
     const field = profileField.dataset.settingsProfileField;
-    const value = field === "avatarUrl" ? publicMediaUrl(profileField.value) : profileField.value.trim();
+    const value = field === "avatarUrl" ? persistableMediaUrl(profileField.value) : profileField.value.trim();
     const savedSession = await saveClientSession({ ...currentSession(), [field]: value });
     profileField.value = savedSession[field] || value;
     renderAccount();
@@ -14635,7 +14668,7 @@ settingsPanel?.addEventListener("change", async (event) => {
   const companyField = event.target.closest("[data-settings-company-field]");
   if (companyField) {
     const field = companyField.dataset.settingsCompanyField;
-    await syncSettingsCompanyField(field, field === "avatarUrl" ? publicMediaUrl(companyField.value) : companyField.value, { trim: true });
+    await syncSettingsCompanyField(field, field === "avatarUrl" ? persistableMediaUrl(companyField.value) : companyField.value, { trim: true });
     renderSettingsPanel();
     showToast("Empresa actualizada y sincronizada.");
     return;
