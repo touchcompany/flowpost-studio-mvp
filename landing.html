@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Touch Note" />
-    <link rel="stylesheet" href="styles.css?v=20260612b" />
+    <link rel="stylesheet" href="styles.css?v=20260612c" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
   </head>
   <body class="marketing-page">
@@ -26,9 +26,10 @@
       </a>
       <nav aria-label="Principal">
         <a href="#servicios">Servicios</a>
+        <a href="#soluciones">Soluciones</a>
         <a href="#ecosistema">Ecosistema</a>
         <a href="#planes">Planes</a>
-        <a href="#comprar">Comprar</a>
+        <a href="#tienda">Tienda</a>
       </nav>
       <div class="marketing-actions">
         <a class="marketing-link" href="login.html">Entrar</a>
@@ -39,12 +40,12 @@
     <main>
       <section class="marketing-hero premium-hero">
         <div class="hero-copy">
-          <h1>Tu agencia, tus clientes y todos tus servicios en un solo panel.</h1>
+          <h1>La plataforma para vender y operar servicios digitales sin desorden.</h1>
           <p>
-            Vende contenido, páginas web, hosting, dominios, campañas, IA y soporte. Cada compra queda ligada al cliente correcto para operarla desde Touch Note.
+            Touch Note une tienda, clientes, cobros, contenido, IA, hosting, dominios y páginas web en una experiencia elegante para agencias, pymes y marcas personales.
           </p>
           <div class="hero-actions">
-            <a class="marketing-button dark large" href="#comprar">Comprar servicios</a>
+            <a class="marketing-button dark large" href="#tienda">Comprar servicios</a>
             <a class="marketing-button light large" href="login.html">Crear cuenta gratis</a>
           </div>
           <ul class="hero-proof" aria-label="Servicios principales">
@@ -89,8 +90,8 @@
 
       <section class="marketing-section service-showcase" id="servicios">
         <div>
-          <h2>Todo lo que tu agencia puede vender desde la plataforma</h2>
-          <p>Servicios listos para comprar, facturar, asignar a un cliente y administrar desde su panel.</p>
+          <h2>Servicios que se venden como producto y se operan como sistema.</h2>
+          <p>Cada servicio tiene una experiencia clara para el cliente, una orden interna para tu equipo y un panel donde se puede ver avance, cobro y entrega.</p>
         </div>
         <div class="service-marquee" aria-label="Servicios destacados">
           <article><i data-lucide="instagram"></i><strong>Contenido social</strong><span>Reels, posts, carruseles, historias y guiones.</span></article>
@@ -101,6 +102,85 @@
           <article><i data-lucide="bot"></i><strong>Chatbot</strong><span>Soporte, leads y respuestas conectables.</span></article>
           <article><i data-lucide="wand-sparkles"></i><strong>IA creativa</strong><span>Copies, guiones, imágenes y perfiles de cliente.</span></article>
           <article><i data-lucide="hard-drive"></i><strong>Recursos</strong><span>Biblioteca, Drive, videos y referencias por empresa.</span></article>
+        </div>
+      </section>
+
+      <section class="marketing-section apple-grid-section" id="soluciones">
+        <article class="apple-product-tile dark service-web">
+          <div>
+            <span class="tile-kicker">Web + dominio</span>
+            <h2>Sitios listos para vender.</h2>
+            <p>Landing pages, dominio, hosting administrado y publicación con una ruta simple para que el cliente compre y vea el avance.</p>
+            <a href="#web-hosting">Ver web y hosting</a>
+          </div>
+          <div class="service-visual website-visual" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </article>
+        <article class="apple-product-tile light service-content">
+          <div>
+            <span class="tile-kicker">Contenido + IA</span>
+            <h2>Guiones, reels y campañas con contexto.</h2>
+            <p>Crea contenido por empresa, guarda prompts, referencias y piezas sin mezclar clientes.</p>
+            <a href="#contenido-ia">Ver contenido</a>
+          </div>
+          <div class="service-visual content-visual" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </article>
+      </section>
+
+      <section class="marketing-section service-detail-section" id="web-hosting">
+        <div class="service-detail-copy">
+          <span class="marketing-eyebrow">Páginas, hosting y dominios</span>
+          <h2>De una compra a una presencia digital lista para administrar.</h2>
+          <p>El cliente puede pedir una página web, dominio o hosting; tú lo recibes como orden vinculada, con cobro, datos técnicos y próximos pasos.</p>
+          <div class="detail-actions">
+            <a class="marketing-button dark" href="#tienda">Comprar web</a>
+            <a class="marketing-button light" href="login.html">Entrar al panel</a>
+          </div>
+        </div>
+        <div class="service-detail-device hosting-device" aria-label="Vista previa de servicio web">
+          <header><span></span><span></span><span></span></header>
+          <section>
+            <strong>Landing premium</strong>
+            <p>Dominio verificado · Hosting cPanel · Entrega guiada</p>
+            <div class="device-preview-bars"><i></i><i></i><i></i></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="marketing-section service-detail-section reverse" id="contenido-ia">
+        <div class="service-detail-device ai-device" aria-label="Vista previa de contenido con IA">
+          <header><span></span><span></span><span></span></header>
+          <section>
+            <strong>Guion para reel</strong>
+            <p>Hook, escenas, CTA, prompt de imagen y notas de producción.</p>
+            <div class="ai-message"><i data-lucide="sparkles"></i><span>Crea una campaña vertical para el lanzamiento.</span></div>
+            <div class="ai-message answer"><span>3 ideas listas para revisar por empresa.</span></div>
+          </section>
+        </div>
+        <div class="service-detail-copy">
+          <span class="marketing-eyebrow">Contenido, campañas e IA</span>
+          <h2>Un estudio creativo dentro del panel de cada marca.</h2>
+          <p>Guiones, prompts, carruseles, referencias, personajes y campañas se guardan por empresa para que el equipo trabaje con contexto real.</p>
+          <div class="detail-actions">
+            <a class="marketing-button dark" href="#tienda">Comprar contenido</a>
+            <a class="marketing-button light" href="login.html#calendar">Crear guion</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="marketing-section service-film-section">
+        <div>
+          <h2>Una operación completa, con una experiencia que el cliente entiende.</h2>
+          <p>La página pública vende. El panel privado organiza. Los cobros, pedidos, guiones y entregas quedan conectados.</p>
+        </div>
+        <div class="film-strip" aria-label="Momentos de la plataforma">
+          <article><span></span><strong>Comprar</strong><small>Servicio o plan</small></article>
+          <article><span></span><strong>Asignar</strong><small>Cliente correcto</small></article>
+          <article><span></span><strong>Producir</strong><small>Guiones y recursos</small></article>
+          <article><span></span><strong>Cobrar</strong><small>PDF y WhatsApp</small></article>
         </div>
       </section>
 
@@ -212,7 +292,7 @@
             Cada servicio comprado puede abrir un pedido, crear una cuenta de cobro, activar módulos para el cliente y dejar una ruta de entrega clara para tu equipo.
           </p>
           <div class="commerce-admin-actions">
-            <a class="marketing-button dark" href="#comprar">Ver servicios</a>
+            <a class="marketing-button dark" href="#tienda">Ver servicios</a>
             <a class="marketing-button light" href="login.html">Entrar al panel</a>
           </div>
         </div>
@@ -261,10 +341,20 @@
         </div>
       </section>
 
-      <section class="marketing-section purchase-section" id="comprar">
+      <section class="marketing-section purchase-section public-store-section" id="tienda">
         <div class="pricing-head">
-          <h2>Compra lo que necesita tu cliente y adminístralo en su panel</h2>
-          <p>Elige un servicio. Lo guardamos como compra pendiente y al entrar al panel aparece dentro de Clientes como orden administrable.</p>
+          <span class="marketing-eyebrow">Tienda pública</span>
+          <h2>Elige un servicio y déjalo listo para operar en Touch Note.</h2>
+          <p>Precios base en pesos colombianos. Puedes cambiar la moneda para referencia visual; el cobro real se configura desde la pasarela activa.</p>
+          <label class="currency-picker">
+            <span>Moneda</span>
+            <select data-currency-select>
+              <option value="COP">COP · Colombia</option>
+              <option value="USD">USD · Dólar</option>
+              <option value="EUR">EUR · Euro</option>
+              <option value="MXN">MXN · México</option>
+            </select>
+          </label>
         </div>
         <div class="purchase-experience">
           <div class="purchase-grid">
@@ -272,42 +362,42 @@
               <i data-lucide="globe-2"></i>
               <h3>Página web landing</h3>
               <p>Diseño, estructura, publicación y preparación para dominio.</p>
-              <strong>$1.200.000 COP</strong>
+              <strong data-price-service="website">$1.200.000 COP</strong>
               <button class="marketing-button dark" type="button" data-buy-service="website">Comprar web</button>
             </article>
             <article data-service-card="hosting">
               <i data-lucide="server"></i>
               <h3>Hosting administrado</h3>
               <p>Servidor, soporte, renovación y conexión con cPanel.</p>
-              <strong>$180.000 COP</strong>
+              <strong data-price-service="hosting">$180.000 COP</strong>
               <button class="marketing-button light" type="button" data-buy-service="hosting">Comprar hosting</button>
             </article>
             <article data-service-card="domain">
               <i data-lucide="badge-check"></i>
               <h3>Dominio anual</h3>
               <p>Compra o renovación de dominio para la marca del cliente.</p>
-              <strong>$85.000 COP</strong>
+              <strong data-price-service="domain">$85.000 COP</strong>
               <button class="marketing-button light" type="button" data-buy-service="domain">Comprar dominio</button>
             </article>
             <article data-service-card="ads">
               <i data-lucide="megaphone"></i>
               <h3>Campañas Meta Ads</h3>
               <p>Estrategia, anuncios y seguimiento para Facebook e Instagram.</p>
-              <strong>$420.000 COP</strong>
+              <strong data-price-service="ads">$420.000 COP</strong>
               <button class="marketing-button light" type="button" data-buy-service="ads">Comprar campaña</button>
             </article>
             <article data-service-card="reels">
               <i data-lucide="clapperboard"></i>
               <h3>Paquete de reels</h3>
               <p>Guiones, edición simple, copies y programación.</p>
-              <strong>$280.000 COP</strong>
+              <strong data-price-service="reels">$280.000 COP</strong>
               <button class="marketing-button light" type="button" data-buy-service="reels">Comprar reels</button>
             </article>
             <article data-service-card="chatbot">
               <i data-lucide="bot"></i>
               <h3>Chatbot y soporte</h3>
               <p>Asistente para responder dudas, captar leads y guiar clientes.</p>
-              <strong>$450.000 COP</strong>
+              <strong data-price-service="chatbot">$450.000 COP</strong>
               <button class="marketing-button light" type="button" data-buy-service="chatbot">Comprar chatbot</button>
             </article>
           </div>
@@ -349,6 +439,6 @@
         </div>
       </section>
     </main>
-    <script src="landing.js?v=20260612b"></script>
+    <script src="landing.js?v=20260612c"></script>
   </body>
 </html>
