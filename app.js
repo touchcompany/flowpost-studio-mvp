@@ -6866,9 +6866,64 @@ function prepareFinanceWhatsapp(invoiceId) {
   documentAction("whatsapp");
 }
 
+function storeCheckoutClient() {
+  return isClientPortalSession() ? clientForCompany() : clients.find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
+}
+
+async function startStoreCheckout(serviceId) {
+  const service = serviceById(serviceId);
+  const client = storeCheckoutClient();
+  const session = currentSession();
+  if (!service || !client) {
+    showToast("Selecciona empresa y servicio.");
+    return;
+  }
+  if (isTouchSuperAdmin(session)) {
+    purchaseServiceForClient(serviceId);
+    return;
+  }
+  if (!validateProvisioningForService(service, client)) return;
+
+  try {
+    showToast("Preparando checkout seguro...");
+    const response = await fetch("/api/store/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        agencyId: activeAgencyId,
+        companyId: client.companyId,
+        clientId: client.id,
+        serviceId: service.id,
+        serviceName: service.name,
+        description: serviceStoreDescription(service, client),
+        amount: service.price,
+        currency: "COP",
+        email: client.email || session.email || "",
+        reference: `touch-${client.id}-${service.id}-${Date.now()}`,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (result.checkoutUrl) {
+      window.location.href = result.checkoutUrl;
+      return;
+    }
+    if (result.ready === false) {
+      showToast(result.message || "Pasarela pendiente. Creare el pedido interno.");
+      purchaseServiceForClient(serviceId);
+      return;
+    }
+    showToast(result.message || "No se pudo abrir el checkout. Creare el pedido interno.");
+    purchaseServiceForClient(serviceId);
+  } catch (error) {
+    showToast("Checkout no disponible. Creare el pedido interno.");
+    purchaseServiceForClient(serviceId);
+  }
+}
+
 function purchaseServiceForClient(serviceId) {
   const service = serviceById(serviceId);
-  const client = isClientPortalSession() ? clientForCompany() : clients.find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
+  const client = storeCheckoutClient();
   if (!service || !client) {
     showToast("Selecciona empresa y servicio.");
     return;
@@ -15222,7 +15277,7 @@ storePanel.addEventListener("click", (event) => {
 
   const buyButton = event.target.closest("[data-store-buy]");
   if (buyButton) {
-    purchaseServiceForClient(buyButton.dataset.storeBuy);
+    startStoreCheckout(buyButton.dataset.storeBuy);
     return;
   }
 

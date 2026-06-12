@@ -10335,32 +10335,42 @@ input[type="file"]:focus {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fafafa;
+  padding: 9px 4px;
+  border: 0;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 0;
+  background: transparent;
 }
 
 .scripts-card-list article.selected {
-  border-color: #111;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #111;
+  border-bottom-color: transparent;
+  border-radius: 18px;
+  background: rgba(17, 17, 17, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.08);
 }
 
 .scripts-card-list article.ready {
-  background: linear-gradient(135deg, #ffffff, #f7fff8);
+  background: transparent;
 }
 
 .scripts-card-list article.draft {
-  background: #fbfbfb;
+  background: transparent;
+}
+
+.scripts-card-list article.ready.selected,
+.scripts-card-list article.draft.selected {
+  background: rgba(17, 17, 17, 0.05);
 }
 
 .scripts-card-list article > button {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
   min-width: 0;
+  width: 100%;
+  padding: 5px;
+  border-radius: 16px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -10368,20 +10378,53 @@ input[type="file"]:focus {
   cursor: pointer;
 }
 
-.scripts-card-list p {
-  margin: 5px 0 0;
+.scripts-card-list article > button:hover {
+  background: rgba(17, 17, 17, 0.04);
+}
+
+.scripts-card-list .status-dot {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.08);
+}
+
+.scripts-card-list strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.94rem;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scripts-card-list small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
   color: var(--muted);
-  line-height: 1.35;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scripts-card-list p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.28;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .script-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 5px;
+  margin-top: 7px;
 }
 
 .script-card-tags em {
@@ -15130,6 +15173,13 @@ input[type="file"] {
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
+.store-service-card h4,
+.store-service-card p,
+.store-service-card span,
+.store-service-card strong {
+  min-width: 0;
+}
+
 .store-service-card.has-order {
   border-color: rgba(15, 118, 110, 0.2);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 244, 0.72));
@@ -15218,6 +15268,10 @@ input[type="file"] {
 .store-card-actions .secondary-button {
   min-height: 42px;
   border-radius: 15px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .store-card-actions .icon-button {
@@ -16212,12 +16266,100 @@ input[type="file"] {
     flex: 1 1 150px;
   }
 
+  .store-group {
+    padding: 10px;
+    border-radius: 20px;
+  }
+
   .store-service-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .store-service-card {
+    gap: 8px;
+    padding: 10px;
+    border-radius: 17px;
+  }
+
+  .store-service-head,
+  .store-service-meta {
+    gap: 6px;
+  }
+
+  .store-service-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 14px;
+  }
+
+  .store-service-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .store-visibility-pill {
+    max-width: 88px;
+    padding: 4px 7px;
+    font-size: 0.62rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .store-visibility-pill svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .store-service-copy h4 {
+    font-size: 0.92rem;
+    line-height: 1.12;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .store-service-copy p {
+    font-size: 0.72rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .store-service-meta {
+    display: grid;
+    align-items: start;
+  }
+
+  .store-service-meta span {
+    font-size: 0.66rem;
+  }
+
+  .store-service-meta strong {
+    font-size: 0.98rem;
   }
 
   .store-card-actions {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .store-card-actions .primary-button,
+  .store-card-actions .secondary-button {
+    min-height: 38px;
+    padding-inline: 9px;
+    border-radius: 14px;
+    font-size: 0.78rem;
+  }
+
+  .store-card-actions .icon-button.compact {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
   }
 
   .store-mode-strip article {

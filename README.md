@@ -283,6 +283,8 @@ Para cPanel/Passenger se recomienda configurar `OAUTH_STATE_SECRET` con un texto
 Stripe Checkout ya crea sesiones reales desde backend si existen `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO` y `STRIPE_PRICE_AGENCY`.
 El webhook de Stripe esta en `/api/billing/webhook` y requiere `STRIPE_WEBHOOK_SECRET`.
 
+La tienda interna usa `POST /api/store/checkout` para intentar checkout real antes de crear un pedido interno. Configura `CHECKOUT_PROVIDER=mercadopago` con `MERCADOPAGO_ACCESS_TOKEN` para cobrar servicios en COP con Mercado Pago. Tambien acepta `CHECKOUT_PROVIDER=paypal` con `PAYPAL_CLIENT_ID` y `PAYPAL_CLIENT_SECRET`; por defecto usa sandbox y `PAYPAL_CURRENCY=USD`. Si no hay credenciales, la app conserva el flujo operativo creando el pedido y la cuenta de cobro interna para que el equipo pueda seguir probando.
+
 Si faltan credenciales de Google/Facebook, el login social se bloquea y muestra las variables pendientes. No crea cuentas sociales simuladas en produccion.
 
 El dashboard ya muestra `Cuenta y plan` dentro de Cuentas. El super admin puede activar Starter, Pro o Agencia para validar limites y permisos:

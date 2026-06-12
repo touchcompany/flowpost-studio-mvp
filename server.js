@@ -1977,6 +1977,163 @@ async function createStripeCheckoutSession({ plan, priceId, email, profileId }) 
   return result;
 }
 
+function checkoutBaseUrl(req) {
+  return (process.env.APP_PUBLIC_URL || publicUrl(req)).replace(/\/$/, "");
+}
+
+function storeCheckoutProvider() {
+  return String(process.env.CHECKOUT_PROVIDER || process.env.PAYMENT_PROVIDER || "mercadopago").toLowerCase();
+}
+
+function storeCheckoutSuccessUrl(req, reference = "") {
+  const base = process.env.STORE_CHECKOUT_SUCCESS_URL || `${checkoutBaseUrl(req)}/index.html#store`;
+  return reference ? `${base}${base.includes("?") ? "&" : "?"}checkout=success&ref=${encodeURIComponent(reference)}` : base;
+}
+
+function storeCheckoutCancelUrl(req) {
+  return process.env.STORE_CHECKOUT_CANCEL_URL || `${checkoutBaseUrl(req)}/index.html#store`;
+}
+
+function normalizeCheckoutAmount(amount) {
+  const value = Number(amount || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.round(value);
+}
+
+async function createMercadoPagoPreference(req, payload) {
+  if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    return {
+      ready: false,
+      provider: "mercadopago",
+      missing: ["MERCADOPAGO_ACCESS_TOKEN"],
+      message: "Configura MERCADOPAGO_ACCESS_TOKEN para cobrar servicios con Mercado Pago.",
+    };
+  }
+  const amount = normalizeCheckoutAmount(payload.amount);
+  if (!amount) throw new Error("El servicio necesita un valor valido para crear el checkout.");
+  const reference = payload.reference || `${payload.clientId || "client"}-${payload.serviceId || "service"}-${Date.now()}`;
+  const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      items: [
+        {
+          title: payload.serviceName || "Servicio Touch Note",
+          description: payload.description || "Servicio digital",
+          quantity: 1,
+          currency_id: payload.currency || process.env.MERCADOPAGO_CURRENCY || "COP",
+          unit_price: amount,
+        },
+      ],
+      payer: payload.email ? { email: payload.email } : undefined,
+      back_urls: {
+        success: storeCheckoutSuccessUrl(req, reference),
+        failure: storeCheckoutCancelUrl(req),
+        pending: storeCheckoutSuccessUrl(req, reference),
+      },
+      auto_return: "approved",
+      external_reference: reference,
+      notification_url: process.env.MERCADOPAGO_WEBHOOK_URL || undefined,
+      metadata: {
+        service_id: payload.serviceId || "",
+        client_id: payload.clientId || "",
+        company_id: payload.companyId || "",
+        agency_id: payload.agencyId || "",
+      },
+    }),
+  });
+  const result = await readJsonResponse(response, "No se pudo crear la preferencia de Mercado Pago.");
+  return {
+    ready: true,
+    provider: "mercadopago",
+    reference,
+    checkoutUrl: result.init_point || result.sandbox_init_point,
+    preferenceId: result.id,
+  };
+}
+
+async function createPayPalOrder(req, payload) {
+  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    return {
+      ready: false,
+      provider: "paypal",
+      missing: ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"].filter((key) => !process.env[key]),
+      message: "Configura PAYPAL_CLIENT_ID y PAYPAL_CLIENT_SECRET para cobrar servicios con PayPal.",
+    };
+  }
+  const amount = normalizeCheckoutAmount(payload.amount);
+  if (!amount) throw new Error("El servicio necesita un valor valido para crear el checkout.");
+  const sourceCurrency = payload.currency || "COP";
+  const paypalCurrency = process.env.PAYPAL_CURRENCY || "USD";
+  let paypalValue = amount;
+  if (paypalCurrency !== sourceCurrency) {
+    const conversionRate = Number(process.env.PAYPAL_COP_TO_USD_RATE || 0);
+    if (sourceCurrency === "COP" && paypalCurrency === "USD" && conversionRate > 0) {
+      paypalValue = Math.max(amount * conversionRate, 1);
+    } else {
+      return {
+        ready: false,
+        provider: "paypal",
+        missing: ["PAYPAL_CURRENCY", "PAYPAL_COP_TO_USD_RATE"],
+        message: "PayPal necesita moneda compatible o una tasa PAYPAL_COP_TO_USD_RATE para convertir servicios en COP.",
+      };
+    }
+  }
+  const paypalBase = process.env.PAYPAL_ENV === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+  const credentials = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64");
+  const tokenResponse = await fetch(`${paypalBase}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: "grant_type=client_credentials",
+  });
+  const token = await readJsonResponse(tokenResponse, "No se pudo autenticar PayPal.");
+  const reference = payload.reference || `${payload.clientId || "client"}-${payload.serviceId || "service"}-${Date.now()}`;
+  const orderResponse = await fetch(`${paypalBase}/v2/checkout/orders`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token.access_token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          reference_id: reference,
+          description: payload.serviceName || "Servicio Touch Note",
+          amount: {
+            currency_code: paypalCurrency,
+            value: String(Number(paypalValue).toFixed(2)),
+          },
+        },
+      ],
+      application_context: {
+        brand_name: "Touch Note",
+        user_action: "PAY_NOW",
+        return_url: storeCheckoutSuccessUrl(req, reference),
+        cancel_url: storeCheckoutCancelUrl(req),
+      },
+    }),
+  });
+  const order = await readJsonResponse(orderResponse, "No se pudo crear la orden de PayPal.");
+  const approve = (order.links || []).find((link) => link.rel === "approve");
+  return {
+    ready: true,
+    provider: "paypal",
+    reference,
+    orderId: order.id,
+    checkoutUrl: approve?.href || "",
+  };
+}
+
 function verifyStripeSignature(rawBody, signatureHeader, secret) {
   if (!signatureHeader || !secret) return false;
   const parts = Object.fromEntries(
@@ -3813,6 +3970,28 @@ async function handleApi(req, res, url) {
         provider: "Facebook Login",
         mode: "auth-error",
         next: error.message || "Revisa las credenciales OAuth de Facebook y vuelve a intentar.",
+      });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/store/checkout") {
+    try {
+      const payload = await readBody(req);
+      const provider = storeCheckoutProvider();
+      const result =
+        provider === "paypal"
+          ? await createPayPalOrder(req, payload)
+          : await createMercadoPagoPreference(req, payload);
+      sendJson(res, result.ready === false ? 200 : 201, {
+        ...result,
+        selectedProvider: provider,
+      });
+    } catch (error) {
+      sendJson(res, 502, {
+        ready: false,
+        provider: storeCheckoutProvider(),
+        message: error.message || "No se pudo crear el checkout del servicio.",
       });
     }
     return;
