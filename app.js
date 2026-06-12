@@ -201,6 +201,14 @@ const STORAGE_KEY = "flowpost-studio-state-v2";
 const UI_STORAGE_KEY = "flowpost-studio-ui-v1";
 const SESSION_KEY = "flowpost-studio-session-v1";
 const PENDING_PURCHASES_KEY = "flowpost-pending-service-purchases-v1";
+const LANDING_SERVICE_CATALOG = {
+  website: { id: "website", name: "Pagina web landing", price: 1200000, group: "Web" },
+  hosting: { id: "hosting", name: "Hosting administrado", price: 180000, group: "Web" },
+  domain: { id: "domain", name: "Dominio anual", price: 85000, group: "Web" },
+  ads: { id: "ads", name: "Campanas Meta Ads", price: 420000, group: "Publicidad" },
+  reels: { id: "reels", name: "Paquete de reels", price: 280000, group: "Produccion" },
+  chatbot: { id: "chatbot", name: "Chatbot y soporte", price: 450000, group: "Automatizacion" },
+};
 const APP_ADMIN_EMAIL = "ia@touch.com.co";
 const planLimits = {
   starter: {
@@ -5641,6 +5649,8 @@ function renderStorePanel() {
 
     ${renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, revenue, publicStoreUrl })}
 
+    ${renderPendingLandingPurchases({ selectedClient, storeAdmin })}
+
     ${renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
 
     ${renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForStore, activeOrders, selectedOrders, publicStoreUrl })}
@@ -6830,14 +6840,9 @@ function createServiceOrderFromPurchase(purchase, client) {
 }
 
 function applyPendingLandingPurchases() {
-  let purchases = [];
-  try {
-    purchases = JSON.parse(localStorage.getItem(PENDING_PURCHASES_KEY) || "[]");
-  } catch {
-    purchases = [];
-  }
-  if (!Array.isArray(purchases) || !purchases.length) return;
-  const client = activeAgencyClients()[0];
+  const purchases = pendingLandingPurchases();
+  if (!purchases.length) return;
+  const client = activeAgencyClients().find((item) => item.id === billingDraft.clientId) || activeAgencyClients()[0];
   if (!client) return;
   purchases.forEach((purchase) => createServiceOrderFromPurchase(purchase, client));
   localStorage.removeItem(PENDING_PURCHASES_KEY);
@@ -6847,11 +6852,101 @@ function applyPendingLandingPurchases() {
   showToast(`${purchases.length} compra${purchases.length === 1 ? "" : "s"} agregada${purchases.length === 1 ? "" : "s"} a la empresa ${client.name}.`);
 }
 
+function pendingLandingPurchases() {
+  try {
+    const purchases = JSON.parse(localStorage.getItem(PENDING_PURCHASES_KEY) || "[]");
+    return Array.isArray(purchases) ? purchases : [];
+  } catch {
+    return [];
+  }
+}
+
+function ensurePendingLandingPurchaseFromUrl() {
+  const serviceId = new URLSearchParams(window.location.search).get("service");
+  const service = LANDING_SERVICE_CATALOG[serviceId];
+  if (!service) return;
+  const purchases = pendingLandingPurchases();
+  const exists = purchases.some((purchase) => purchase.serviceId === service.id && purchase.source === "landing");
+  if (exists) return;
+  localStorage.setItem(
+    PENDING_PURCHASES_KEY,
+    JSON.stringify([
+      {
+        id: `landing-${service.id}-${Date.now()}`,
+        serviceId: service.id,
+        serviceName: service.name,
+        amount: service.price,
+        currency: "COP",
+        status: "Solicitado",
+        source: "landing",
+        createdAt: new Date().toISOString(),
+      },
+      ...purchases,
+    ].slice(0, 12))
+  );
+}
+
+function renderPendingLandingPurchases({ selectedClient, storeAdmin = false }) {
+  const purchases = pendingLandingPurchases();
+  if (!purchases.length) return "";
+  const total = purchases.reduce((sum, purchase) => sum + Number(purchase.amount || 0), 0);
+  const targetName = selectedClient?.name || activeAgencyClients()[0]?.name || "una empresa";
+  return `
+    <section class="store-pending-web-orders" aria-label="Compras web pendientes">
+      <header>
+        <div>
+          <span class="eyebrow">Landing pública</span>
+          <h3>${storeAdmin ? "Compras web pendientes" : "Solicitud lista para activar"}</h3>
+          <p>${
+            storeAdmin
+              ? `Revisa antes de convertirlas en pedidos. Se asignarán a <strong>${escapeHtml(targetName)}</strong>.`
+              : `Terminaremos la solicitud para <strong>${escapeHtml(targetName)}</strong> y quedará visible como pedido.`
+          }</p>
+        </div>
+        <div class="store-pending-total">
+          <span>${purchases.length} pendiente${purchases.length === 1 ? "" : "s"}</span>
+          <strong>${formatMoney(total, "COP")}</strong>
+        </div>
+      </header>
+      <div class="store-pending-list">
+        ${purchases
+          .slice(0, 4)
+          .map((purchase) => {
+            const service = serviceById(purchase.serviceId) || {};
+            const name = purchase.serviceName || service.name || "Servicio web";
+            const amount = Number(purchase.amount || service.price || 0);
+            return `
+              <article class="store-pending-row">
+                <span class="status-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
+                <div>
+                  <strong>${escapeHtml(name)}</strong>
+                  <small>${formatMoney(amount, "COP")} · ${escapeHtml(activityTimeLabel(purchase.createdAt || new Date().toISOString()))}</small>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+      <div class="store-pending-actions">
+        <button class="secondary-button icon-text-button compact" type="button" data-clear-landing-purchases>
+          <i data-lucide="x"></i>
+          Descartar
+        </button>
+        <button class="primary-button icon-text-button compact" type="button" data-import-landing-purchases>
+          <i data-lucide="download-cloud"></i>
+          ${storeAdmin ? `Importar a ${escapeHtml(targetName)}` : "Activar solicitud"}
+        </button>
+      </div>
+    </section>
+  `;
+}
+
 function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicStoreUrl = "" }) {
   const publicServices = services.filter((service) => service.clientVisible !== false);
   const privateServices = services.length - publicServices.length;
   const pendingOrders = activeOrders.filter((order) => ["Solicitado", "En proceso", "Pendiente"].includes(order.status)).length;
   const completedOrders = activeOrders.filter((order) => order.status === "Completado").length;
+  const landingPurchases = pendingLandingPurchases();
   const checklist = [
     {
       icon: "store",
@@ -6896,6 +6991,11 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicSt
         <span>Pedidos activos</span>
         <strong>${pendingOrders}</strong>
         <small>${escapeHtml(selectedClient?.name || "Sin empresa")}</small>
+      </article>
+      <article class="store-admin-card">
+        <span>Compras web</span>
+        <strong>${landingPurchases.length}</strong>
+        <small>${landingPurchases.length ? "Listas para revisar" : "Sin pendientes"}</small>
       </article>
       <article class="store-admin-card store-public-link-card">
         <span>Venta externa</span>
@@ -14860,6 +14960,20 @@ storePanel.addEventListener("click", (event) => {
     return;
   }
 
+  const importLandingPurchasesButton = event.target.closest("[data-import-landing-purchases]");
+  if (importLandingPurchasesButton) {
+    applyPendingLandingPurchases();
+    return;
+  }
+
+  const clearLandingPurchasesButton = event.target.closest("[data-clear-landing-purchases]");
+  if (clearLandingPurchasesButton) {
+    localStorage.removeItem(PENDING_PURCHASES_KEY);
+    renderStorePanel();
+    showToast("Compras web pendientes descartadas.");
+    return;
+  }
+
   const openClientsButton = event.target.closest("[data-store-open-clients]");
   if (openClientsButton) {
     renderClientBillingPanel();
@@ -15404,7 +15518,7 @@ async function init() {
   await hydrateStateFromBackend();
   const hasSession = await hydrateSessionFromBackend();
   if (!hasSession) return;
-  applyPendingLandingPurchases();
+  ensurePendingLandingPurchaseFromUrl();
   selectedVideoId = activeCompany().videos[0]?.id || null;
   renderQueue();
   renderCalendar();

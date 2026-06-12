@@ -14376,7 +14376,7 @@ input[type="file"] {
 
 .store-admin-desk {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(140px, 0.35fr));
+  grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(132px, 0.35fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -14452,6 +14452,101 @@ input[type="file"] {
   background: #fff;
   padding: 12px;
   font: inherit;
+}
+
+.store-pending-web-orders {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(14, 165, 233, 0.14);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.88));
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.06);
+}
+
+.store-pending-web-orders > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.store-pending-web-orders h3,
+.store-pending-web-orders p {
+  margin: 0;
+}
+
+.store-pending-web-orders h3 {
+  margin-top: 2px;
+  font-size: 1.15rem;
+}
+
+.store-pending-web-orders p {
+  color: var(--muted);
+}
+
+.store-pending-total {
+  display: grid;
+  min-width: 150px;
+  justify-items: end;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.store-pending-total span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 760;
+}
+
+.store-pending-total strong {
+  font-size: 1.05rem;
+}
+
+.store-pending-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.store-pending-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.store-pending-row strong,
+.store-pending-row small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-pending-row small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.store-pending-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .store-admin-checklist {
@@ -15371,6 +15466,15 @@ input[type="file"] {
 
   .store-admin-checklist {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .store-pending-web-orders > header {
+    grid-template-columns: 1fr;
+  }
+
+  .store-pending-total {
+    justify-items: start;
+    min-width: 0;
   }
 
   .store-orders-board > header,

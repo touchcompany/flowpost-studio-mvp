@@ -77,7 +77,7 @@ document.querySelectorAll("[data-buy-service]").forEach((button) => {
       result.innerHTML = `
         <i data-lucide="check-circle-2"></i>
         <span>${service.name} agregado por ${formatMoney(service.price)}. Entra para verlo en Clientes.</span>
-        <a class="marketing-button dark" href="login.html?service=${encodeURIComponent(service.id)}">Continuar</a>
+        <a class="marketing-button dark" href="login.html?service=${encodeURIComponent(service.id)}&next=%23store">Continuar</a>
       `;
       renderIcons();
     }
