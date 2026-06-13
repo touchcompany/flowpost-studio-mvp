@@ -263,9 +263,9 @@ const featureCatalog = [
   { key: "aiScripts", label: "Guiones con IA", icon: "sparkles", plans: ["starter", "pro", "agency"] },
   { key: "clients", label: "Empresas gestionadas", icon: "users", plans: ["agency"] },
   { key: "billing", label: "Cobros y facturas", icon: "receipt-text", plans: ["pro", "agency"] },
-  { key: "store", label: "Venta de servicios", icon: "store", plans: ["pro", "agency"] },
+  { key: "store", label: "Venta de servicios", icon: "shopping-bag", plans: ["pro", "agency"] },
   { key: "hosting", label: "Hosting y dominios", icon: "server", plans: ["agency"] },
-  { key: "apiAdmin", label: "APIs y automatizaciones", icon: "workflow", plans: [], adminOnly: true },
+  { key: "apiAdmin", label: "APIs y automatizaciones", icon: "bot", plans: [], adminOnly: true },
 ];
 const memberRoles = {
   owner: {
