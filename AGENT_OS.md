@@ -72,6 +72,30 @@ El resto se abre desde el perfil o segun permisos. Super admin ve todo; usuarios
 - Webhook de pagos que active servicios.
 - cPanel/eNom solo desde backend y con aprobacion del super admin.
 
+## Endpoint interno de agentes
+
+La app ya expone un punto central para ejecutar agentes desde UI, cron o futuras colas:
+
+```http
+POST /api/agents/run
+Content-Type: application/json
+
+{
+  "action": "agent-library",
+  "companyId": "company-id"
+}
+```
+
+Acciones actuales:
+
+- `agent-library`: lista videos reales de Google Drive cuando hay OAuth; si falta token, devuelve recursos demo para no romper el flujo.
+- `agent-script`: devuelve estado de OpenAI/Gemini y un prompt sugerido por empresa.
+- `agent-publish`: ejecuta preflight de publicacion por trabajo, sin enviar todavia.
+- `agent-apis`: revisa credenciales OAuth y cuentas conectadas.
+- `agent-store`: revisa catalogo, ordenes y servicios vendibles.
+
+Este endpoint es la base para conectar skills externos: cada skill debe terminar llamando una accion de agente o creando una nueva accion en este router, no manipulando datos directo desde frontend.
+
 ## Regla de seguridad
 
 Nunca publicar, comprar dominio, crear hosting o cobrar automaticamente sin una confirmacion o estado explicito en el flujo. Primero dry-run, despues accion real.

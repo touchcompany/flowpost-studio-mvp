@@ -15873,8 +15873,68 @@ automationCenterPanel.addEventListener("click", (event) => {
   }
 });
 
+async function requestOperationalAgent(action) {
+  if (!backendEnabled || window.location.protocol === "file:") return null;
+  try {
+    const response = await fetch("/api/agents/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        action,
+        companyId: activeCompanyId,
+        agencyId: activeAgencyId,
+      }),
+    });
+    if (!response.ok) throw new Error("agent unavailable");
+    return response.json();
+  } catch (error) {
+    console.warn(error);
+    return null;
+  }
+}
+
+function mergeAgentMediaFiles(files = []) {
+  if (!Array.isArray(files) || !files.length) return 0;
+  const company = activeCompany();
+  const existingSources = new Set((company.videos || []).map((video) => video.source));
+  const imported = files.filter((video) => video?.source && !existingSources.has(video.source));
+  if (!imported.length) return 0;
+  company.videos = [...imported, ...(company.videos || [])];
+  selectedVideoId = imported[0]?.id || selectedVideoId;
+  if (videoSourceInput) videoSourceInput.value = selectedVideo()?.source || "";
+  renderMediaLocation();
+  renderVideoLibrary();
+  renderChecks();
+  persistState();
+  return imported.length;
+}
+
+function applyAgentPreflight(results = []) {
+  if (!Array.isArray(results) || !results.length) return 0;
+  jobs = jobs.map((job) => {
+    const item = results.find((result) => result.jobId === job.id || result.publicationId === job.publicationId);
+    return item
+      ? {
+          ...job,
+          preflight: item.preflight,
+          errorMessage: item.preflight?.ready ? "" : (item.preflight?.blockers || []).join(" "),
+        }
+      : job;
+  });
+  persistState();
+  renderQueue();
+  return results.filter((item) => item.preflight?.ready).length;
+}
+
 async function runOperationalAgent(action) {
   if (action === "agent-library") {
+    const result = await requestOperationalAgent(action);
+    if (result?.files?.length) {
+      const imported = mergeAgentMediaFiles(result.files);
+      showToast(imported ? `${imported} recursos importados por el agente.` : result.message || "Biblioteca ya estaba sincronizada.");
+      setView("library");
+      return;
+    }
     if (activeCompany().videos?.length) {
       setView("library");
       return;
@@ -15885,14 +15945,16 @@ async function runOperationalAgent(action) {
   }
 
   if (action === "agent-script") {
+    const result = await requestOperationalAgent(action);
     selectedCreativeType = "script";
     setView("scripts");
     window.setTimeout(() => {
       const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
       if (!input || input.value.trim()) return;
-      input.value = `Crea un guion premium para ${activeCompany().name}. Usa el tono de la marca, recursos disponibles, un hook fuerte, escenas claras, CTA a WhatsApp y una estructura lista para grabar.`;
+      input.value = result?.suggestedPrompt || `Crea un guion premium para ${activeCompany().name}. Usa el tono de la marca, recursos disponibles, un hook fuerte, escenas claras, CTA a WhatsApp y una estructura lista para grabar.`;
       input.focus();
     }, 80);
+    if (result?.message) showToast(result.message);
     return;
   }
 
@@ -15903,17 +15965,30 @@ async function runOperationalAgent(action) {
       showToast("Crea una pieza para que el agente genere trabajos por red.");
       return;
     }
+    const result = await requestOperationalAgent(action);
+    if (result?.results?.length) {
+      const ready = applyAgentPreflight(result.results);
+      addActivity("queue", "Agente de publicación", result.message || `${ready}/${result.results.length} trabajos listos.`, {
+        companyId: activeCompanyId,
+      });
+      showToast(result.message || `${ready}/${result.results.length} trabajos listos para envio real.`);
+      return;
+    }
     await validateQueuePreflight();
     return;
   }
 
   if (action === "agent-apis") {
+    const result = await requestOperationalAgent(action);
+    if (result?.message) showToast(result.message);
     await refreshOAuthStatus(true);
     if (canAccessView("accounts")) setView("accounts");
     return;
   }
 
   if (action === "agent-store") {
+    const result = await requestOperationalAgent(action);
+    if (result?.message) showToast(result.message);
     renderStorePanel();
     setView("store");
     return;

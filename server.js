@@ -3336,6 +3336,128 @@ async function systemStatus(req) {
   };
 }
 
+async function runAgentFromServer(req, payload = {}, session = null) {
+  const state = filterStateForSession(await store.getState(), session);
+  const action = String(payload.action || "").trim();
+  const companyId = payload.companyId || state.activeCompanyId || state.companies?.[0]?.id || "";
+  const company = (state.companies || []).find((item) => item.id === companyId) || (state.companies || [])[0];
+
+  if (!company) {
+    return {
+      ok: false,
+      action,
+      message: "No hay empresa disponible para ejecutar el agente.",
+    };
+  }
+
+  if (action === "agent-library" || action === "library-sync") {
+    const result = await listDriveFiles(company);
+    return {
+      ok: true,
+      action,
+      agent: "library",
+      companyId: company.id,
+      ready: Boolean(result.ready),
+      provider: result.provider || company.mediaSource?.provider || "Google Drive",
+      mode: result.mode || "manual",
+      files: Array.isArray(result.files) ? result.files : [],
+      message: result.ready
+        ? `${(result.files || []).length} recursos encontrados para ${company.name}.`
+        : result.message || "Biblioteca lista para modo manual o demo.",
+    };
+  }
+
+  if (action === "agent-publish" || action === "publish-preflight") {
+    const companyJobs = (state.jobs || []).filter((job) => job.companyId === company.id && job.status !== "Publicado");
+    const results = companyJobs.map((job) => {
+      const publication = (state.publications || []).find((item) => item.id === job.publicationId) || {};
+      return {
+        jobId: job.id,
+        publicationId: job.publicationId || publication.id || "",
+        platform: job.platform,
+        preflight: validatePublishJob({ company, publication, job }),
+      };
+    });
+    const ready = results.filter((item) => item.preflight.ready).length;
+    return {
+      ok: true,
+      action,
+      agent: "publishing",
+      companyId: company.id,
+      ready: results.length > 0 && ready === results.length,
+      results,
+      message: results.length
+        ? `${ready}/${results.length} trabajos listos para envio real.`
+        : "No hay trabajos pendientes para validar.",
+    };
+  }
+
+  if (action === "agent-apis" || action === "connections-check") {
+    const oauth = {
+      googleDrive: oauthSetup("Google Drive", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]),
+      meta: oauthSetup("Meta / Instagram", ["META_APP_ID", "META_APP_SECRET"]),
+      tiktok: oauthSetup("TikTok", ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]),
+    };
+    const accounts = (company.accounts || []).map((account) => ({
+      platform: account.platform,
+      status: account.status,
+      connected: account.status === "Conectada",
+    }));
+    const ready = Object.values(oauth).every((item) => item.ready);
+    return {
+      ok: true,
+      action,
+      agent: "connections",
+      companyId: company.id,
+      ready,
+      oauth,
+      accounts,
+      message: ready ? "OAuth base listo para conexiones reales." : "Faltan credenciales OAuth para completar conexiones.",
+    };
+  }
+
+  if (action === "agent-script" || action === "creative-brief") {
+    const companyPublications = (state.publications || []).filter((publication) => publication.companyId === company.id);
+    const prompts = (state.promptLibrary || []).filter((prompt) => prompt.companyId === company.id);
+    const ai = aiProviderStatus();
+    return {
+      ok: true,
+      action,
+      agent: "creative",
+      companyId: company.id,
+      ready: ai.ok,
+      ai,
+      promptCount: prompts.length,
+      publicationCount: companyPublications.length,
+      suggestedPrompt: `Crea un guion premium para ${company.name}. Usa tono de marca, recursos disponibles, hook fuerte, escenas claras, CTA y una estructura lista para grabar.`,
+      message: ai.ok ? "IA lista para generar desde backend." : "IA en fallback: configura OPENAI_API_KEY o GEMINI_API_KEY.",
+    };
+  }
+
+  if (action === "agent-store" || action === "store-ops") {
+    const client = (state.clients || []).find((item) => item.companyId === company.id);
+    const orders = (state.serviceOrders || []).filter((order) => order.companyId === company.id || (client && order.clientId === client.id));
+    const services = publicServicesFromState(state);
+    return {
+      ok: true,
+      action,
+      agent: "commerce",
+      companyId: company.id,
+      ready: services.length > 0,
+      services: services.length,
+      orders: orders.length,
+      pendingOrders: orders.filter((order) => order.status !== "Completado").length,
+      message: services.length ? "Catalogo listo para venta y gestion." : "Agrega servicios visibles para vender desde la web.",
+    };
+  }
+
+  return {
+    ok: false,
+    action,
+    message: "Agente no reconocido.",
+  };
+}
+
 function adminTokenValid(req, url) {
   const expectedToken = process.env.ADMIN_MIGRATION_TOKEN || "";
   if (!expectedToken) return false;
@@ -4381,6 +4503,14 @@ async function handleApi(req, res, url) {
     if (store.provider === "supabase" && !session?.id) return;
     const state = await store.getState();
     sendJson(res, 200, filterStateForSession(state, session));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/agents/run") {
+    const session = await requireAppSession(req, res);
+    if (store.provider === "supabase" && !session?.id) return;
+    const payload = await readBody(req);
+    sendJson(res, 200, await runAgentFromServer(req, payload, session));
     return;
   }
 
