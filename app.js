@@ -12019,6 +12019,49 @@ function renderUserSafetyPanel() {
   `;
 }
 
+function userFeatureEnabled(feature, user = {}) {
+  if (user.role === "super_admin" || String(user.email || "").trim().toLowerCase() === APP_ADMIN_EMAIL) return true;
+  const mode = user.moduleAccessMode || user.metadata?.moduleAccessMode || "auto";
+  const enabled = Array.isArray(user.enabledModules) ? user.enabledModules : user.metadata?.enabledModules || [];
+  if (mode === "manual") return enabled.includes(feature.key);
+  return feature.plans.includes(user.plan || "starter");
+}
+
+function renderUserModuleAccessControls(user = {}) {
+  const isOwner = user.role === "super_admin" || String(user.email || "").trim().toLowerCase() === APP_ADMIN_EMAIL;
+  const mode = user.moduleAccessMode || user.metadata?.moduleAccessMode || "auto";
+  const editableFeatures = featureCatalog.filter((feature) => !feature.adminOnly);
+  return `
+    <div class="active-user-access">
+      <label>
+        <span>Acceso</span>
+        <select data-user-access-mode="${escapeHtml(user.id)}" ${isOwner ? "disabled" : ""}>
+          <option value="auto" ${mode !== "manual" ? "selected" : ""}>Automático</option>
+          <option value="manual" ${mode === "manual" ? "selected" : ""}>Manual</option>
+        </select>
+      </label>
+      <div class="active-user-modules" aria-label="Módulos habilitados">
+        ${
+          isOwner
+            ? `<span class="active-user-module fixed"><i data-lucide="crown"></i> Todo</span>`
+            : editableFeatures
+                .map((feature) => {
+                  const enabled = userFeatureEnabled(feature, user);
+                  return `
+                    <label class="active-user-module ${enabled ? "enabled" : "disabled"}" title="${escapeHtml(feature.label)}">
+                      <input data-user-access-toggle="${escapeHtml(user.id)}" data-module-key="${escapeHtml(feature.key)}" type="checkbox" ${enabled ? "checked" : ""} ${mode === "manual" ? "" : "disabled"} />
+                      <i data-lucide="${feature.icon}"></i>
+                      <span>${escapeHtml(feature.label)}</span>
+                    </label>
+                  `;
+                })
+                .join("")
+        }
+      </div>
+    </div>
+  `;
+}
+
 function renderActiveUsersPanel() {
   const session = currentSession();
   if (!isTouchSuperAdmin(session)) return "";
@@ -12049,8 +12092,11 @@ function renderActiveUsersPanel() {
                         <strong>${escapeHtml(user.name || user.email || "Usuario sin nombre")}</strong>
                         <p>${escapeHtml(user.email || "Sin email")} · ${escapeHtml(user.roleLabel || user.role || "Sin rol")} · ${escapeHtml(user.planLabel || user.plan || "Sin plan")}</p>
                       </div>
-                      <span class="pill ${user.status === "active" ? "done" : "muted"}">${escapeHtml(user.status || "trial")}</span>
-                      <span class="pill ready">${escapeHtml(user.provider || "email")}</span>
+                      <div class="active-user-pills">
+                        <span class="pill ${user.status === "active" ? "done" : "muted"}">${escapeHtml(user.status || "trial")}</span>
+                        <span class="pill ready">${escapeHtml(user.provider || "email")}</span>
+                      </div>
+                      ${renderUserModuleAccessControls(user)}
                     </article>
                   `
                 )
@@ -12162,6 +12208,45 @@ async function refreshActiveUsers(showFeedback = false) {
     activeUsers = [];
     renderAccounts();
     if (showFeedback) showToast("No se pudo consultar usuarios activos.");
+  }
+}
+
+async function saveUserModuleAccess(userId, updates = {}) {
+  if (window.location.protocol === "file:" || !isTouchSuperAdmin()) {
+    showToast("Solo el propietario puede cambiar módulos.");
+    return null;
+  }
+  const user = activeUsers.find((item) => item.id === userId);
+  if (!user) {
+    showToast("Usuario no encontrado en la lista.");
+    return null;
+  }
+  if (user.role === "super_admin" || String(user.email || "").trim().toLowerCase() === APP_ADMIN_EMAIL) {
+    showToast("El propietario siempre conserva acceso completo.");
+    return null;
+  }
+  const currentMode = user.moduleAccessMode || user.metadata?.moduleAccessMode || "auto";
+  const currentModules = Array.isArray(user.enabledModules) ? user.enabledModules : user.metadata?.enabledModules || [];
+  const payload = {
+    moduleAccessMode: updates.moduleAccessMode || currentMode,
+    enabledModules: Array.isArray(updates.enabledModules) ? updates.enabledModules : currentModules,
+  };
+  try {
+    const response = await fetch(`/api/users/${encodeURIComponent(userId)}/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.session?.id) throw new Error(result.message || "No se pudo guardar el acceso.");
+    activeUsers = activeUsers.map((item) => (item.id === userId ? { ...item, ...result.session } : item));
+    renderAccounts();
+    showToast("Acceso del usuario actualizado.");
+    return result.session;
+  } catch (error) {
+    renderAccounts();
+    showToast(error.message || "No se pudo guardar el acceso.");
+    return null;
   }
 }
 
@@ -14649,6 +14734,38 @@ accountsGrid.addEventListener("click", async (event) => {
     return;
   }
   showToast(result.message || `Faltan credenciales: ${(result.missing || []).join(", ")}`);
+});
+
+accountsGrid.addEventListener("change", async (event) => {
+  const userModeField = event.target.closest("[data-user-access-mode]");
+  if (userModeField) {
+    const userId = userModeField.dataset.userAccessMode;
+    const user = activeUsers.find((item) => item.id === userId);
+    if (!user) return;
+    const nextMode = userModeField.value === "manual" ? "manual" : "auto";
+    const currentModules = Array.isArray(user.enabledModules) ? user.enabledModules : user.metadata?.enabledModules || [];
+    const autoModules = featureCatalog.filter((feature) => !feature.adminOnly && feature.plans.includes(user.plan || "starter")).map((feature) => feature.key);
+    await saveUserModuleAccess(userId, {
+      moduleAccessMode: nextMode,
+      enabledModules: nextMode === "manual" ? currentModules.length ? currentModules : autoModules : currentModules,
+    });
+    return;
+  }
+
+  const userModuleField = event.target.closest("[data-user-access-toggle]");
+  if (userModuleField) {
+    const userId = userModuleField.dataset.userAccessToggle;
+    const moduleKey = userModuleField.dataset.moduleKey;
+    const user = activeUsers.find((item) => item.id === userId);
+    if (!user || !moduleKey) return;
+    const currentModules = new Set(Array.isArray(user.enabledModules) ? user.enabledModules : user.metadata?.enabledModules || []);
+    if (userModuleField.checked) currentModules.add(moduleKey);
+    else currentModules.delete(moduleKey);
+    await saveUserModuleAccess(userId, {
+      moduleAccessMode: "manual",
+      enabledModules: [...currentModules],
+    });
+  }
 });
 
 testCenterPanel.addEventListener("click", async (event) => {

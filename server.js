@@ -4493,6 +4493,42 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if ((req.method === "POST" || req.method === "PUT") && parts[0] === "api" && parts[1] === "users" && parts[2] && parts[3] === "access") {
+    if (!store.getSession || !store.saveSession) {
+      sendError(res, 501, "profile access update unavailable");
+      return;
+    }
+    const session = await sessionFromRequest(req);
+    if (!sessionIsSuperAdmin(session)) {
+      sendError(res, 403, "profile access update forbidden");
+      return;
+    }
+    const target = await store.getSession(parts[2]);
+    if (!target?.id) {
+      sendError(res, 404, "profile not found");
+      return;
+    }
+    const payload = await readBody(req);
+    const rawMode = payload.moduleAccessMode || payload.metadata?.moduleAccessMode;
+    const moduleAccessMode = ["manual", "auto"].includes(rawMode) ? rawMode : "auto";
+    const rawModules = Array.isArray(payload.enabledModules) ? payload.enabledModules : payload.metadata?.enabledModules;
+    const enabledModules = Array.isArray(rawModules) ? rawModules.filter(Boolean) : [];
+    const updated = await store.saveSession(
+      normalizeSession({
+        ...target,
+        moduleAccessMode,
+        enabledModules,
+        metadata: {
+          ...(target.metadata || {}),
+          moduleAccessMode,
+          enabledModules,
+        },
+      })
+    );
+    sendJson(res, 200, { ok: true, session: updated, provider: store.provider });
+    return;
+  }
+
   if (req.method === "POST" && parts[0] === "api" && parts[1] === "trash" && parts[2] === "users" && parts[3] && parts[4] === "restore") {
     if (!store.restoreProfile) {
       sendError(res, 501, "restore unavailable");

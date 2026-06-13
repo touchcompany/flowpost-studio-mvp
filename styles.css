@@ -9043,7 +9043,7 @@ input[type="file"]:focus {
 
 .active-users-list article {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   min-width: 0;
@@ -9051,6 +9051,101 @@ input[type="file"]:focus {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fafafa;
+}
+
+.active-user-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 6px;
+}
+
+.active-user-access {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid rgba(17, 17, 17, 0.06);
+}
+
+.active-user-access > label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.active-user-access select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.active-user-modules {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.active-user-module {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  max-width: 180px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+.active-user-module.enabled {
+  color: #111;
+  border-color: rgba(17, 17, 17, 0.16);
+  background: linear-gradient(145deg, #fff, rgba(240, 253, 244, 0.86));
+}
+
+.active-user-module.disabled {
+  opacity: 0.54;
+}
+
+.active-user-module.fixed {
+  color: #111;
+}
+
+.active-user-module input {
+  width: 13px;
+  height: 13px;
+  accent-color: #111;
+}
+
+.active-user-module svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke-width: 1.8;
+}
+
+.active-user-module span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .active-users-list strong,
@@ -17078,6 +17173,7 @@ input[type="file"] {
   .password-change-box,
   .active-users-panel header,
   .active-users-list article,
+  .active-user-access,
   .dashboard-insights article,
   .prompt-list article,
   .client-edit-grid {
