@@ -20893,3 +20893,417 @@ input[type="file"] {
     height: 18px;
   }
 }
+
+/* Point 2 finishing pass: clearer module hierarchy and tap rhythm. */
+.company-list-toolbar,
+.store-catalog-toolbar,
+.finance-filter-bar {
+  align-items: end;
+  gap: 12px;
+}
+
+.company-filter-chips,
+.store-category-chips {
+  gap: 8px;
+  scrollbar-width: none;
+}
+
+.company-filter-chips::-webkit-scrollbar,
+.store-category-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.company-filter-chips button,
+.store-category-chips button {
+  min-height: 38px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.company-chat-row {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.company-row-main {
+  align-items: center;
+  text-align: left;
+}
+
+.company-row-main > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.company-row-main strong,
+.company-row-main small,
+.company-row-main em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-row-main em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.company-row-meta {
+  align-items: center;
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+.company-row-quick-actions {
+  gap: 8px;
+  min-width: max-content;
+}
+
+.company-row-quick-actions button,
+.company-quick-active {
+  width: 38px;
+  height: 38px;
+  border-radius: 15px;
+}
+
+.company-quick-active span {
+  display: none;
+}
+
+.company-overview-metrics,
+.store-catalog-kpis,
+.finance-executive-cards,
+.finance-insight-grid {
+  gap: var(--view-card-gap);
+}
+
+.company-overview-metrics article,
+.store-catalog-kpis article,
+.finance-executive-cards article,
+.finance-insight-card,
+.finance-chart-card,
+.store-command-card,
+.store-operations-stat,
+.store-pipeline-lane {
+  border-color: var(--view-line);
+  border-radius: 20px;
+}
+
+.client-command-center {
+  align-items: center;
+}
+
+.client-command-main {
+  min-width: 0;
+}
+
+.client-command-main h2,
+.client-command-main p,
+.client-command-main small {
+  max-width: 100%;
+}
+
+.client-command-score {
+  display: grid;
+  place-items: center;
+  min-width: 112px;
+}
+
+.client-command-stats article,
+.client-workspace-summary article,
+.client-billing-summary article {
+  min-width: 0;
+}
+
+.client-command-actions {
+  align-items: stretch;
+}
+
+.client-command-actions .icon-text-button,
+.client-actions .secondary-button,
+.service-card-actions button {
+  border-radius: 18px;
+}
+
+.agency-service-list {
+  align-items: stretch;
+}
+
+.agency-service-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 13px;
+}
+
+.agency-service-list article > div {
+  min-width: 0;
+}
+
+.agency-service-list strong,
+.agency-service-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-card-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.service-card-actions .icon-text-button {
+  min-width: 42px;
+}
+
+.store-command-center,
+.store-operations-board,
+.store-pipeline,
+.store-catalog-console {
+  scroll-margin-top: 96px;
+}
+
+.store-command-grid,
+.store-operations-grid,
+.store-pipeline-grid {
+  gap: var(--view-card-gap);
+}
+
+.store-leader-strip article,
+.store-operations-clients button,
+.store-order-list article {
+  align-items: center;
+  border-color: var(--view-line);
+  border-radius: 18px;
+}
+
+.store-leader-strip strong,
+.store-operations-clients strong,
+.store-order-list strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-service-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.store-service-media {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.store-service-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.store-service-head {
+  min-height: 44px;
+}
+
+.store-service-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.store-card-actions {
+  margin-top: auto;
+}
+
+.store-card-actions .icon-text-button {
+  gap: 8px;
+}
+
+.finance-executive-summary,
+.finance-report-grid,
+.finance-insight-bottom {
+  gap: var(--view-card-gap);
+}
+
+.finance-health-card,
+.finance-top-client,
+.finance-action-item {
+  border-color: var(--view-line);
+  border-radius: 20px;
+}
+
+.finance-month-row,
+.finance-company-row {
+  border-radius: 16px;
+}
+
+.finance-month-row strong,
+.finance-company-row strong,
+.finance-company-row small,
+.finance-row strong,
+.finance-row p {
+  min-width: 0;
+}
+
+.finance-company-row {
+  align-items: center;
+}
+
+.finance-row-actions {
+  min-width: max-content;
+}
+
+@media (min-width: 721px) {
+  .company-chat-list,
+  .store-catalog,
+  .finance-shell {
+    align-content: start;
+  }
+
+  .client-command-actions .icon-text-button,
+  .service-card-actions .icon-text-button {
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 960px) {
+  .company-chat-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .company-row-quick-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    padding-left: 58px;
+  }
+
+  .agency-service-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .service-card-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .company-list-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .company-filter-chips,
+  .store-category-chips {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .company-filter-chips button,
+  .store-category-chips button {
+    flex: 0 0 auto;
+  }
+
+  .company-row-main strong,
+  .company-row-main small {
+    white-space: normal;
+  }
+
+  .company-row-main em {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .client-command-center {
+    align-items: start;
+  }
+
+  .client-command-score {
+    min-width: 0;
+  }
+
+  .agency-service-list {
+    grid-template-columns: 1fr;
+  }
+
+  .agency-service-list article {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  .service-card-actions {
+    grid-column: auto;
+  }
+
+  .service-card-actions .icon-text-button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .service-card-actions .icon-text-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .store-command-grid,
+  .store-operations-grid,
+  .store-pipeline-grid,
+  .finance-report-grid,
+  .finance-executive-cards,
+  .finance-insight-grid,
+  .finance-insight-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .store-leader-strip {
+    display: grid;
+    gap: 8px;
+  }
+
+  .store-service-media {
+    aspect-ratio: 1 / 0.72;
+  }
+
+  .finance-month-row {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .finance-month-row strong {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .finance-company-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .finance-company-row > span:not(.company-avatar):not(.finance-company-main) {
+    display: none;
+  }
+
+  .finance-company-row em {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 420px) {
+  .agency-service-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .service-card-actions {
+    grid-column: 1 / -1;
+  }
+
+  .store-service-grid {
+    align-items: stretch;
+  }
+}
