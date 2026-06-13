@@ -11932,7 +11932,7 @@ function renderScriptsWorkspace() {
           <span class="assistant-avatar"><i data-lucide="sparkles"></i></span>
           <div>
             <h3>${selectedPublication ? "Guion seleccionado" : "Crea el primer guion"}</h3>
-            <p>${selectedPublication ? "Edita la pieza y genera contenido sin salir del contexto de esta empresa." : "Empieza con una instruccion libre para crear una pieza de esta empresa."}</p>
+            <p>${selectedPublication ? "Escribe, genera y guarda sin salir de esta empresa." : "Escribe una solicitud libre como en ChatGPT o Gemini."}</p>
           </div>
           <select data-script-provider>
             ${[
@@ -11963,10 +11963,8 @@ function renderScriptsWorkspace() {
         </div>
         <label class="field compact">
           <span>Mensaje para la IA</span>
-          <textarea data-script-chat-prompt rows="5" placeholder="Escribe como en ChatGPT o Gemini: objetivo, producto, cliente ideal, formato, tono, CTA y referencias."></textarea>
+          <textarea data-script-chat-prompt rows="5" placeholder="Ej: Crea 12 ideas de reels para este mes, con hook, escenas, texto en pantalla y CTA para vender por WhatsApp."></textarea>
         </label>
-        ${renderCreativePromptStarters(company, selectedPublication)}
-        ${renderCreativeCapabilityPanel()}
         ${renderScriptsWorkspaceAiStatus(selectedPublication)}
         <div class="scripts-chat-actions">
           <button class="secondary-button icon-text-button" type="button" data-open-script-modal="${escapeHtml(selectedPublication?.id || "")}" ${selectedPublication ? "" : "disabled"}>
@@ -11978,13 +11976,20 @@ function renderScriptsWorkspace() {
             ${isGeneratingCreative ? "Creando..." : "Crear con IA"}
           </button>
         </div>
+        <details class="scripts-advanced-drawer">
+          <summary>
+            <span><i data-lucide="sliders-horizontal"></i> Recursos avanzados</span>
+            <small>Prompts, personajes, salidas de IA y atajos</small>
+          </summary>
+          <div class="scripts-advanced-grid">
+            ${renderCreativePromptStarters(company, selectedPublication)}
+            ${renderCreativeCapabilityPanel()}
+            ${renderCreativeOutputs(selectedPublication)}
+            ${renderScriptsCharactersPanel(company)}
+            ${renderScriptsPromptNotebook()}
+          </div>
+        </details>
       </section>
-
-      <aside class="scripts-resource-panel">
-        ${renderCreativeOutputs(selectedPublication)}
-        ${renderScriptsCharactersPanel(company)}
-        ${renderScriptsPromptNotebook()}
-      </aside>
     </section>
   `;
   renderIcons();
