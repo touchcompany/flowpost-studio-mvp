@@ -722,8 +722,8 @@ let clients = [
     email: "admin@casanortecafe.com",
     plan: "Pro",
     billingCycle: "Mensual",
-    amount: 149,
-    currency: "USD",
+    amount: 350000,
+    currency: "COP",
     status: "Activo",
     nextInvoiceDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 12).toISOString().slice(0, 10),
   },
@@ -776,23 +776,23 @@ let invoices = [
     clientId: "client-casa-norte",
     companyId: "casa-norte",
     concept: "Plan Pro mensual",
-    amount: 149,
-    currency: "USD",
+    amount: 350000,
+    currency: "COP",
     status: "Pendiente",
     dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 12).toISOString().slice(0, 10),
   },
 ];
 const defaultAgencyServices = [
-  { id: "starter", agencyId: "agency-touch", name: "Plan Starter social", price: 79000, group: "Contenido", clientVisible: true },
-  { id: "pro", agencyId: "agency-touch", name: "Plan Pro social", price: 350000, group: "Contenido", clientVisible: true },
-  { id: "agency", agencyId: "agency-touch", name: "Plan Agencia", price: 700000, group: "Contenido", clientVisible: true },
-  { id: "reels", agencyId: "agency-touch", name: "Paquete de reels", price: 280000, group: "Produccion", clientVisible: true },
-  { id: "ads", agencyId: "agency-touch", name: "Campanas Meta Ads", price: 420000, group: "Publicidad", clientVisible: true },
-  { id: "hosting", agencyId: "agency-touch", name: "Hosting administrado", price: 180000, group: "Web", clientVisible: true },
-  { id: "domain", agencyId: "agency-touch", name: "Dominio anual", price: 85000, group: "Web", clientVisible: true },
-  { id: "website", agencyId: "agency-touch", name: "Pagina web landing", price: 1200000, group: "Web", clientVisible: true },
-  { id: "chatbot", agencyId: "agency-touch", name: "Chatbot y soporte", price: 450000, group: "Automatizacion", clientVisible: true },
-  { id: "ai-content", agencyId: "agency-touch", name: "Guiones e IA creativa", price: 250000, group: "IA", clientVisible: true },
+  { id: "starter", agencyId: "agency-touch", name: "Plan Starter social", price: 79000, currency: "COP", group: "Contenido", clientVisible: true },
+  { id: "pro", agencyId: "agency-touch", name: "Plan Pro social", price: 350000, currency: "COP", group: "Contenido", clientVisible: true },
+  { id: "agency", agencyId: "agency-touch", name: "Plan Agencia", price: 700000, currency: "COP", group: "Contenido", clientVisible: true },
+  { id: "reels", agencyId: "agency-touch", name: "Paquete de reels", price: 280000, currency: "COP", group: "Produccion", clientVisible: true },
+  { id: "ads", agencyId: "agency-touch", name: "Campanas Meta Ads", price: 420000, currency: "COP", group: "Publicidad", clientVisible: true },
+  { id: "hosting", agencyId: "agency-touch", name: "Hosting administrado", price: 180000, currency: "COP", group: "Web", clientVisible: true },
+  { id: "domain", agencyId: "agency-touch", name: "Dominio anual", price: 85000, currency: "COP", group: "Web", clientVisible: true },
+  { id: "website", agencyId: "agency-touch", name: "Pagina web landing", price: 1200000, currency: "COP", group: "Web", clientVisible: true },
+  { id: "chatbot", agencyId: "agency-touch", name: "Chatbot y soporte", price: 450000, currency: "COP", group: "Automatizacion", clientVisible: true },
+  { id: "ai-content", agencyId: "agency-touch", name: "Guiones e IA creativa", price: 250000, currency: "COP", group: "IA", clientVisible: true },
 ];
 let agencyServices = [...defaultAgencyServices];
 let serviceOrders = [];
@@ -804,8 +804,8 @@ let financeTransactions = [
     companyId: "casa-norte",
     clientId: "client-casa-norte",
     concept: "Pago inicial Plan Pro",
-    amount: 149,
-    currency: "USD",
+    amount: 350000,
+    currency: "COP",
     date: new Date().toISOString().slice(0, 10),
     status: "Confirmado",
   },
@@ -838,12 +838,14 @@ let storeFilters = {
   visibility: "all",
 };
 let storeFilterRenderTimer = null;
+let profileSaveTimer = null;
 let companyListSearch = "";
 let companyListFilter = "all";
 let selectedCompanyDetailId = "";
 let billingDraft = {
   editingInvoiceId: "",
   documentType: "Cuenta de cobro",
+  currency: "COP",
   issuerProfileId: "",
   issuerCompanyId: "",
   clientId: "client-casa-norte",
@@ -876,6 +878,7 @@ let billingDraft = {
 };
 const issuerBillingProfileFields = [
   "documentType",
+  "currency",
   "numberPrefix",
   "nextNumber",
   "issuerName",
@@ -1525,8 +1528,9 @@ function entityPhotoUrl(entity = {}) {
 }
 
 function avatarImageMarkup(photoUrl = "", alt = "") {
+  const fallbackInitials = escapeHtml(profileInitials(alt).slice(0, 2));
   return photoUrl
-    ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" onerror="this.closest('.company-avatar, .account-avatar, .nav-icon, .brand-mark')?.classList.add('is-broken-media'); this.remove();" />`
+    ? `<img class="entity-avatar-image" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(alt)}" onerror="this.closest('.company-avatar, .account-avatar, .nav-icon, .brand-mark')?.classList.add('is-broken-media'); const fallback=document.createElement('span'); fallback.textContent='${fallbackInitials}'; this.replaceWith(fallback);" />`
     : "";
 }
 
@@ -1566,7 +1570,7 @@ function updateMobileProfileNav() {
     mobileProfileNavIcon.innerHTML = loadingSession
       ? ""
       : photoUrl
-      ? `<img src="${escapeHtml(photoUrl)}" alt="" />`
+      ? avatarImageMarkup(photoUrl, session.name || "Tu perfil")
       : `<span>${escapeHtml(initials.slice(0, 2))}</span>`;
   }
   if (mobileMenuProfileAvatar) {
@@ -2057,11 +2061,50 @@ async function checkBillingWebhook() {
   }
 }
 
-function formatMoney(amount, currency = "USD") {
-  return new Intl.NumberFormat("es-CO", {
+const currencyOptions = [
+  { code: "COP", label: "Peso colombiano", locale: "es-CO", helper: "Colombia" },
+  { code: "USD", label: "Dólar estadounidense", locale: "en-US", helper: "Estados Unidos" },
+  { code: "EUR", label: "Euro", locale: "es-ES", helper: "Europa" },
+  { code: "MXN", label: "Peso mexicano", locale: "es-MX", helper: "México" },
+];
+
+function supportedCurrency(currency = "COP") {
+  const code = String(currency || "COP").trim().toUpperCase();
+  return currencyOptions.some((option) => option.code === code) ? code : "COP";
+}
+
+function activeCurrency() {
+  const session = currentSession();
+  return supportedCurrency(
+    billingDraft.currency ||
+      session.metadata?.billingProfile?.currency ||
+      session.metadata?.currency ||
+      activeAgency().currency ||
+      "COP"
+  );
+}
+
+function serviceCurrency(service = {}) {
+  return supportedCurrency(service.currency || "COP");
+}
+
+function currencySelectOptions(selectedCurrency = activeCurrency()) {
+  const selected = supportedCurrency(selectedCurrency);
+  return currencyOptions
+    .map(
+      (option) =>
+        `<option value="${option.code}" ${option.code === selected ? "selected" : ""}>${option.code} · ${option.label}</option>`
+    )
+    .join("");
+}
+
+function formatMoney(amount, currency = activeCurrency()) {
+  const currencyCode = supportedCurrency(currency);
+  const option = currencyOptions.find((item) => item.code === currencyCode) || currencyOptions[0];
+  return new Intl.NumberFormat(option.locale, {
     style: "currency",
-    currency,
-    maximumFractionDigits: 0,
+    currency: currencyCode,
+    maximumFractionDigits: currencyCode === "COP" || currencyCode === "MXN" ? 0 : 2,
   }).format(Number(amount || 0));
 }
 
@@ -2088,8 +2131,8 @@ function ensureAgencyClients() {
     email: "",
     plan: "Starter",
     billingCycle: "Mensual",
-    amount: 79,
-    currency: "USD",
+    amount: 79000,
+    currency: "COP",
     status: "Activo",
     serviceId: client.plan === "Agencia" ? "agency" : client.plan === "Pro" ? "pro" : "starter",
     objectives: "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
@@ -2117,8 +2160,8 @@ function ensureAgencyClients() {
       phone: company.phone || "",
       plan: "Starter",
       billingCycle: "Mensual",
-      amount: 79,
-      currency: "USD",
+      amount: 79000,
+      currency: "COP",
       status: "Activo",
       serviceId: "starter",
       objectives: "Aumentar visibilidad, mejorar consistencia de contenido y generar clientes potenciales.",
@@ -2463,6 +2506,7 @@ function syncBillingDraftDefaults() {
   if (!billingDraft.currentNumber) billingDraft.currentNumber = billingDocumentNumberFromDraft();
   if (!billingDraft.issuerEmail && issuer?.issuerEmail) billingDraft.issuerEmail = issuer.issuerEmail;
   if (!billingDraft.issuerAddress && issuer?.issuerAddress) billingDraft.issuerAddress = issuer.issuerAddress;
+  billingDraft.currency = supportedCurrency(billingDraft.currency || issuer?.currency || client?.currency || "COP");
   if (!billingDraft.paymentAccountHolder && issuer?.paymentAccountHolder) billingDraft.paymentAccountHolder = issuer.paymentAccountHolder;
   if (!billingDraft.clientEmail && client?.email) billingDraft.clientEmail = client.email;
   if (!billingDraft.autoFrequency && client?.billingCycle) billingDraft.autoFrequency = client.billingCycle;
@@ -2477,6 +2521,7 @@ function currentIssuerProfile() {
   const issuerName = profile.issuerName || session.name || activeAgency().name || "Touch Note";
   const mergedProfile = {
     documentType: "Cuenta de cobro",
+    currency: "COP",
     numberPrefix: "CC",
     nextNumber: 1,
     issuerName,
@@ -2573,7 +2618,7 @@ function renderAgencyServicesManager() {
                 <span class="agency-service-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
                 <div class="agency-service-copy">
                   <strong>${escapeHtml(service.name)}</strong>
-                  <span>${escapeHtml(service.group)} · ${formatMoney(service.price, "COP")}</span>
+                  <span>${escapeHtml(service.group)} · ${formatMoney(service.price, serviceCurrency(service))}</span>
                 </div>
                 <div class="service-card-actions">
                   <button class="secondary-button icon-only-button" type="button" data-service-apply="${service.id}" aria-label="Crear documento" title="Crear documento">
@@ -2591,7 +2636,10 @@ function renderAgencyServicesManager() {
       <div class="agency-service-form">
         <input data-new-service-field="name" type="text" placeholder="Nombre del servicio" />
         <input data-new-service-field="group" type="text" placeholder="Categoria" />
-        <input data-new-service-field="price" type="number" min="0" placeholder="Valor COP" />
+        <input data-new-service-field="price" type="number" min="0" placeholder="Valor" />
+        <select data-new-service-field="currency" aria-label="Moneda del servicio">
+          ${currencySelectOptions(activeCurrency())}
+        </select>
         <button class="primary-button icon-text-button" type="button" data-add-agency-service>
           <i data-lucide="plus"></i>
           Agregar servicio
@@ -2607,6 +2655,7 @@ function renderBillingDocumentEditor() {
   const client = clients.find((item) => item.id === billingDraft.clientId) || clients[0];
   const documentClients = activeAgencyClients();
   const subtotal = billingDraftSubtotal();
+  const documentCurrency = activeCurrency();
   const documentLabel = billingDraft.documentType === "Factura" ? "Factura" : "Cuenta de cobro";
   const mailReady = Boolean(mailStatus?.ready);
   const mailMissing = mailStatus?.missing?.length ? mailStatus.missing.join(", ") : "SMTP_HOST, SMTP_USER, SMTP_PASS";
@@ -2711,6 +2760,12 @@ function renderBillingDocumentEditor() {
           <h3>Pago y automatizacion</h3>
           <div class="document-grid">
             <label class="field compact">
+              <span>Moneda</span>
+              <select data-billing-field="currency">
+                ${currencySelectOptions(documentCurrency)}
+              </select>
+            </label>
+            <label class="field compact">
               <span>Banco</span>
               <input data-billing-field="paymentBank" type="text" value="${escapeHtml(billingDraft.paymentBank || "")}" placeholder="Ej: Bancolombia" />
             </label>
@@ -2795,8 +2850,8 @@ function renderBillingDocumentEditor() {
           <h3>Resumen</h3>
           <div><span>Emisor</span><strong>${escapeHtml(issuer?.issuerName || "Sin emisor")}</strong></div>
           <div><span>Empresa receptora</span><strong>${escapeHtml(client?.name || "Sin empresa")}</strong></div>
-          <div><span>Subtotal</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
-          <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
+          <div><span>Subtotal</span><strong>${formatMoney(subtotal, documentCurrency)}</strong></div>
+          <div class="total"><span>Total</span><strong>${formatMoney(subtotal, documentCurrency)}</strong></div>
           <button class="primary-button icon-text-button" type="button" data-save-billing-document>
             <i data-lucide="save"></i>
             ${billingDraft.editingInvoiceId ? "Actualizar documento" : "Guardar documento"}
@@ -2809,7 +2864,7 @@ function renderBillingDocumentEditor() {
 
         <section class="document-card document-preview">
           <span>${escapeHtml(documentLabel)}</span>
-          <strong>${formatMoney(subtotal, "COP")}</strong>
+          <strong>${formatMoney(subtotal, documentCurrency)}</strong>
           <p>${escapeHtml(billingDraft.description || "Servicios contratados")}</p>
           <small>Emisor: ${escapeHtml(issuer?.issuerName || "Emisor")} · Receptor: ${escapeHtml(client?.name || "Empresa")}</small>
           <small>${escapeHtml(billingDraft.issueDate || "Sin emision")} · vence ${escapeHtml(billingDraft.dueDate || "sin fecha")}</small>
@@ -2914,7 +2969,7 @@ function renderClientCommandCenter(activeClients, pendingInvoices, activeOrders)
         <span>${escapeHtml(clientHealthLabel(score))}</span>
       </div>
       <div class="client-command-stats">
-        <article><span>Cobro abierto</span><strong>${formatMoney(openValue, "COP")}</strong></article>
+        <article><span>Cobro abierto</span><strong>${formatMoney(openValue, selectedClient.currency || activeCurrency())}</strong></article>
         <article><span>Contenido</span><strong>${posts.length}</strong></article>
         <article><span>Servicios</span><strong>${orders.length}</strong></article>
         <article><span>Activos</span><strong>${enabledModules.length}/${enabledModules.length + lockedModules.length}</strong></article>
@@ -3051,7 +3106,7 @@ function renderManagedCompaniesContext(activeClients = [], selectedClient = null
         </article>
         <article>
           <span>Por cobrar</span>
-          <strong>${formatMoney(pendingForSelected, "COP")}</strong>
+          <strong>${formatMoney(pendingForSelected, selectedClient?.currency || activeCurrency())}</strong>
         </article>
         <article>
           <span>Total empresas</span>
@@ -3199,7 +3254,7 @@ function renderClientBillingPanel() {
                   <div class="client-profile-body">
                     <section>
                       <h3>Cobro actual</h3>
-                      <p>${invoice ? `${invoice.concept} vence ${invoice.dueDate} · ${formatMoney(openValue, "COP")}` : "Empresa al dia."}</p>
+                      <p>${invoice ? `${invoice.concept} vence ${invoice.dueDate} · ${formatMoney(openValue, invoice.currency || client.currency || activeCurrency())}` : "Empresa al dia."}</p>
                     </section>
                     <section>
                       <h3>Objetivo</h3>
@@ -4791,6 +4846,12 @@ function renderSettingsPanel() {
             </select>
           </label>
           <label class="field compact">
+            <span>Moneda principal</span>
+            <select data-settings-billing-field="currency">
+              ${currencySelectOptions(billingDraft.currency || issuerProfile.currency || "COP")}
+            </select>
+          </label>
+          <label class="field compact">
             <span>Prefijo</span>
             <input data-settings-billing-field="numberPrefix" value="${escapeHtml(billingDraft.numberPrefix || "CC")}" />
           </label>
@@ -5480,8 +5541,8 @@ function renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore
           <span class="status-icon large"><i data-lucide="chart-no-axes-combined"></i></span>
           <div>
             <small>${storeAdmin ? "Ventas gestionadas" : "Inversión activa"}</small>
-            <strong>${formatMoney(revenue, "COP")}</strong>
-            <p>${orders.length} pedido${orders.length === 1 ? "" : "s"} · ticket promedio ${formatMoney(avgTicket, "COP")}</p>
+            <strong>${formatMoney(revenue, activeCurrency())}</strong>
+            <p>${orders.length} pedido${orders.length === 1 ? "" : "s"} · ticket promedio ${formatMoney(avgTicket, activeCurrency())}</p>
           </div>
         </article>
         <article class="store-command-card">
@@ -5511,7 +5572,7 @@ function renderStoreCommandCenter({ storeAdmin, selectedClient, servicesForStore
                       <span class="store-service-icon compact"><i data-lucide="${serviceIcon(service)}"></i></span>
                       <div>
                         <strong>${escapeHtml(service.name)}</strong>
-                        <small>${count} pedido${count === 1 ? "" : "s"} · ${formatMoney(serviceRevenue, "COP")}</small>
+                        <small>${count} pedido${count === 1 ? "" : "s"} · ${formatMoney(serviceRevenue, activeCurrency())}</small>
                       </div>
                     </article>
                   `
@@ -5629,7 +5690,7 @@ function renderStorePipeline({ storeAdmin, selectedClient, activeOrders = [], se
                   <strong>${lane.orders.length}</strong>
                   <p>${escapeHtml(lane.detail)}</p>
                   <div class="store-pipeline-meter"><span style="width:${percent}%"></span></div>
-                  <em>${formatMoney(value, "COP")}</em>
+                  <em>${formatMoney(value, activeCurrency())}</em>
                 </div>
               </article>
             `;
@@ -5683,14 +5744,14 @@ function renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForSto
       icon: "receipt-text",
       label: "Cobros pendientes",
       value: pendingInvoices.length,
-      detail: pendingInvoices.length ? formatMoney(pendingInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0), "COP") : "Sin cartera",
+      detail: pendingInvoices.length ? formatMoney(pendingInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0), activeCurrency()) : "Sin cartera",
       tone: pendingInvoices.length ? "warning" : "ready",
     },
     {
       icon: "badge-dollar-sign",
       label: "Potencial visible",
-      value: formatMoney(catalogPotential, "COP"),
-      detail: `${formatMoney(totalRevenue, "COP")} gestionado`,
+      value: formatMoney(catalogPotential, activeCurrency()),
+      detail: `${formatMoney(totalRevenue, activeCurrency())} gestionado`,
       tone: totalRevenue ? "ready" : "muted",
     },
   ];
@@ -5749,7 +5810,7 @@ function renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForSto
                             <strong>${escapeHtml(client.name || company?.name || "Empresa")}</strong>
                             <small>${count} servicio${count === 1 ? "" : "s"} · ${open} activo${open === 1 ? "" : "s"}</small>
                           </span>
-                          <em>${formatMoney(revenue, "COP")}</em>
+                          <em>${formatMoney(revenue, activeCurrency())}</em>
                         </button>
                       `
                     )
@@ -5771,7 +5832,7 @@ function renderStoreOperationsBoard({ storeAdmin, selectedClient, servicesForSto
                 pendingInvoices.length
                   ? `${pendingInvoices.length} documento${pendingInvoices.length === 1 ? "" : "s"} pendiente${pendingInvoices.length === 1 ? "" : "s"} conectado${pendingInvoices.length === 1 ? "" : "s"} a pedidos.`
                   : pendingRevenue
-                    ? `${formatMoney(pendingRevenue, "COP")} en servicios activos por completar.`
+                    ? `${formatMoney(pendingRevenue, activeCurrency())} en servicios activos por completar.`
                     : "Cuando llegue una compra nueva, aparecerá aquí la acción prioritaria."
               }</p>
             </div>
@@ -5874,7 +5935,7 @@ function renderStorePanel() {
         <div class="store-catalog-kpis">
           <article><strong>${filteredServicesForStore.length}</strong><span>vistos</span></article>
           <article><strong>${publicCatalogCount}</strong><span>publicos</span></article>
-          <article><strong>${formatMoney(catalogValue, "COP")}</strong><span>valor filtro</span></article>
+          <article><strong>${formatMoney(catalogValue, activeCurrency())}</strong><span>valor filtro</span></article>
         </div>
       </header>
       <div class="store-catalog-toolbar">
@@ -5915,7 +5976,7 @@ function renderStorePanel() {
       <article>
         <span class="status-icon small"><i data-lucide="receipt-text"></i></span>
         <div>
-          <strong>${storeAdmin ? `${pendingOrders} pendientes` : formatMoney(selectedRevenue, "COP")}</strong>
+          <strong>${storeAdmin ? `${pendingOrders} pendientes` : formatMoney(selectedRevenue, activeCurrency())}</strong>
           <small>${storeAdmin ? `${completedOrders} completados en esta agencia` : "Inversión visible de esta empresa"}</small>
         </div>
       </article>
@@ -5983,7 +6044,7 @@ function renderStorePanel() {
       <article><span>${storeAdmin ? "Servicios visibles" : "Disponibles"}</span><strong>${storeAdmin ? publicServices.length : servicesForStore.length}</strong></article>
       <article><span>${storeAdmin ? "Privados" : "Comprados"}</span><strong>${storeAdmin ? privateServices : selectedOrders.length}</strong></article>
       <article><span>${storeAdmin ? "En proceso" : "Empresa"}</span><strong>${storeAdmin ? pendingOrders : selectedClient ? "1" : "0"}</strong></article>
-      <article><span>${storeAdmin ? "Vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedRevenue, "COP")}</strong></article>
+      <article><span>${storeAdmin ? "Vendido" : "Invertido"}</span><strong>${formatMoney(storeAdmin ? revenue : selectedRevenue, activeCurrency())}</strong></article>
     </section>
 
     ${renderStoreOrdersBoard({ storeAdmin, selectedClient, activeOrders, selectedOrders })}
@@ -6030,7 +6091,7 @@ function renderStorePanel() {
                           </div>
                           <div class="store-service-meta">
                             <span>${escapeHtml(service.group || "Servicio")}</span>
-                            <strong>${formatMoney(service.price, "COP")}</strong>
+                            <strong>${formatMoney(service.price, serviceCurrency(service))}</strong>
                           </div>
                           ${
                             serviceOrder
@@ -6057,6 +6118,9 @@ function renderStorePanel() {
                                   <input data-store-service-field="name" value="${escapeHtml(service.name)}" aria-label="Nombre del servicio" />
                                   <input data-store-service-field="group" value="${escapeHtml(service.group || "Servicio")}" aria-label="Categoría del servicio" />
                                   <input data-store-service-field="price" type="number" min="0" value="${escapeHtml(service.price || 0)}" aria-label="Precio del servicio" />
+                                  <select data-store-service-field="currency" aria-label="Moneda del servicio">
+                                    ${currencySelectOptions(serviceCurrency(service))}
+                                  </select>
                                   <input data-store-service-field="imageUrl" value="${escapeHtml(mediaInputValue(service.imageUrl || service.coverUrl || ""))}" aria-label="Imagen pública del servicio" placeholder="/content/uploads/servicio.jpg" />
                                   <textarea data-store-service-field="summary" aria-label="Descripción pública del servicio" placeholder="Descripción pública">${escapeHtml(servicePublicSummary(service))}</textarea>
                                   <div>
@@ -6245,11 +6309,11 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
         <article>
           <span>${storeAdmin ? "Pedidos" : "Compras"}</span>
           <strong>${visibleOrders.length}</strong>
-          <small>${storeAdmin ? formatMoney(revenue, "COP") : "por empresa"}</small>
+          <small>${storeAdmin ? formatMoney(revenue, activeCurrency()) : "por empresa"}</small>
         </article>
         <article>
           <span>Valor base</span>
-          <strong>${formatMoney(catalogValue, "COP")}</strong>
+          <strong>${formatMoney(catalogValue, activeCurrency())}</strong>
           <small>catalogo activo</small>
         </article>
       </div>
@@ -6268,7 +6332,7 @@ function renderStoreExperienceHero({ storeAdmin, selectedClient, servicesForStor
                         <span><i data-lucide="${serviceIcon(service)}"></i></span>
                         <div>
                           <strong>${escapeHtml(service.name)}</strong>
-                          <small>${formatMoney(service.price, "COP")}</small>
+                          <small>${formatMoney(service.price, serviceCurrency(service))}</small>
                         </div>
                       </article>
                     `
@@ -6823,6 +6887,7 @@ function createFinanceDocument() {
   billingDraft.numberPrefix = documentType === "Factura" ? "FAC" : "CC";
   billingDraft.currentNumber = "";
   const amount = Number(financePanel?.querySelector('[data-finance-new="amount"]')?.value || service.price || client.amount || 0);
+  const currency = supportedCurrency(service.currency || client.currency || billingDraft.currency || "COP");
   const dueDate = financePanel?.querySelector('[data-finance-new="dueDate"]')?.value || addDaysToDate(todayISO(), 5);
   const documentNumber = billingDocumentNumberFromDraft();
   const invoiceId = `invoice-${client.id}-${Date.now()}`;
@@ -6839,7 +6904,7 @@ function createFinanceDocument() {
       number: documentNumber,
       concept: service.name,
       amount,
-      currency: "COP",
+      currency,
       status: "Pendiente",
       issueDate: todayISO(),
       dueDate,
@@ -6890,7 +6955,7 @@ function createMonthlyProvider() {
       name,
       category,
       amount,
-      currency: "COP",
+      currency: activeCurrency(),
       cycle: "Mensual",
       nextPaymentDate,
       status: "Activo",
@@ -6919,7 +6984,7 @@ function createManualTransaction() {
       companyId,
       concept,
       amount,
-      currency: "COP",
+      currency: activeCurrency(),
       date,
       status: "Confirmado",
     },
@@ -7128,7 +7193,7 @@ async function startStoreCheckout(serviceId) {
         serviceName: service.name,
         description: serviceStoreDescription(service, client),
         amount: service.price,
-        currency: "COP",
+        currency: serviceCurrency(service),
         email: client.email || session.email || "",
         reference: `touch-${client.id}-${service.id}-${Date.now()}`,
       }),
@@ -7164,6 +7229,7 @@ function purchaseServiceForClient(serviceId) {
   syncBillingDraftDefaults();
   const issuerProfile = currentIssuerProfile();
   const dueDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString().slice(0, 10);
+  const currency = serviceCurrency(service);
   const order = {
     id: `order-${client.id}-${service.id}-${Date.now()}`,
     agencyId: activeAgencyId,
@@ -7173,7 +7239,7 @@ function purchaseServiceForClient(serviceId) {
     serviceId: service.id,
     serviceName: service.name,
     amount: service.price,
-    currency: "COP",
+    currency,
     status: "Solicitado",
     provisioning: {
       domain: serviceProvisionDraft.domain,
@@ -7199,7 +7265,7 @@ function purchaseServiceForClient(serviceId) {
       number: billingDocumentNumberFromDraft(),
       concept: service.name,
       amount: service.price,
-      currency: "COP",
+      currency,
       status: "Pendiente",
       issueDate: now.toISOString().slice(0, 10),
       dueDate,
@@ -7285,7 +7351,7 @@ function createServiceOrderFromPurchase(purchase, client) {
     serviceId: purchase.serviceId || service.id,
     serviceName,
     amount,
-    currency: purchase.currency || "COP",
+    currency: supportedCurrency(purchase.currency || serviceCurrency(service)),
     status: purchase.status || "Solicitado",
     source: purchase.source || "landing",
     provisioning: {
@@ -7404,7 +7470,7 @@ function renderPendingLandingPurchases({ selectedClient, storeAdmin = false }) {
         </div>
         <div class="store-pending-total">
           <span>${purchases.length} pendiente${purchases.length === 1 ? "" : "s"}</span>
-          <strong>${formatMoney(total, "COP")}</strong>
+          <strong>${formatMoney(total, activeCurrency())}</strong>
         </div>
       </header>
       <div class="store-pending-list">
@@ -7419,7 +7485,7 @@ function renderPendingLandingPurchases({ selectedClient, storeAdmin = false }) {
                 <span class="status-icon"><i data-lucide="${serviceIcon(service)}"></i></span>
                 <div>
                   <strong>${escapeHtml(name)}</strong>
-                  <small>${formatMoney(amount, "COP")} · ${escapeHtml(activityTimeLabel(purchase.createdAt || new Date().toISOString()))}</small>
+                  <small>${formatMoney(amount, purchase.currency || serviceCurrency(service))} · ${escapeHtml(activityTimeLabel(purchase.createdAt || new Date().toISOString()))}</small>
                 </div>
               </article>
             `;
@@ -7559,7 +7625,10 @@ function renderStoreAdminDesk({ selectedClient, services, activeOrders, publicSt
       <div class="store-admin-form">
         <input data-store-new-service="name" placeholder="Nuevo servicio o producto" />
         <input data-store-new-service="group" placeholder="Categoría" />
-        <input data-store-new-service="price" type="number" min="0" placeholder="Valor COP" />
+        <input data-store-new-service="price" type="number" min="0" placeholder="Valor" />
+        <select data-store-new-service="currency" aria-label="Moneda del servicio">
+          ${currencySelectOptions(activeCurrency())}
+        </select>
         <input data-store-new-service="summary" placeholder="Descripción pública breve" />
         <input data-store-new-service="imageUrl" placeholder="Imagen pública o ruta /content/uploads/..." />
         <button class="primary-button icon-text-button" type="button" data-add-store-service>
@@ -7650,6 +7719,7 @@ function saveBillingDocument() {
   const recurringEnabled = Boolean(billingDraft.autoGenerate === true || billingDraft.autoGenerate === "true");
   const recurringFrequency = billingDraft.autoFrequency || client.billingCycle || "Mensual";
   const issuerProfile = currentIssuerProfile();
+  const documentCurrency = activeCurrency();
   const document = {
     ...(existingDocument || {}),
     id: existingDocument?.id || `invoice-${client.id}-${Date.now()}`,
@@ -7663,7 +7733,7 @@ function saveBillingDocument() {
     number: documentNumber,
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
     amount: subtotal,
-    currency: "COP",
+    currency: documentCurrency,
     status: existingDocument?.status || "Pendiente",
     issueDate: billingDraft.issueDate,
     dueDate: billingDraft.dueDate,
@@ -7733,6 +7803,7 @@ function currentBillingDocument() {
   if (!client) return null;
   const subtotal = billingDraftSubtotal();
   const issuerProfile = currentIssuerProfile();
+  const documentCurrency = activeCurrency();
   return {
     id: `draft-${client.id}`,
     agencyId: activeAgencyId,
@@ -7745,7 +7816,7 @@ function currentBillingDocument() {
     number: billingDraft.currentNumber || billingDocumentNumberFromDraft(),
     concept: billingDraft.description || `${billingDraft.documentType} ${client.name}`,
     amount: subtotal,
-    currency: "COP",
+    currency: documentCurrency,
     status: "Pendiente",
     issueDate: billingDraft.issueDate,
     dueDate: billingDraft.dueDate,
@@ -7808,11 +7879,12 @@ function billingDocumentPlainText(documentData = currentBillingDocument()) {
   const client = clients.find((item) => item.id === documentData.clientId) || {};
   const issuer = billingDocumentIssuer(documentData);
   const subtotal = billingDocumentSubtotal(documentData);
+  const currency = supportedCurrency(documentData.currency || billingDraft.currency || "COP");
   const services = (documentData.lines || [])
     .map((line) => {
       const service = serviceById(line.serviceId);
       const quantity = Number(line.quantity || 1);
-      return `${service.name || "Servicio"} x${quantity}: ${formatMoney(Number(line.price || 0) * quantity, "COP")}`;
+      return `${service.name || "Servicio"} x${quantity}: ${formatMoney(Number(line.price || 0) * quantity, currency)}`;
     })
     .join("\n");
   const payment = documentData.paymentBank || documentData.paymentAccountNumber
@@ -7839,7 +7911,7 @@ Vence: ${documentData.dueDate || ""}
 DETALLE
 ${services || "Servicios contratados"}
 
-TOTAL: ${formatMoney(subtotal, "COP")}${payment}
+TOTAL: ${formatMoney(subtotal, currency)}${payment}
 
 ${documentData.observations || ""}`.trim();
 }
@@ -7849,6 +7921,7 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
   const client = clients.find((item) => item.id === documentData.clientId) || {};
   const issuer = billingDocumentIssuer(documentData);
   const number = billingDocumentNumber(documentData);
+  const currency = supportedCurrency(documentData.currency || billingDraft.currency || "COP");
   const logoSvg = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 40"><g fill="#111111"><circle cx="7.62" cy="9.52" r="1.74"/><path d="M30.04,15.21c.35-.19.58-.56.58-.96.03-1.54-.44-5.13-5.2-5.31-.13,0-.27,0-.41,0h-8.38c-4.92,0-8.91,3.67-8.91,8.19v6.89c0,4.52,3.98,8.19,8.91,8.19h8.38c.31,0,.63-.02.93-.05,3.14-.34,4.96-3.08,4.41-5.71-.07-.35-.29-.64-.58-.84-3.89-2.39-3.77-8.2.26-10.41h0Z"/><path d="M31.81,17.2l4.68-2.02c.77-.33,1.62.23,1.62,1.06v8.72c0,.85-.87,1.4-1.64,1.05l-4.72-2.15c-2.88-1.31-2.84-5.41.06-6.67Z"/></g></svg>');
   const lines = (documentData.lines || []).map((line) => {
     const service = serviceById(line.serviceId);
@@ -7969,10 +8042,10 @@ function billingDocumentHtml(documentData = currentBillingDocument()) {
       <table>
         <thead><tr><th>Servicio</th><th>Cant.</th><th>Valor</th><th>Total</th></tr></thead>
         <tbody>
-          ${lines.map((line) => `<tr><td><strong>${escapeHtml(line.name)}</strong><br /><small>${escapeHtml(line.group)}</small></td><td>${line.quantity}</td><td>${formatMoney(line.price, "COP")}</td><td>${formatMoney(line.total, "COP")}</td></tr>`).join("")}
+          ${lines.map((line) => `<tr><td><strong>${escapeHtml(line.name)}</strong><br /><small>${escapeHtml(line.group)}</small></td><td>${line.quantity}</td><td>${formatMoney(line.price, currency)}</td><td>${formatMoney(line.total, currency)}</td></tr>`).join("")}
         </tbody>
       </table>
-      <div class="total"><span>Total</span><strong>${formatMoney(subtotal, "COP")}</strong></div>
+      <div class="total"><span>Total</span><strong>${formatMoney(subtotal, currency)}</strong></div>
       ${documentData.observations ? `<p class="notes">${escapeHtml(documentData.observations)}</p>` : ""}
       <footer>
         <span>${escapeHtml(issuer.name || "Touch Note")}</span>
@@ -8098,7 +8171,8 @@ async function documentAction(action) {
   const documentType = documentData?.documentType || "Cuenta de cobro";
   const recipientEmail = documentData?.clientEmail || client?.email || "";
   const recipientPhone = whatsappPhone(documentData?.clientPhone || client?.phone);
-  const message = `${documentType} ${documentNumber} para ${client?.name || "empresa"} por ${formatMoney(subtotal, "COP")}`;
+  const currency = supportedCurrency(documentData.currency || billingDraft.currency || "COP");
+  const message = `${documentType} ${documentNumber} para ${client?.name || "empresa"} por ${formatMoney(subtotal, currency)}`;
   if (action === "pdf") {
     openBillingPdf(documentData);
     return;
@@ -8109,16 +8183,16 @@ async function documentAction(action) {
   }
   if (action === "copy") {
     const lines = (documentData?.lines || [])
-      .map((line) => `${serviceById(line.serviceId).name} x${line.quantity || 1}: ${formatMoney(Number(line.price || 0) * Number(line.quantity || 1), "COP")}`)
+      .map((line) => `${serviceById(line.serviceId).name} x${line.quantity || 1}: ${formatMoney(Number(line.price || 0) * Number(line.quantity || 1), currency)}`)
       .join("\n");
-    navigator.clipboard?.writeText(`${message}\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, "COP")}\nPago: ${documentData?.paymentBank || "Banco por definir"} · ${documentData?.paymentAccountType || "Cuenta"} ${documentData?.paymentAccountNumber || ""}`);
+    navigator.clipboard?.writeText(`${message}\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}\n\n${lines}\n\nTotal: ${formatMoney(subtotal, currency)}\nPago: ${documentData?.paymentBank || "Banco por definir"} · ${documentData?.paymentAccountType || "Cuenta"} ${documentData?.paymentAccountNumber || ""}`);
     showToast("Resumen del documento copiado.");
     return;
   }
   if (action === "email") {
     const html = billingDocumentHtml(documentData);
     const emailSubject = `${message}`;
-    const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}\nTotal: ${formatMoney(subtotal, "COP")}`;
+    const text = `Hola ${client?.contact || client?.name || ""},\n\nTe compartimos ${message}.\n\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}\nTotal: ${formatMoney(subtotal, currency)}`;
     if (window.location.protocol !== "file:" && !mailStatus) {
       try {
         const statusResponse = await fetch("/api/mail/status", { headers: { Accept: "application/json" } });
@@ -8167,7 +8241,7 @@ async function documentAction(action) {
   const whatsappMessage =
     `Buen dia ${client?.contact || client?.name || ""}, te comparto la ${documentType.toLowerCase()} No. ${documentNumber} por ${formatMoney(
       subtotal,
-      "COP"
+      currency
     )}.\n\nEmision: ${documentData?.issueDate || ""}\nVence: ${documentData?.dueDate || ""}${paymentDetail}\n\nAdjunto el documento. Quedo atento.`;
   try {
     const blob = await fetchBillingPdfBlob(documentData);
@@ -8203,7 +8277,7 @@ function updateClientProfile(clientId, field, value) {
             ? {
                 plan: serviceById(value).name,
                 amount: serviceById(value).price,
-                currency: "COP",
+                currency: serviceCurrency(serviceById(value)),
               }
             : {}),
         }
@@ -8916,7 +8990,7 @@ function renderDashboardCommerceSnapshot({ company, client, openInvoices }) {
     {
       icon: "receipt-text",
       label: "Por cobrar",
-      value: formatMoney(pendingValue, "COP"),
+      value: formatMoney(pendingValue, activeCurrency()),
       detail: `${openInvoices.length} cuenta${openInvoices.length === 1 ? "" : "s"} o factura${openInvoices.length === 1 ? "" : "s"} abierta${openInvoices.length === 1 ? "" : "s"}`,
       action: "Cobros",
       view: "finances",
@@ -8975,7 +9049,7 @@ function renderDashboardCommerceSnapshot({ company, client, openInvoices }) {
                 : "Cuando vendas o asignes un servicio, Inicio mostrará el paso prioritario aquí."
           }</p>
         </div>
-        <strong>${formatMoney(orderValue, "COP")}</strong>
+        <strong>${formatMoney(orderValue, activeCurrency())}</strong>
       </article>
     </section>
   `;
@@ -9138,7 +9212,7 @@ function renderDashboard() {
       ${dashboardMetric("Publicaciones", companyPosts.length, `${scheduled} programadas · ${published} publicadas`, "calendar-days", "blue")}
       ${dashboardMetric("Cola", companyJobs.length, `${pendingJobs} trabajos pendientes`, "list-checks", "dark")}
       ${dashboardMetric("Recursos", company.videos?.length || 0, `${company.mediaSource?.provider || "Biblioteca"} conectada`, "layers", "green")}
-      ${dashboardMetric("Cobros", formatMoney(openInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0), "COP"), `${openInvoices.length} documentos abiertos`, "wallet", "rose")}
+      ${dashboardMetric("Cobros", formatMoney(openInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0), activeCurrency()), `${openInvoices.length} documentos abiertos`, "wallet", "rose")}
     </section>
 
     <section class="dashboard-grid">
@@ -15041,6 +15115,23 @@ settingsPanel?.addEventListener("input", async (event) => {
       }
       if (helper) helper.outerHTML = mediaUrlHelperMarkup(savedUrl, "perfil");
       renderIcons();
+      clearTimeout(profileSaveTimer);
+      const nextSession = {
+        ...currentSession(),
+        avatarUrl: savedUrl,
+        metadata: {
+          ...(currentSession().metadata || {}),
+          avatarUrl: savedUrl,
+        },
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+      renderAccount();
+      updateMobileProfileNav();
+      profileSaveTimer = window.setTimeout(async () => {
+        await saveClientSession(nextSession);
+        renderAccount();
+        updateMobileProfileNav();
+      }, 650);
     }
     return;
   }
@@ -15363,6 +15454,7 @@ clientWorkspacePanel.addEventListener("click", (event) => {
     const name = clientWorkspacePanel.querySelector('[data-new-service-field="name"]')?.value.trim();
     const group = clientWorkspacePanel.querySelector('[data-new-service-field="group"]')?.value.trim() || "Servicio";
     const price = Number(clientWorkspacePanel.querySelector('[data-new-service-field="price"]')?.value || 0);
+    const currency = supportedCurrency(clientWorkspacePanel.querySelector('[data-new-service-field="currency"]')?.value || activeCurrency());
     if (!name || !price) {
       showToast("Agrega nombre y valor del servicio.");
       return;
@@ -15375,6 +15467,7 @@ clientWorkspacePanel.addEventListener("click", (event) => {
         name,
         group,
         price,
+        currency,
         clientVisible: true,
       },
     ];
@@ -15615,6 +15708,7 @@ storePanel.addEventListener("click", (event) => {
     const name = storePanel.querySelector('[data-store-new-service="name"]')?.value.trim();
     const group = storePanel.querySelector('[data-store-new-service="group"]')?.value.trim() || "Servicio";
     const price = Number(storePanel.querySelector('[data-store-new-service="price"]')?.value || 0);
+    const currency = supportedCurrency(storePanel.querySelector('[data-store-new-service="currency"]')?.value || activeCurrency());
     const summary = storePanel.querySelector('[data-store-new-service="summary"]')?.value.trim() || "";
     const imageUrl = persistableMediaUrl(storePanel.querySelector('[data-store-new-service="imageUrl"]')?.value || "");
     if (!name || !price) {
@@ -15629,6 +15723,7 @@ storePanel.addEventListener("click", (event) => {
         name,
         group,
         price,
+        currency,
         summary,
         imageUrl,
         icon: serviceIcon({ id: name, name, group }),
@@ -15654,6 +15749,7 @@ storePanel.addEventListener("click", (event) => {
     const nextName = getValue("name");
     const nextGroup = getValue("group") || "Servicio";
     const nextPrice = Number(getValue("price") || 0);
+    const nextCurrency = supportedCurrency(getValue("currency") || "COP");
     if (!nextName || !nextPrice) {
       showToast("Nombre y valor son obligatorios.");
       return;
@@ -15665,6 +15761,7 @@ storePanel.addEventListener("click", (event) => {
             name: nextName,
             group: nextGroup,
             price: nextPrice,
+            currency: nextCurrency,
             summary: getValue("summary"),
             imageUrl: persistableMediaUrl(getValue("imageUrl")),
             icon: service.icon || serviceIcon({ ...service, name: nextName, group: nextGroup }),

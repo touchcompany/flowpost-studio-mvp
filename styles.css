@@ -19335,3 +19335,223 @@ input[type="file"] {
     display: grid;
   }
 }
+
+/* Final responsive shell polish: keep navigation stable while the workspace scrolls. */
+.nav-icon,
+.status-icon,
+.account-avatar,
+.company-avatar,
+.brand-mark {
+  display: grid;
+  place-items: center;
+}
+
+.nav-icon svg,
+.status-icon svg,
+.account-avatar svg,
+.company-avatar svg {
+  display: block;
+  margin: auto;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-icon img,
+.status-icon img,
+.account-avatar img,
+.company-avatar img,
+.mobile-menu-profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-avatar span,
+.mobile-profile-avatar span,
+.mobile-menu-profile-avatar span,
+.company-avatar span {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  line-height: 1;
+}
+
+@media (min-width: 621px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .sidebar,
+  .queue-panel {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    min-width: 0;
+  }
+
+  .nav-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+
+  .nav-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sync-card {
+    flex: 0 0 auto;
+    margin-top: auto;
+  }
+
+  .main-panel {
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .queue-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar {
+    align-items: center;
+    padding-inline: 14px;
+  }
+
+  .app-shell.sidebar-collapsed .nav-list {
+    align-items: center;
+    width: 100%;
+  }
+
+  .app-shell.sidebar-collapsed .nav-item {
+    display: grid;
+    width: 52px;
+    min-width: 52px;
+    min-height: 52px;
+    place-items: center;
+    padding: 0;
+    border-radius: 16px;
+    font-size: 0;
+  }
+
+  .app-shell.sidebar-collapsed .nav-item.locked::after {
+    display: none;
+  }
+
+  .app-shell.sidebar-collapsed .nav-item .nav-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .app-shell.sidebar-collapsed .nav-item .nav-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .app-shell.sidebar-collapsed .sync-card {
+    display: grid;
+    width: 52px;
+    min-height: 52px;
+    place-items: center;
+    padding: 0;
+  }
+
+  .app-shell.sidebar-collapsed .sync-card > div,
+  .app-shell.sidebar-collapsed .sync-card .backup-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  html,
+  body {
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    min-height: 100dvh;
+  }
+
+  .main-panel {
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .sidebar {
+    position: fixed;
+    z-index: 80;
+    height: auto;
+    max-height: calc(100dvh - 24px);
+    overflow: visible;
+  }
+
+  .sidebar .sync-card {
+    display: none;
+  }
+
+  .nav-list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center;
+    overflow: visible;
+  }
+
+  .nav-item,
+  .nav-item:not(.active) {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .nav-item.locked::after {
+    display: none;
+  }
+
+  .nav-item .nav-icon {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  .nav-item.active,
+  .mobile-more-button.active,
+  .mobile-more-button[aria-expanded="true"] {
+    background: rgba(17, 17, 17, 0.11);
+  }
+
+  .mobile-more-menu {
+    max-height: min(68dvh, 520px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .mobile-more-profile {
+    align-items: center;
+  }
+
+  .mobile-menu-profile-avatar,
+  .mobile-profile-avatar {
+    overflow: hidden;
+    border-radius: 999px;
+  }
+}
