@@ -6314,6 +6314,113 @@ function nextAutomationStep(order) {
   return (order.automation?.steps || []).find((step) => step.status !== "Completado") || null;
 }
 
+function operationalAgents() {
+  const company = activeCompany();
+  const companyPublications = publications.filter((publication) => publication.companyId === activeCompanyId);
+  const companyJobs = jobs.filter((job) => job.companyId === activeCompanyId && job.status !== "Publicado");
+  const companyVideos = Array.isArray(company.videos) ? company.videos : [];
+  const readyScripts = companyPublications.filter((publication) => (publication.script || "").trim()).length;
+  const connectedAccounts = (company.accounts || []).filter((account) => account.status === "Conectada").length;
+  const pendingJobs = companyJobs.filter((job) => !job.preflight || !job.preflight.ready).length;
+  const storeOrders = allAutomationOrders().filter((order) => order.clientId === clientForCompany()?.id || order.companyId === activeCompanyId);
+  const aiReady = Boolean(aiCapabilityStatus?.ok || aiCapabilityStatus?.image?.ready || aiCapabilityStatus?.video?.ready);
+  return [
+    {
+      key: "library",
+      label: "Agente de biblioteca",
+      icon: "folder-sync",
+      view: "library",
+      action: "agent-library",
+      ready: companyVideos.length > 0,
+      metric: `${companyVideos.length} recurso${companyVideos.length === 1 ? "" : "s"}`,
+      detail: companyVideos.length ? "Recursos listos para crear piezas y publicar." : "Sincroniza Drive o agrega enlaces para dejar recursos disponibles.",
+      button: companyVideos.length ? "Ver recursos" : "Sincronizar",
+    },
+    {
+      key: "scripts",
+      label: "Agente creativo",
+      icon: "sparkles",
+      view: "scripts",
+      action: "agent-script",
+      ready: readyScripts > 0 && aiReady,
+      metric: `${readyScripts}/${companyPublications.length || 0} guiones`,
+      detail: aiReady ? "Puede crear guiones, prompts de imagen, carruseles y video con contexto de empresa." : "Funciona en fallback; agrega OpenAI/Gemini para generacion real.",
+      button: "Crear guion",
+    },
+    {
+      key: "publishing",
+      label: "Agente de publicación",
+      icon: "send",
+      view: "compose",
+      action: "agent-publish",
+      ready: companyJobs.length > 0 && pendingJobs === 0,
+      metric: `${companyJobs.length - pendingJobs}/${companyJobs.length || 0} listos`,
+      detail: companyJobs.length ? "Valida copy, medios, conexiones y bloqueos antes de enviar." : "Crea una publicación para generar trabajos por red.",
+      button: companyJobs.length ? "Validar cola" : "Crear pieza",
+    },
+    {
+      key: "connections",
+      label: "Agente de conexiones",
+      icon: "plug-zap",
+      view: "accounts",
+      action: "agent-apis",
+      ready: connectedAccounts > 0,
+      metric: `${connectedAccounts} cuenta${connectedAccounts === 1 ? "" : "s"}`,
+      detail: connectedAccounts ? "Hay conexiones activas para esta empresa." : "Revisa OAuth, Drive, Meta, TikTok y permisos disponibles.",
+      button: "Revisar APIs",
+    },
+    {
+      key: "commerce",
+      label: "Agente comercial",
+      icon: "shopping-bag",
+      view: "store",
+      action: "agent-store",
+      ready: storeOrders.length > 0,
+      metric: `${storeOrders.length} orden${storeOrders.length === 1 ? "" : "es"}`,
+      detail: storeOrders.length ? "Servicios comprados con flujo de entrega y proveedor." : "Publica servicios vendibles y vincula pedidos a empresas.",
+      button: "Abrir tienda",
+    },
+  ];
+}
+
+function renderOperationalAgents() {
+  const agents = operationalAgents();
+  const readyCount = agents.filter((agent) => agent.ready).length;
+  return `
+    <section class="agent-command-center">
+      <header>
+        <span class="status-icon large"><i data-lucide="bot"></i></span>
+        <div>
+          <span class="workspace-label">CRM de agentes</span>
+          <h3>Agentes que operan ${escapeHtml(activeCompany().name)}</h3>
+          <p>Acciones guiadas para dejar biblioteca, guiones, publicación, APIs y ventas listas sin llenar la pantalla de opciones.</p>
+        </div>
+        <strong>${readyCount}/${agents.length}</strong>
+      </header>
+      <div class="agent-command-grid">
+        ${agents
+          .map((agent) => {
+            const locked = agent.view && !canAccessView(agent.view);
+            return `
+              <article class="${agent.ready ? "ready" : "pending"} ${locked ? "locked" : ""}">
+                <span class="status-icon"><i data-lucide="${agent.icon}"></i></span>
+                <div>
+                  <strong>${escapeHtml(agent.label)}</strong>
+                  <p>${escapeHtml(agent.detail)}</p>
+                  <small>${escapeHtml(agent.metric)}</small>
+                </div>
+                <button class="secondary-button icon-button compact" type="button" data-agent-action="${escapeHtml(agent.action)}" ${locked ? "disabled" : ""} aria-label="${escapeHtml(agent.button)}">
+                  <i data-lucide="${locked ? "lock" : agent.ready ? "arrow-up-right" : "play"}"></i>
+                </button>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderAutomationCenter() {
   if (!automationCenterPanel) return;
   const orders = allAutomationOrders();
@@ -6363,6 +6470,8 @@ function renderAutomationCenter() {
         Revisar proveedores
       </button>
     </section>
+
+    ${renderOperationalAgents()}
 
     <section class="automation-layout">
       <div class="automation-board">
@@ -15718,6 +15827,15 @@ storePanel.addEventListener("input", (event) => {
 });
 
 automationCenterPanel.addEventListener("click", (event) => {
+  const agentButton = event.target.closest("[data-agent-action]");
+  if (agentButton) {
+    runOperationalAgent(agentButton.dataset.agentAction).catch((error) => {
+      console.error(error);
+      showToast("El agente no pudo completar la accion. Revisa permisos o conexion.");
+    });
+    return;
+  }
+
   const stepButton = event.target.closest("[data-center-step]");
   if (stepButton) {
     completeAutomationStep(stepButton.dataset.centerStep, stepButton.dataset.stepId);
@@ -15754,6 +15872,53 @@ automationCenterPanel.addEventListener("click", (event) => {
     refreshProvisioningStatus(true);
   }
 });
+
+async function runOperationalAgent(action) {
+  if (action === "agent-library") {
+    if (activeCompany().videos?.length) {
+      setView("library");
+      return;
+    }
+    await openGooglePicker();
+    setView("library");
+    return;
+  }
+
+  if (action === "agent-script") {
+    selectedCreativeType = "script";
+    setView("scripts");
+    window.setTimeout(() => {
+      const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
+      if (!input || input.value.trim()) return;
+      input.value = `Crea un guion premium para ${activeCompany().name}. Usa el tono de la marca, recursos disponibles, un hook fuerte, escenas claras, CTA a WhatsApp y una estructura lista para grabar.`;
+      input.focus();
+    }, 80);
+    return;
+  }
+
+  if (action === "agent-publish") {
+    const companyJobs = jobs.filter((job) => job.companyId === activeCompanyId && job.status !== "Publicado");
+    if (!companyJobs.length) {
+      setView("compose");
+      showToast("Crea una pieza para que el agente genere trabajos por red.");
+      return;
+    }
+    await validateQueuePreflight();
+    return;
+  }
+
+  if (action === "agent-apis") {
+    await refreshOAuthStatus(true);
+    if (canAccessView("accounts")) setView("accounts");
+    return;
+  }
+
+  if (action === "agent-store") {
+    renderStorePanel();
+    setView("store");
+    return;
+  }
+}
 
 async function logoutCurrentSession() {
   const session = currentSession();
