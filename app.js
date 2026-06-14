@@ -9907,6 +9907,25 @@ function calendarPeriodLabel() {
   return `${shortDateLabel(startDate)} - ${shortDateLabel(addDaysISO(startDate, 6))}`;
 }
 
+function calendarScriptPrompt(date = calendarFocusDate || todayISO(), time = "09:00") {
+  const company = activeCompany();
+  const dateLabel = date ? shortDateLabel(date) : "esta fecha";
+  return [
+    `Crea un guion para ${company.name} programado el ${dateLabel} a las ${time}.`,
+    "Quiero una pieza lista para producir: hook, objetivo, escenas numeradas, texto en pantalla, toma sugerida, CTA y notas de edicion.",
+    `Usa el tono de la marca: ${company.voiceTone || company.description || "claro, cercano y profesional"}.`,
+  ].join("\n");
+}
+
+function calendarMonthlyPrompt() {
+  const company = activeCompany();
+  return [
+    `Crea una planeacion mensual de guiones para ${company.name}.`,
+    "Organizala por semanas con ideas de reels, carruseles e historias. Incluye objetivo, hook, formato, CTA y prioridad.",
+    `Ten en cuenta el tono de la marca: ${company.voiceTone || company.description || "claro, cercano y profesional"}.`,
+  ].join("\n");
+}
+
 function shiftCalendarFocus(direction) {
   if (direction === "today") {
     calendarFocusDate = todayISO();
@@ -9945,11 +9964,11 @@ function renderCalendarBoardHeader(companyPublications) {
         }
         <button class="secondary-button icon-text-button" type="button" data-calendar-open-scripts>
           <i data-lucide="notebook-pen"></i>
-          Guiones
+          Ver guiones
         </button>
         <button class="primary-button icon-text-button" type="button" data-calendar-create-slot="${calendarFocusDate || todayISO()}" data-calendar-create-time="09:00">
-          <i data-lucide="plus"></i>
-          Nuevo guion
+          <i data-lucide="sparkles"></i>
+          Crear con IA
         </button>
       </div>
     </section>
@@ -11834,6 +11853,7 @@ function renderScriptsWorkspace() {
   const readyScripts = companyScripts.filter((publication) => (publication.script || "").trim()).length;
   const pendingScripts = companyScripts.length - readyScripts;
   const scheduledScripts = companyScripts.filter((publication) => ["Programado", "Aprobado"].includes(publication.status)).length;
+  const calendarContext = calendarFocusDate ? `Calendario · ${shortDateLabel(calendarFocusDate)}` : "Planeacion editorial";
   const statusBuckets = ["Todos", "Idea", "En diseño", "En revisión", "Aprobado", "Programado", "Publicado"].map((status) => ({
     status,
     count: status === "Todos" ? companyScripts.length : companyScripts.filter((publication) => publication.status === status).length,
@@ -11848,7 +11868,7 @@ function renderScriptsWorkspace() {
         <div>
           <p>Workspace de guiones</p>
           <h3>${escapeHtml(company.name)}</h3>
-          <small>${escapeHtml(company.description || company.handle || "Sin descripcion")}</small>
+          <small>${escapeHtml(calendarContext)} · ${escapeHtml(company.description || company.handle || "Sin descripcion")}</small>
         </div>
         <div class="scripts-company-stats">
           <span><strong>${companyScripts.length}</strong> piezas</span>
@@ -13716,9 +13736,8 @@ async function generateCreativeFromWorkspace() {
   }
 }
 
-function openScriptsPromptForPublication(publicationId, promptText = "") {
-  selectedCalendarPublicationId = publicationId;
-  renderScriptsWorkspace();
+function openScriptsPromptForPublication(publicationId = "", promptText = "") {
+  selectedCalendarPublicationId = publicationId || "";
   setView("scripts");
   setTimeout(() => {
     const input = scriptsWorkspacePanel?.querySelector("[data-script-chat-prompt]");
@@ -13767,10 +13786,7 @@ function createScriptDraftFromCalendar(date, time = "09:00") {
   persistUiState();
   persistState();
   renderCalendar();
-  openScriptsPromptForPublication(
-    publication.id,
-    `Crea un guion para ${company.name} programado el ${date} a las ${time}. Quiero que sea claro, potente, facil de grabar y con CTA.`
-  );
+  openScriptsPromptForPublication(publication.id, calendarScriptPrompt(date, time));
   showToast("Borrador de guion creado. Escribe como en ChatGPT o Gemini.");
 }
 
@@ -14071,10 +14087,9 @@ calendarGrid.addEventListener("click", (event) => {
     const publication = selectedCalendarPublication(filteredPublications());
     if (publication) {
       selectedCalendarPublicationId = publication.id;
-      openScriptsPromptForPublication(publication.id);
+      openScriptsPromptForPublication(publication.id, publication.script ? "" : calendarScriptPrompt(publication.date || calendarFocusDate || todayISO(), publication.time || "09:00"));
     } else {
-      setView("scripts");
-      renderScriptsWorkspace();
+      openScriptsPromptForPublication("", calendarMonthlyPrompt());
     }
     return;
   }
