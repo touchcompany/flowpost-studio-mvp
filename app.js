@@ -11900,6 +11900,8 @@ function renderScriptsWorkspace() {
                       const aiAssets = publication.cover?.creativeAssets?.length || 0;
                       const isReady = Boolean((publication.script || "").trim());
                       const fromCalendar = publication.createdFrom === "calendar" || publication.calendarOrigin?.source === "calendar" || publication.cover?.calendarOrigin?.source === "calendar";
+                      const aiMode = publication.cover?.ai?.mode || "";
+                      const providerLabel = aiMode === "openai" ? "ChatGPT" : aiMode === "gemini" ? "Gemini" : aiMode ? "Fallback" : "Manual";
                       return `
                       <article class="${publication.id === selectedPublication?.id ? "selected" : ""} ${isReady ? "ready" : "draft"}">
                         <button type="button" data-script-select="${escapeHtml(publication.id)}">
@@ -11915,6 +11917,12 @@ function renderScriptsWorkspace() {
                             </span>
                           </span>
                         </button>
+                        <div>
+                          <span class="script-provider-mini ${aiMode && aiMode !== "openai" && aiMode !== "gemini" ? "warning" : ""}">${escapeHtml(providerLabel)}</span>
+                          <button class="secondary-button icon-button compact" type="button" data-script-open="${escapeHtml(publication.id)}" aria-label="Abrir guion completo">
+                            <i data-lucide="panel-right-open"></i>
+                          </button>
+                        </div>
                       </article>
                     `;
                     }
